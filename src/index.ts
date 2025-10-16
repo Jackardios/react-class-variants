@@ -8,6 +8,7 @@ import {
   type ComponentPropsWithRef,
   type ElementType,
   type ReactElement,
+  type JSX,
 } from 'react';
 import {
   getRefProperty,
@@ -23,7 +24,15 @@ type OmitByValue<T, Value> = {
   [P in keyof T as T[P] extends Value ? never : P]: T[P];
 };
 type StringToBoolean<T> = T extends 'true' | 'false' ? boolean : T;
-type Simplify<T> = { [KeyType in keyof T]: T[KeyType] };
+type Simplify<T> = { [K in keyof T]: T[K] };
+type Prettify<T> = {
+  [K in keyof T]: T[K];
+} & {};
+type Exact<T, Shape> = T extends Shape
+  ? Exclude<keyof T, keyof Shape> extends never
+    ? T
+    : never
+  : never;
 
 // ----------------------------------------------------------------------
 
@@ -62,10 +71,16 @@ interface CompoundVariant<V extends VariantsSchema> {
   className: ClassNameValue;
 }
 
+/**
+ * Maps variant names to their possible values (with boolean string conversion).
+ */
 type Variants<V extends VariantsSchema> = {
   [Variant in keyof V]: StringToBoolean<keyof V[Variant]>;
 };
 
+/**
+ * Like Variants but allows arrays of values for compound variant matching.
+ */
 type VariantsMulti<V extends VariantsSchema> = {
   [Variant in keyof V]:
     | StringToBoolean<keyof V[Variant]>
@@ -115,16 +130,6 @@ export type VariantOptions<
   : Required<Omit<Variants<V>, OptionalVariantNames<C, V>>> &
       Partial<Pick<Variants<V>, OptionalVariantNames<C, V>>>;
 
-/**
- * Render prop type.
- * @template P Props
- * @example
- * const children: RenderProp = (props) => <div {...props} />;
- */
-export type RenderProp<P = HTMLAttributes<any> & { ref?: Ref<any> }> = (
-  props: P
-) => ReactNode;
-
 // ----------------------------------------------------------------------
 
 export interface VariantFactoryOptions {
@@ -135,20 +140,135 @@ type VariantsResolverArgs<P> = PickRequiredKeys<P> extends never
   ? [props?: P]
   : [props: P];
 
+// ----------------------------------------------------------------------
+// Variant Component Types
+// ----------------------------------------------------------------------
+
+/**
+ * Configuration for variant component with optional render prop control.
+ */
+export type VariantComponentConfig<V extends VariantsSchema> =
+  VariantsConfig<V> & {
+    withoutRenderProp?: boolean;
+    forwardProps?: (keyof V)[];
+  };
+
+/**
+ * Config type with withoutRenderProp removed.
+ */
+export type OnlyVariantsConfig<
+  C extends VariantComponentConfig<V>,
+  V extends VariantsSchema
+> = Omit<C, 'withoutRenderProp' | 'forwardProps'>;
+
+/**
+ * Base props for a variant component, combining variant options with component props.
+ */
+export type BaseVariantComponentProps<
+  T extends ElementType,
+  C extends VariantComponentConfig<V>,
+  V extends VariantsSchema
+> = VariantOptions<OnlyVariantsConfig<C, V>, V> &
+  Omit<
+    ComponentPropsWithRef<T>,
+    keyof VariantOptions<OnlyVariantsConfig<C, V>, V>
+  >;
+
+/**
+ * Render prop type.
+ * @template P Props
+ * @example
+ * const children: RenderPropFn = (props) => <div {...props} />;
+ */
+type RenderPropFn<P = HTMLAttributes<any> & { ref?: Ref<any> }> = (
+  props: Prettify<P>
+) => ReactNode;
+
+type VariantKeysToStrip<
+  C extends VariantComponentConfig<V>,
+  V extends VariantsSchema
+> = Exclude<
+  keyof VariantOptions<OnlyVariantsConfig<C, V>, V>,
+  NonNullable<C['forwardProps']>[number]
+>;
+
+type RenderPropType<
+  P,
+  C extends VariantComponentConfig<V>,
+  V extends VariantsSchema
+> =
+  | RenderPropFn<
+      {
+        className: string;
+      } & Omit<P, VariantKeysToStrip<C, V> | 'render' | 'className'>
+    >
+  | ReactElement;
+
+/**
+ * Component props with optional render prop.
+ */
+export type VariantComponentPropsWithRender<
+  P,
+  C extends VariantComponentConfig<V>,
+  V extends VariantsSchema
+> = Simplify<{ render?: RenderPropType<P, C, V> } & P>;
+
+export type VariantComponentType<
+  T extends ElementType,
+  C extends VariantComponentConfig<V>,
+  V extends VariantsSchema = NonNullable<C['variants']>
+> = T extends keyof JSX.IntrinsicElements
+  ? C extends { withoutRenderProp: true }
+    ? (props: BaseVariantComponentProps<T, C, V>) => ReactElement
+    : (
+        props: VariantComponentPropsWithRender<
+          BaseVariantComponentProps<T, C, V>,
+          C,
+          V
+        >
+      ) => ReactNode
+  : (props: BaseVariantComponentProps<T, C, V>) => ReactElement;
+
 export function defineConfig(options?: VariantFactoryOptions) {
   const { onClassesMerged } = options ?? {};
 
   function mergeClassNames(...classNames: ClassNameValue[]): string {
-    // @ts-ignore
-    const className = classNames.flat(Infinity).filter(Boolean).join(' ');
+    const flattened = (classNames as string[]).flat(Infinity) as (
+      | string
+      | null
+      | undefined
+    )[];
+    const filtered = flattened.filter((cls): cls is string => Boolean(cls));
+    const joined = filtered.join(' ');
 
-    return onClassesMerged ? onClassesMerged(className) : className;
+    return onClassesMerged ? onClassesMerged(joined) : joined;
   }
 
+  /**
+   * Creates a className resolver function from a variants configuration.
+   *
+   * @template C - Variants configuration type
+   * @template V - Variants schema type
+   * @param config - The variants configuration object
+   * @returns A function that resolves className based on variant props
+   *
+   * @example
+   * const button = variants({
+   *   base: 'px-4 py-2',
+   *   variants: {
+   *     color: {
+   *       primary: 'bg-blue-500',
+   *       secondary: 'bg-gray-500'
+   *     }
+   *   }
+   * });
+   *
+   * button({ color: 'primary' }); // 'px-4 py-2 bg-blue-500'
+   */
   function variants<
     C extends VariantsConfig<V>,
     V extends VariantsSchema = NonNullable<C['variants']>
-  >(config: Simplify<C>) {
+  >(config: Exact<Simplify<C>, VariantsConfig<V>>) {
     const { base, variants, compoundVariants, defaultVariants } = config;
 
     if (!('variants' in config) || !config.variants) {
@@ -161,11 +281,13 @@ export function defineConfig(options?: VariantFactoryOptions) {
       return variant && ('false' in variant || 'true' in variant);
     }
 
-    type ResolveProps = VariantOptions<C, V> & {
-      className?: ClassNameValue;
-    };
-
-    return function (...[props]: VariantsResolverArgs<ResolveProps>) {
+    return function (
+      ...[props]: VariantsResolverArgs<
+        VariantOptions<C, V> & {
+          className?: ClassNameValue;
+        }
+      >
+    ) {
       const result = [base];
 
       const getSelectedVariant = (name: keyof V) =>
@@ -201,19 +323,50 @@ export function defineConfig(options?: VariantFactoryOptions) {
     };
   }
 
+  /**
+   * Creates a props resolver that separates variant props from other props
+   * and resolves the className.
+   *
+   * @template C - Variants configuration type
+   * @template V - Variants schema type
+   * @param config - The variants configuration object
+   * @returns A function that takes props and returns non-variant props with resolved className
+   *
+   * @example
+   * const resolveButtonProps = variantPropsResolver({
+   *   variants: {
+   *     color: { primary: 'bg-blue-500' }
+   *   }
+   * });
+   *
+   * resolveButtonProps({ color: 'primary', onClick: () => {} })
+   * // { className: 'bg-blue-500', onClick: () => {} }
+   */
   function variantPropsResolver<
-    C extends VariantsConfig<V>,
+    C extends VariantComponentConfig<V>,
     V extends VariantsSchema = NonNullable<C['variants']>
-  >(config: Simplify<C>) {
-    const variantsResolver = variants<C, V>(config);
+  >(config: Exact<Simplify<C>, VariantComponentConfig<V>>) {
+    const { forwardProps, withoutRenderProp, ...variantsConfig } = config;
+    const variantsResolver = variants(variantsConfig);
 
-    type Props = VariantOptions<C, V> & {
+    type OnlyVariantProps = (keyof V extends never
+      ? {}
+      : VariantOptions<typeof config, V>) & {
       className?: string;
     };
 
-    return function <P extends Props>(props: P) {
-      const result = { ...props } as { className: string } & Omit<P, keyof V>;
-      const onlyVariantProps = { className: result.className } as Props;
+    type ForwardPropKey = NonNullable<C['forwardProps']>;
+
+    return function <P extends OnlyVariantProps>(props: P) {
+      const result = { ...props } as { className: string } & Omit<
+        P,
+        ForwardPropKey extends any[]
+          ? Exclude<keyof V, ForwardPropKey[number]>
+          : keyof V
+      >;
+      const onlyVariantProps = {
+        className: result.className,
+      } as OnlyVariantProps;
 
       if (config.variants) {
         for (const variantKey in config.variants) {
@@ -221,75 +374,85 @@ export function defineConfig(options?: VariantFactoryOptions) {
             hasOwnProperty(config.variants, variantKey) &&
             hasOwnProperty(result, variantKey)
           ) {
-            (onlyVariantProps as any)[variantKey] = result[variantKey];
-            delete result[variantKey];
+            onlyVariantProps[variantKey] = result[variantKey];
+
+            if (!forwardProps || !forwardProps.includes(variantKey)) {
+              delete result[variantKey];
+            }
           }
         }
       }
 
-      result.className = variantsResolver(onlyVariantProps);
+      result.className = variantsResolver(onlyVariantProps as any);
 
       return result;
     };
   }
 
+  /**
+   * Creates a React component with variants support.
+   *
+   * @template T - The element type (HTML tag or component)
+   * @template C - Variants configuration type
+   * @template V - Variants schema type
+   * @param elementType - The base element type to render
+   * @param config - The variants configuration object with optional withoutRenderProp flag
+   * @returns A React component with variant props
+   *
+   * @example
+   * const Button = variantComponent('button', {
+   *   base: 'px-4 py-2',
+   *   variants: {
+   *     color: {
+   *       primary: 'bg-blue-500',
+   *       secondary: 'bg-gray-500'
+   *     }
+   *   }
+   * });
+   *
+   * <Button color="primary">Click me</Button>
+   * <Button color="primary" render={<a href="/" />}>Link as button</Button>
+   */
   function variantComponent<
     T extends ElementType,
-    C extends VariantsConfig<V> & {
-      withoutRenderProp?: boolean;
-    },
+    C extends VariantComponentConfig<V>,
     V extends VariantsSchema = NonNullable<C['variants']>
-  >(type: T, config: Simplify<C>) {
-    const { withoutRenderProp, ...variantsConfig } = config;
-    type OnlyVariantsConfig = Omit<C, 'withoutRenderProp'>;
-    type VariantOptionsOfConfig = VariantOptions<OnlyVariantsConfig, V>;
-    type BaseProps = VariantOptionsOfConfig &
-      Omit<ComponentPropsWithRef<T>, keyof VariantOptionsOfConfig>;
+  >(
+    elementType: T,
+    config: Exact<Simplify<C>, VariantComponentConfig<V>>
+  ): VariantComponentType<T, C, V> {
+    const { withoutRenderProp } = config;
+    type BaseProps = BaseVariantComponentProps<T, C, V>;
 
-    const resolveProps = variantPropsResolver<OnlyVariantsConfig, V>(
-      variantsConfig
-    );
+    const resolveProps = variantPropsResolver<C, V>(config);
 
-    if (typeof type !== 'string' || withoutRenderProp) {
-      return (props: BaseProps) => {
-        return createElement(type, resolveProps(props));
-      };
+    if (typeof elementType !== 'string' || withoutRenderProp) {
+      return ((props: BaseProps) => {
+        return createElement(elementType, resolveProps(props as any));
+      }) as VariantComponentType<T, C, V>;
     }
 
-    const component = (
-      props: Simplify<
-        {
-          /**
-           * Allows the component to be rendered as a different HTML element or React
-           * component. The value can be a React element or a function that takes in the
-           * original component props and gives back a React element with the props
-           * merged.
-           */
-          render?:
-            | RenderProp<
-                {
-                  className: string;
-                } & Omit<BaseProps, keyof VariantOptionsOfConfig>
-              >
-            | ReactElement<any>;
-        } & Omit<BaseProps, 'render'>
-      >
-    ) => {
+    type ComponentProps = VariantComponentPropsWithRender<BaseProps, C, V>;
+
+    const component = ((props: ComponentProps) => {
       const { render, ...rest } = props;
-      const mergedRef = useMergeRefs((rest as any).ref, getRefProperty(render));
-      const resolvedProps = resolveProps(rest as BaseProps);
+      const mergedRef = useMergeRefs(
+        (rest as { ref?: Ref<unknown> }).ref,
+        getRefProperty(render)
+      );
+      const resolvedProps = resolveProps(rest as any);
 
       if (render) {
-        if (isValidElement<any>(render)) {
+        if (isValidElement(render)) {
           const renderProps = { ...render.props, ref: mergedRef };
           return cloneElement(render, mergeProps(resolvedProps, renderProps));
         } else {
-          return render(resolvedProps) as ReactElement;
+          return render(resolvedProps as any) as ReactElement;
         }
       }
 
-      return createElement(type, resolvedProps);
-    };
+      return createElement(elementType, { ...resolvedProps, ref: mergedRef });
+    }) as VariantComponentType<T, C, V>;
 
     return component;
   }
@@ -300,8 +463,3 @@ export function defineConfig(options?: VariantFactoryOptions) {
     variantComponent,
   } as const;
 }
-
-/**
- * No-op function to mark template literals as tailwind strings.
- */
-export const tw = String.raw;

@@ -125,26 +125,3 @@ export function useMergeRefs(...refs: Array<Ref<any> | undefined>) {
     };
   }, refs);
 }
-
-// /**
-//  * Render prop type.
-//  * @template P Props
-//  * @example
-//  * const children: RenderProp = (props) => <div {...props} />;
-//  */
-// export type RenderProp<P = HTMLAttributes<any> & { ref?: Ref<any> }> = (
-//   props: P
-// ) => ReactNode;
-
-// export type ComponentPropsWithRenderProp<T extends ElementType> =
-//   T extends keyof JSX.IntrinsicElements
-//     ? Omit<ComponentPropsWithRef<T>, 'render'> & {
-//         /**
-//          * Allows the component to be rendered as a different HTML element or React
-//          * component. The value can be a React element or a function that takes in the
-//          * original component props and gives back a React element with the props
-//          * merged.
-//          */
-//         render?: RenderProp | ReactElement;
-//       }
-//     : ComponentPropsWithRef<T>;

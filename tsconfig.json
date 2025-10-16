@@ -4,15 +4,16 @@
     "module": "ESNext",
     "target": "ES2016",
     "lib": ["ESNext", "dom"],
-    "jsx": "react",
+    "jsx": "react-jsx",
     "moduleResolution": "node",
     "skipLibCheck": true,
     "esModuleInterop": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
-    "noEmit": true
+    "noEmit": true,
+    "types": ["@testing-library/jest-dom"]
   },
-  "include": ["src"],
+  "include": ["src", "test"],
   "exclude": ["node_modules", "dist"]
 }

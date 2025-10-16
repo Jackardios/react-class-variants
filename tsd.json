@@ -1,0 +1,9 @@
+{
+  "directory": "test",
+  "compilerOptions": {
+    "strict": true,
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "types": ["@testing-library/jest-dom"]
+  }
+}
