@@ -1,16 +1,38 @@
 {
-  "name": "react-tailwind-variants",
-  "version": "1.0.3",
-  "description": "React Stitches-like variants API for tailwindcss classes",
+  "name": "react-class-variants",
+  "version": "2.0.0-alpha.0",
+  "description": "Type-safe React variants API for dynamic CSS class composition",
   "private": false,
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "sideEffects": false,
   "scripts": {
     "dev": "vitest",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
     "build": "tsup src/index.ts --format cjs,esm --dts",
-    "lint": "tsc",
+    "lint": "tsc --project tsconfig.build.json",
+    "lint:all": "tsc",
     "ci": "pnpm run lint && pnpm run test && pnpm run build",
     "release": "pnpm run ci && changeset publish"
   },
@@ -21,47 +43,47 @@
     "url": "https://github.com/jackardios"
   },
   "keywords": [
+    "react",
+    "variants",
+    "css",
+    "classnames",
+    "class-variance",
     "tailwind",
     "tailwindcss",
-    "css",
-    "cva",
-    "classname",
-    "classname-variants",
-    "tailwind-variants",
-    "stitches.js",
-    "stitches",
-    "stitches-like",
-    "variants",
-    "react"
+    "css-modules",
+    "styled-components",
+    "typescript",
+    "polymorphic",
+    "compound-variants"
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jackardios/react-tailwind-variants.git"
+    "url": "git+https://github.com/jackardios/react-class-variants.git"
   },
   "bugs": {
-    "url": "https://github.com/jackardios/react-tailwind-variants/issues"
+    "url": "https://github.com/jackardios/react-class-variants/issues"
   },
-  "homepage": "https://github.com/jackardios/react-tailwind-variants#readme",
+  "homepage": "https://github.com/jackardios/react-class-variants#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "devDependencies": {
-    "@changesets/cli": "^2.26.0",
-    "@testing-library/dom": "^10.4.0",
-    "@testing-library/jest-dom": "^6.6.3",
+    "@changesets/cli": "^2.29.6",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
-    "@types/react": "^19.1.0",
-    "@types/react-dom": "^19.1.0",
+    "@types/react": "^19.1.11",
+    "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^4.7.0",
     "jsdom": "^26.1.0",
-    "react-dom": "^19.1.0",
+    "react-dom": "^19.1.1",
+    "tsd": "^0.33.0",
     "tsup": "^8.5.0",
-    "typescript": "^5.8.3",
+    "typescript": "^5.9.2",
     "vitest": "^3.2.4"
   },
-  "dependencies": {
-    "@radix-ui/react-slot": "^1.2.3"
-  },
   "peerDependencies": {
-    "react": "^16.8 || ^17.0 || ^18.0 || ^19.0",
-    "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0",
-    "tailwind-merge": "^1.10.0 || ^2.0.0 || ^3.0.0"
+    "react": "^19.0",
+    "react-dom": "^19.0"
   }
 }
