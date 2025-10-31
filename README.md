@@ -211,7 +211,7 @@ If you're using Tailwind CSS, you can enable autocompletion and syntax highlight
 
 ```json
 {
-  "tailwindCSS.experimental.classFunctions": [
+  "tailwindCSS.classFunctions": [
     "variants",
     "variantPropsResolver",
     "variantComponent"
