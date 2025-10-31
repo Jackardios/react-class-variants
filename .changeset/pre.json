@@ -1,0 +1,10 @@
+{
+  "mode": "pre",
+  "tag": "alpha",
+  "initialVersions": {
+    "react-class-variants": "2.0.0-alpha.0"
+  },
+  "changesets": [
+    "major-v2-refactor"
+  ]
+}
