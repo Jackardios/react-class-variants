@@ -5,6 +5,7 @@
     "react-class-variants": "2.0.0-alpha.0"
   },
   "changesets": [
+    "add-type-utilities",
     "major-v2-refactor"
   ]
 }
