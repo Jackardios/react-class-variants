@@ -34,7 +34,7 @@
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "lint": "tsc --project tsconfig.build.json",
     "lint:all": "tsc",
-    "ci": "pnpm run lint && pnpm run test && pnpm run test:types && pnpm run build",
+    "ci": "pnpm run lint && pnpm run test && pnpm run build && pnpm run test:types",
     "release": "pnpm run ci && changeset publish"
   },
   "license": "MIT",
