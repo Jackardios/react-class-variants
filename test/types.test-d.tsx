@@ -9,6 +9,8 @@ import {
   defineConfig,
   type VariantOptions,
   type ClassNameValue,
+  type ExtractVariantOptions,
+  type ExtractVariantConfig,
 } from '../src/index';
 
 const { variants, variantPropsResolver, variantComponent } = defineConfig();
@@ -577,3 +579,150 @@ const onlyFalse = variants({
 expectType<string>(onlyFalse());
 expectType<string>(onlyFalse({ inactive: true }));
 expectType<string>(onlyFalse({ inactive: false }));
+
+// =============================================================================
+// ExtractVariantConfig Type Tests
+// =============================================================================
+
+// Extract full config from component
+const ConfigButton = variantComponent('button', {
+  base: 'btn',
+  variants: {
+    color: {
+      primary: 'bg-blue',
+      secondary: 'bg-gray',
+    },
+  },
+  defaultVariants: {
+    color: 'primary',
+  },
+  compoundVariants: [
+    {
+      variants: { color: 'primary' },
+      className: 'font-bold',
+    },
+  ],
+});
+
+type ConfigButtonConfig = ExtractVariantConfig<typeof ConfigButton>;
+
+// Config should have all properties (base, variants, defaultVariants, compoundVariants)
+expectType<ConfigButtonConfig['base']>('btn');
+expectType<NonNullable<ConfigButtonConfig['variants']>['color']['primary']>(
+  'bg-blue'
+);
+expectType<NonNullable<ConfigButtonConfig['defaultVariants']>['color']>(
+  'primary'
+);
+
+// =============================================================================
+// ExtractVariantOptions - Universal Type Tests (works with all functions)
+// =============================================================================
+
+// Extract from variants() function
+const testVariants = variants({
+  variants: {
+    color: {
+      primary: 'bg-blue',
+      secondary: 'bg-gray',
+    },
+    size: {
+      small: 'text-sm',
+      large: 'text-lg',
+    },
+  },
+  defaultVariants: {
+    size: 'small',
+  },
+});
+
+type VariantsOptions = ExtractVariantOptions<typeof testVariants>;
+expectAssignable<VariantsOptions>({ color: 'primary' });
+expectAssignable<VariantsOptions>({ color: 'secondary', size: 'large' });
+expectNotAssignable<VariantsOptions>({}); // color is required
+
+// Extract from variantPropsResolver() function
+const testResolver = variantPropsResolver({
+  variants: {
+    variant: {
+      outline: 'border',
+      solid: 'bg-fill',
+    },
+    disabled: {
+      true: 'opacity-50',
+      false: 'opacity-100',
+    },
+  },
+});
+
+type ResolverOptions = ExtractVariantOptions<typeof testResolver>;
+expectAssignable<ResolverOptions>({ variant: 'outline' });
+expectAssignable<ResolverOptions>({ variant: 'solid', disabled: true });
+expectNotAssignable<ResolverOptions>({}); // variant is required
+
+// Extract from variantComponent() - should work same as before
+const testComponent = variantComponent('button', {
+  variants: {
+    intent: {
+      primary: 'btn-primary',
+      secondary: 'btn-secondary',
+    },
+  },
+});
+
+type ComponentOptions = ExtractVariantOptions<typeof testComponent>;
+expectAssignable<ComponentOptions>({ intent: 'primary' });
+expectNotAssignable<ComponentOptions>({});
+
+// =============================================================================
+// ExtractVariantConfig - Universal Type Tests (works with all functions)
+// =============================================================================
+
+// Extract config from variants() function
+const configTestVariants = variants({
+  base: 'btn',
+  variants: {
+    color: { primary: 'bg-blue' },
+  },
+  defaultVariants: {
+    color: 'primary',
+  },
+  compoundVariants: [
+    {
+      variants: { color: 'primary' },
+      className: 'font-bold',
+    },
+  ],
+});
+
+type VariantsConfig = ExtractVariantConfig<typeof configTestVariants>;
+expectType<VariantsConfig['base']>('btn');
+expectType<NonNullable<VariantsConfig['variants']>['color']['primary']>(
+  'bg-blue'
+);
+
+// Extract config from variantPropsResolver() function
+const configTestResolver = variantPropsResolver({
+  base: 'input',
+  variants: {
+    size: { small: 'h-8', large: 'h-12' },
+  },
+});
+
+type ResolverConfig = ExtractVariantConfig<typeof configTestResolver>;
+expectType<ResolverConfig['base']>('input');
+expectType<NonNullable<ResolverConfig['variants']>['size']['small']>('h-8');
+
+// Extract config from variantComponent() function - should work same as before
+const configTestComponent = variantComponent('div', {
+  base: 'container',
+  variants: {
+    spacing: { normal: 'p-4', tight: 'p-2' },
+  },
+});
+
+type ComponentConfig = ExtractVariantConfig<typeof configTestComponent>;
+expectType<ComponentConfig['base']>('container');
+expectType<NonNullable<ComponentConfig['variants']>['spacing']['normal']>(
+  'p-4'
+);

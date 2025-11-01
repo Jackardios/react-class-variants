@@ -153,7 +153,11 @@ describe('Edge Cases and Complex Scenarios', () => {
         ],
       });
 
-      const result = component({ color: 'primary', size: 'large', rounded: true });
+      const result = component({
+        color: 'primary',
+        size: 'large',
+        rounded: true,
+      });
       expect(result).toContain('shadow-lg');
       expect(result).toContain('border-blue');
       expect(result).toContain('p-4');
@@ -184,8 +188,12 @@ describe('Edge Cases and Complex Scenarios', () => {
       });
 
       expect(component({ color: 'red', size: 'small' })).toContain('uppercase');
-      expect(component({ color: 'blue', size: 'small' })).toContain('uppercase');
-      expect(component({ color: 'green', size: 'small' })).toContain('uppercase');
+      expect(component({ color: 'blue', size: 'small' })).toContain(
+        'uppercase'
+      );
+      expect(component({ color: 'green', size: 'small' })).toContain(
+        'uppercase'
+      );
     });
 
     it('should handle compound variant with single-item array', () => {
@@ -251,6 +259,7 @@ describe('Edge Cases and Complex Scenarios', () => {
         },
       });
 
+      // @ts-expect-error - Testing edge case: size is required but has undefined default
       expect(component()).toBe('bg-blue');
     });
 
@@ -319,7 +328,7 @@ describe('Edge Cases and Complex Scenarios', () => {
 
     it('should handle onClassesMerged with very long input', () => {
       const { variants } = defineConfig({
-        onClassesMerged: (cls) => cls.split(' ').reverse().join(' '),
+        onClassesMerged: cls => cls.split(' ').reverse().join(' '),
       });
 
       const classes = Array.from({ length: 100 }, (_, i) => `class-${i}`);
@@ -334,7 +343,7 @@ describe('Edge Cases and Complex Scenarios', () => {
 
     it('should handle onClassesMerged with special characters', () => {
       const { variants } = defineConfig({
-        onClassesMerged: (cls) => cls.replace(/[^a-z\s-]/gi, ''),
+        onClassesMerged: cls => cls.replace(/[^a-z\s-]/gi, ''),
       });
 
       const component = variants({
@@ -551,7 +560,7 @@ describe('Edge Cases and Complex Scenarios', () => {
   describe('Integration edge cases', () => {
     it('should handle all features combined', () => {
       const { variantComponent } = defineConfig({
-        onClassesMerged: (cls) => cls.trim().replace(/\s+/g, ' '),
+        onClassesMerged: cls => cls.trim().replace(/\s+/g, ' '),
       });
 
       const Component = variantComponent('button', {

@@ -140,6 +140,51 @@ type VariantsResolverArgs<P> = PickRequiredKeys<P> extends never
   ? [props?: P]
   : [props: P];
 
+/**
+ * Type for the variants resolver function with config metadata.
+ */
+type VariantsResolverFn<
+  C extends VariantsConfig<V>,
+  V extends VariantsSchema
+> = ((
+  ...args: VariantsResolverArgs<
+    VariantOptions<C, V> & {
+      className?: ClassNameValue;
+    }
+  >
+) => string) & {
+  /**
+   * @internal
+   * Type-only property to store configuration for type extraction.
+   * This property does not exist at runtime.
+   */
+  __config?: C;
+};
+
+/**
+ * Type for the variant props resolver function with config metadata.
+ */
+type VariantPropsResolverFn<
+  C extends VariantComponentConfig<V>,
+  V extends VariantsSchema
+> = (<P extends VariantOptions<C, V> & { className?: string }>(
+  props: P
+) => {
+  className: string;
+} & Omit<
+  P,
+  NonNullable<C['forwardProps']> extends any[]
+    ? Exclude<keyof V, NonNullable<C['forwardProps']>[number]>
+    : keyof V
+>) & {
+  /**
+   * @internal
+   * Type-only property to store configuration for type extraction.
+   * This property does not exist at runtime.
+   */
+  __config?: C;
+};
+
 // ----------------------------------------------------------------------
 // Variant Component Types
 // ----------------------------------------------------------------------
@@ -154,25 +199,79 @@ export type VariantComponentConfig<V extends VariantsSchema> =
   };
 
 /**
- * Config type with withoutRenderProp removed.
- */
-export type OnlyVariantsConfig<
-  C extends VariantComponentConfig<V>,
-  V extends VariantsSchema
-> = Omit<C, 'withoutRenderProp' | 'forwardProps'>;
-
-/**
  * Base props for a variant component, combining variant options with component props.
  */
 export type BaseVariantComponentProps<
   T extends ElementType,
   C extends VariantComponentConfig<V>,
   V extends VariantsSchema
-> = VariantOptions<OnlyVariantsConfig<C, V>, V> &
-  Omit<
-    ComponentPropsWithRef<T>,
-    keyof VariantOptions<OnlyVariantsConfig<C, V>, V>
-  >;
+> = VariantOptions<C, V> &
+  Omit<ComponentPropsWithRef<T>, keyof VariantOptions<C, V>>;
+
+/**
+ * Extracts the full configuration from a variant function, resolver, or component.
+ * @template T - The variant function, resolver, or component type
+ * @returns The VariantsConfig or VariantComponentConfig type
+ *
+ * @example
+ * // Works with variants()
+ * const buttonVariants = variants({
+ *   base: 'btn',
+ *   variants: { color: { primary: 'bg-blue' } }
+ * });
+ * type Config1 = ExtractVariantConfig<typeof buttonVariants>;
+ *
+ * // Works with variantPropsResolver()
+ * const resolveProps = variantPropsResolver({ ... });
+ * type Config2 = ExtractVariantConfig<typeof resolveProps>;
+ *
+ * // Works with variantComponent()
+ * const Button = variantComponent('button', { ... });
+ * type Config3 = ExtractVariantConfig<typeof Button>;
+ */
+export type ExtractVariantConfig<T> = T extends {
+  __config?: infer Config;
+}
+  ? Config extends VariantsConfig<any>
+    ? Prettify<Config>
+    : never
+  : never;
+
+/**
+ * Extracts variant options type from a variant function, resolver, or component.
+ * @template T - The variant function, resolver, or component type
+ * @returns The VariantOptions type
+ *
+ * @example
+ * // Works with variants()
+ * const buttonVariants = variants({
+ *   variants: { color: { primary: 'bg-blue', secondary: 'bg-gray' } }
+ * });
+ * type Options1 = ExtractVariantOptions<typeof buttonVariants>;
+ * // { color: 'primary' | 'secondary' }
+ *
+ * // Works with variantPropsResolver()
+ * const resolveProps = variantPropsResolver({
+ *   variants: { size: { small: 'text-sm', large: 'text-lg' } },
+ *   defaultVariants: { size: 'small' }
+ * });
+ * type Options2 = ExtractVariantOptions<typeof resolveProps>;
+ * // { size?: 'small' | 'large' }
+ *
+ * // Works with variantComponent()
+ * const Button = variantComponent('button', {
+ *   variants: { color: { primary: 'bg-blue' } }
+ * });
+ * type Options3 = ExtractVariantOptions<typeof Button>;
+ * // { color: 'primary' }
+ */
+export type ExtractVariantOptions<T> = T extends {
+  __config?: infer Config;
+}
+  ? Config extends VariantsConfig<infer Schema>
+    ? Prettify<VariantOptions<Config, Schema>>
+    : never
+  : never;
 
 /**
  * Render prop type.
@@ -187,10 +286,7 @@ type RenderPropFn<P = HTMLAttributes<any> & { ref?: Ref<any> }> = (
 type VariantKeysToStrip<
   C extends VariantComponentConfig<V>,
   V extends VariantsSchema
-> = Exclude<
-  keyof VariantOptions<OnlyVariantsConfig<C, V>, V>,
-  NonNullable<C['forwardProps']>[number]
->;
+> = Exclude<keyof VariantOptions<C, V>, NonNullable<C['forwardProps']>[number]>;
 
 type RenderPropType<
   P,
@@ -217,7 +313,7 @@ export type VariantComponentType<
   T extends ElementType,
   C extends VariantComponentConfig<V>,
   V extends VariantsSchema = NonNullable<C['variants']>
-> = T extends keyof JSX.IntrinsicElements
+> = (T extends keyof JSX.IntrinsicElements
   ? C extends { withoutRenderProp: true }
     ? (props: BaseVariantComponentProps<T, C, V>) => ReactElement
     : (
@@ -227,7 +323,14 @@ export type VariantComponentType<
           V
         >
       ) => ReactNode
-  : (props: BaseVariantComponentProps<T, C, V>) => ReactElement;
+  : (props: BaseVariantComponentProps<T, C, V>) => ReactElement) & {
+  /**
+   * @internal
+   * Type-only property to store component configuration for type extraction.
+   * This property does not exist at runtime.
+   */
+  __config?: C;
+};
 
 export function defineConfig(options?: VariantFactoryOptions) {
   const { onClassesMerged } = options ?? {};
@@ -268,7 +371,7 @@ export function defineConfig(options?: VariantFactoryOptions) {
   function variants<
     C extends VariantsConfig<V>,
     V extends VariantsSchema = NonNullable<C['variants']>
-  >(config: Exact<Simplify<C>, VariantsConfig<V>>) {
+  >(config: Exact<Simplify<C>, VariantsConfig<V>>): VariantsResolverFn<C, V> {
     const { base, variants, compoundVariants, defaultVariants } = config;
 
     if (!('variants' in config) || !config.variants) {
@@ -281,13 +384,7 @@ export function defineConfig(options?: VariantFactoryOptions) {
       return variant && ('false' in variant || 'true' in variant);
     }
 
-    return function (
-      ...[props]: VariantsResolverArgs<
-        VariantOptions<C, V> & {
-          className?: ClassNameValue;
-        }
-      >
-    ) {
+    return function (...[props]) {
       const result = [base];
 
       const getSelectedVariant = (name: keyof V) =>
@@ -345,7 +442,9 @@ export function defineConfig(options?: VariantFactoryOptions) {
   function variantPropsResolver<
     C extends VariantComponentConfig<V>,
     V extends VariantsSchema = NonNullable<C['variants']>
-  >(config: Exact<Simplify<C>, VariantComponentConfig<V>>) {
+  >(
+    config: Exact<Simplify<C>, VariantComponentConfig<V>>
+  ): VariantPropsResolverFn<C, V> {
     const { forwardProps, withoutRenderProp, ...variantsConfig } = config;
     const variantsResolver = variants(variantsConfig);
 
@@ -386,7 +485,7 @@ export function defineConfig(options?: VariantFactoryOptions) {
       result.className = variantsResolver(onlyVariantProps as any);
 
       return result;
-    };
+    } as VariantPropsResolverFn<C, V>;
   }
 
   /**

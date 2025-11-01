@@ -71,6 +71,8 @@ No more messy `className` logic, no more props duplication, just clean, type-saf
   - [Type Inference](#type-inference)
   - [Optional vs Required](#optional-vs-required)
   - [Type Utilities](#type-utilities)
+    - [ExtractVariantOptions](#extractvariantoptionst)
+    - [ExtractVariantConfig](#extractvariantconfigt)
 - [Usage with Different CSS Solutions](#usage-with-different-css-solutions)
   - [Tailwind CSS](#tailwind-css)
   - [CSS Modules](#css-modules)
@@ -551,12 +553,16 @@ const component = variants({
 
 ### Type Utilities
 
+React Class Variants provides several utility types for working with variants and components:
+
 ```typescript
 import type {
   VariantsConfig,
   VariantOptions,
   ClassNameValue,
   VariantComponentProps,
+  ExtractVariantOptions,
+  ExtractVariantConfig,
 } from 'react-class-variants';
 
 // Extract config type
@@ -570,6 +576,153 @@ type Props = {
   className?: ClassNameValue;
 };
 ```
+
+#### `ExtractVariantOptions<T>`
+
+**Universal type utility** that extracts variant options from any variant function, resolver, or component. Works with:
+
+- `variants()` - className resolver functions
+- `variantPropsResolver()` - props resolver functions
+- `variantComponent()` - React components
+
+This is useful when you need to reference variant props in other parts of your code.
+
+```typescript
+const { variants, variantPropsResolver, variantComponent } = defineConfig();
+
+// Works with variants()
+const buttonVariants = variants({
+  variants: {
+    color: {
+      primary: 'bg-blue-500',
+      secondary: 'bg-gray-500',
+    },
+    size: {
+      sm: 'text-sm',
+      lg: 'text-lg',
+    },
+  },
+  defaultVariants: {
+    size: 'sm',
+  },
+});
+
+type ButtonOptions1 = ExtractVariantOptions<typeof buttonVariants>;
+// Result: { color: 'primary' | 'secondary', size?: 'sm' | 'lg' }
+
+// Works with variantPropsResolver()
+const resolveButtonProps = variantPropsResolver({
+  variants: {
+    variant: { solid: 'bg-fill', outline: 'border' },
+  },
+});
+
+type ButtonOptions2 = ExtractVariantOptions<typeof resolveButtonProps>;
+// Result: { variant: 'solid' | 'outline' }
+
+// Works with variantComponent()
+const Button = variantComponent('button', {
+  variants: {
+    color: { primary: 'bg-blue-500' },
+  },
+});
+
+type ButtonOptions3 = ExtractVariantOptions<typeof Button>;
+// Result: { color: 'primary' }
+
+// Use in your own components
+function ButtonGroup({ variant }: { variant: ButtonOptions1['color'] }) {
+  return (
+    <div>
+      <Button color={variant} />
+      <Button color={variant} />
+    </div>
+  );
+}
+```
+
+**Key Points:**
+
+- **Universal:** Works with all three core functions (`variants`, `variantPropsResolver`, `variantComponent`)
+- Respects optional vs required variants (based on `defaultVariants` and boolean variants)
+- Includes only variant props (excludes native element props like `onClick`, `className`, etc.)
+- Useful for prop forwarding and composition
+
+#### `ExtractVariantConfig<T>`
+
+**Universal type utility** that extracts the full configuration from any variant function, resolver, or component. Works with:
+
+- `variants()` - className resolver functions
+- `variantPropsResolver()` - props resolver functions
+- `variantComponent()` - React components
+
+This is useful for reusing or extending configurations.
+
+```typescript
+const { variants, variantPropsResolver, variantComponent } = defineConfig();
+
+// Works with variants()
+const buttonVariants = variants({
+  base: 'rounded font-semibold',
+  variants: {
+    color: {
+      primary: 'bg-blue-500',
+      secondary: 'bg-gray-500',
+    },
+  },
+  defaultVariants: {
+    color: 'primary',
+  },
+  compoundVariants: [
+    {
+      variants: { color: 'primary' },
+      className: 'shadow-lg',
+    },
+  ],
+});
+
+type ButtonConfig1 = ExtractVariantConfig<typeof buttonVariants>;
+// Result: {
+//   base?: ClassNameValue,
+//   variants?: { color: { primary: string, secondary: string } },
+//   defaultVariants?: { color: 'primary' | 'secondary' },
+//   compoundVariants?: Array<...>
+// }
+
+// Works with variantPropsResolver()
+const resolveProps = variantPropsResolver({
+  base: 'input',
+  variants: { size: { sm: 'h-8', lg: 'h-12' } },
+});
+
+type ResolverConfig = ExtractVariantConfig<typeof resolveProps>;
+
+// Works with variantComponent()
+const Button = variantComponent('button', {
+  base: 'btn',
+  variants: { color: { primary: 'bg-blue' } },
+});
+
+type ButtonConfig2 = ExtractVariantConfig<typeof Button>;
+
+// Reuse config with modifications
+const dangerVariants = variants({
+  ...(buttonVariants as any), // Note: need type assertion for runtime config access
+  variants: {
+    color: {
+      danger: 'bg-red-500 text-white',
+      warning: 'bg-yellow-500 text-black',
+    },
+  },
+});
+```
+
+**Key Points:**
+
+- **Universal:** Works with all three core functions (`variants`, `variantPropsResolver`, `variantComponent`)
+- Extracts the complete `VariantsConfig` including `base`, `variants`, `defaultVariants`, and `compoundVariants`
+- Useful for creating derived components or sharing configurations
+- Returns a prettified type for better IDE support
 
 ## Usage with Different CSS Solutions
 
