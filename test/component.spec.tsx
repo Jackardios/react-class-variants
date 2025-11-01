@@ -253,10 +253,7 @@ describe('variantComponent', () => {
       });
 
       render(
-        <Button
-          color="primary"
-          render={({ className, children }) => <a className={className} href="/link">{children}</a>}
-        >
+        <Button color="primary" render={props => <a {...props} href="/link" />}>
           Function render
         </Button>
       );

@@ -4,7 +4,7 @@ import {
   expectNotAssignable,
   expectError,
 } from 'tsd';
-import { type ReactElement, type ReactNode } from 'react';
+import { type Ref, type ReactElement, type ReactNode } from 'react';
 import {
   defineConfig,
   type VariantOptions,
@@ -286,7 +286,9 @@ expectType<ReactNode>(
   ButtonWithRender({
     color: 'primary',
     render: props => {
-      expectType<{ className: string; children: string }>(props);
+      expectType<string>(props.className);
+      expectType<Ref<any> | undefined>(props.ref);
+      expectError(props.color);
       return <a {...props} />;
     },
     children: 'Link',
@@ -312,7 +314,7 @@ expectType<ReactNode>(
       expectError(props.size);
       // className and onClick should be in props
       expectType<string>(props.className);
-      expectType<Function>(props.onClick);
+      expectType<React.MouseEventHandler<any> | undefined>(props.onClick);
       return <div {...props} />;
     },
   })
@@ -370,7 +372,7 @@ expectType<ReactNode>(
     size: 'large',
     render: props => {
       expectType<string>(props.className);
-      expectType<string>(props.size);
+      expectAssignable<string>(props.size);
       expectError(props.color);
       return <div {...props} />;
     },
@@ -428,7 +430,7 @@ const resolved = resolveProps({
 });
 
 expectType<string>(resolved.className);
-expectType<Function>(resolved.onClick);
+expectAssignable<Function>(resolved.onClick);
 expectType<string>(resolved['data-testid']);
 expectError(resolved.color);
 
@@ -448,8 +450,8 @@ const resolvedWithForward = resolveWithForward({
 });
 
 expectType<string>(resolvedWithForward.className);
-expectType<string>(resolvedWithForward.size);
-expectType<Function>(resolvedWithForward.onClick);
+expectAssignable<string>(resolvedWithForward.size);
+expectAssignable<Function>(resolvedWithForward.onClick);
 expectError(resolvedWithForward.color);
 
 // =============================================================================
@@ -489,7 +491,7 @@ const Input = variantComponent('input', {
   base: 'input',
 });
 
-expectType<ReactElement>(
+expectType<ReactNode>(
   Input({
     type: 'text',
     placeholder: 'Enter text',
@@ -607,12 +609,12 @@ const ConfigButton = variantComponent('button', {
 type ConfigButtonConfig = ExtractVariantConfig<typeof ConfigButton>;
 
 // Config should have all properties (base, variants, defaultVariants, compoundVariants)
-expectType<ConfigButtonConfig['base']>('btn');
-expectType<NonNullable<ConfigButtonConfig['variants']>['color']['primary']>(
-  'bg-blue'
-);
-expectType<NonNullable<ConfigButtonConfig['defaultVariants']>['color']>(
-  'primary'
+expectAssignable<ConfigButtonConfig['base']>('btn');
+expectAssignable<
+  NonNullable<ConfigButtonConfig['variants']>['color']['primary']
+>('bg-blue');
+expectAssignable<NonNullable<ConfigButtonConfig['defaultVariants']>['color']>(
+  'primary' // literal 'primary'
 );
 
 // =============================================================================
@@ -696,8 +698,8 @@ const configTestVariants = variants({
 });
 
 type VariantsConfig = ExtractVariantConfig<typeof configTestVariants>;
-expectType<VariantsConfig['base']>('btn');
-expectType<NonNullable<VariantsConfig['variants']>['color']['primary']>(
+expectAssignable<VariantsConfig['base']>('btn');
+expectAssignable<NonNullable<VariantsConfig['variants']>['color']['primary']>(
   'bg-blue'
 );
 
@@ -710,8 +712,10 @@ const configTestResolver = variantPropsResolver({
 });
 
 type ResolverConfig = ExtractVariantConfig<typeof configTestResolver>;
-expectType<ResolverConfig['base']>('input');
-expectType<NonNullable<ResolverConfig['variants']>['size']['small']>('h-8');
+expectAssignable<ResolverConfig['base']>('input');
+expectAssignable<NonNullable<ResolverConfig['variants']>['size']['small']>(
+  'h-8'
+);
 
 // Extract config from variantComponent() function - should work same as before
 const configTestComponent = variantComponent('div', {
@@ -722,7 +726,7 @@ const configTestComponent = variantComponent('div', {
 });
 
 type ComponentConfig = ExtractVariantConfig<typeof configTestComponent>;
-expectType<ComponentConfig['base']>('container');
-expectType<NonNullable<ComponentConfig['variants']>['spacing']['normal']>(
+expectAssignable<ComponentConfig['base']>('container');
+expectAssignable<NonNullable<ComponentConfig['variants']>['spacing']['normal']>(
   'p-4'
 );

@@ -148,9 +148,9 @@ type VariantsResolverFn<
   V extends VariantsSchema
 > = ((
   ...args: VariantsResolverArgs<
-    VariantOptions<C, V> & {
+    {
       className?: ClassNameValue;
-    }
+    } & Omit<VariantOptions<C, V>, 'className'>
   >
 ) => string) & {
   /**
@@ -167,15 +167,19 @@ type VariantsResolverFn<
 type VariantPropsResolverFn<
   C extends VariantComponentConfig<V>,
   V extends VariantsSchema
-> = (<P extends VariantOptions<C, V> & { className?: string }>(
+> = (<
+  P extends Omit<VariantOptions<C, V>, 'className'> & { className?: string }
+>(
   props: P
 ) => {
   className: string;
 } & Omit<
   P,
-  NonNullable<C['forwardProps']> extends any[]
-    ? Exclude<keyof V, NonNullable<C['forwardProps']>[number]>
-    : keyof V
+  | 'className'
+  | '__config'
+  | (C['forwardProps'] extends (keyof V)[]
+      ? Exclude<keyof V, C['forwardProps'][number]>
+      : keyof V)
 >) & {
   /**
    * @internal
@@ -280,23 +284,26 @@ export type ExtractVariantOptions<T> = T extends {
  * const children: RenderPropFn = (props) => <div {...props} />;
  */
 type RenderPropFn<P = HTMLAttributes<any> & { ref?: Ref<any> }> = (
-  props: Prettify<P>
+  props: P
 ) => ReactNode;
 
-type VariantKeysToStrip<
-  C extends VariantComponentConfig<V>,
-  V extends VariantsSchema
-> = Exclude<keyof VariantOptions<C, V>, NonNullable<C['forwardProps']>[number]>;
-
 type RenderPropType<
-  P,
   C extends VariantComponentConfig<V>,
   V extends VariantsSchema
 > =
   | RenderPropFn<
-      {
-        className: string;
-      } & Omit<P, VariantKeysToStrip<C, V> | 'render' | 'className'>
+      Prettify<
+        {
+          className: string;
+          ref?: Ref<any>;
+        } & (C['forwardProps'] extends (keyof VariantOptions<C, V>)[]
+          ? Pick<VariantOptions<C, V>, C['forwardProps'][number]>
+          : {}) &
+          Omit<
+            HTMLAttributes<any>,
+            'render' | 'className' | keyof VariantOptions<C, V>
+          >
+      >
     >
   | ReactElement;
 
@@ -307,7 +314,7 @@ export type VariantComponentPropsWithRender<
   P,
   C extends VariantComponentConfig<V>,
   V extends VariantsSchema
-> = Simplify<{ render?: RenderPropType<P, C, V> } & P>;
+> = Simplify<{ render?: RenderPropType<C, V> } & P>;
 
 export type VariantComponentType<
   T extends ElementType,
@@ -442,9 +449,7 @@ export function defineConfig(options?: VariantFactoryOptions) {
   function variantPropsResolver<
     C extends VariantComponentConfig<V>,
     V extends VariantsSchema = NonNullable<C['variants']>
-  >(
-    config: Exact<Simplify<C>, VariantComponentConfig<V>>
-  ): VariantPropsResolverFn<C, V> {
+  >(config: Exact<Simplify<C>, VariantComponentConfig<V>>) {
     const { forwardProps, withoutRenderProp, ...variantsConfig } = config;
     const variantsResolver = variants(variantsConfig);
 
@@ -463,6 +468,7 @@ export function defineConfig(options?: VariantFactoryOptions) {
           ? Exclude<keyof V, ForwardPropKey[number]>
           : keyof V
       >;
+
       const onlyVariantProps = {
         className: result.className,
       } as OnlyVariantProps;
