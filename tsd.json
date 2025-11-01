@@ -1,5 +1,4 @@
 {
-  "directory": "test",
   "compilerOptions": {
     "strict": true,
     "jsx": "react-jsx",
