@@ -36,14 +36,27 @@ type Exact<T, Shape> = T extends Shape
 
 // ----------------------------------------------------------------------
 
+/**
+ * Represents a className value that can be a string, null, undefined, or an array of ClassNameValues.
+ * Nested arrays are flattened when resolved.
+ *
+ * @example
+ * // All valid ClassNameValue examples:
+ * const a: ClassNameValue = 'px-4 py-2';
+ * const b: ClassNameValue = ['px-4', 'py-2'];
+ * const c: ClassNameValue = [['px-4'], ['py-2', null]];
+ * const d: ClassNameValue = null;
+ */
 export type ClassNameValue = string | null | undefined | ClassNameValue[];
 
 /**
  * Definition of the available variants and their options.
+ * Each key is a variant name, and each value is an object mapping variant values to class names.
+ *
  * @example
  * {
  *   color: {
- *     white: "bg-white"
+ *     white: "bg-white",
  *     green: "bg-green-500",
  *   },
  *   size: {
@@ -54,6 +67,25 @@ export type ClassNameValue = string | null | undefined | ClassNameValue[];
  */
 export type VariantsSchema = Record<string, Record<string, ClassNameValue>>;
 
+/**
+ * Configuration object for defining variants.
+ *
+ * @template V - The variants schema type
+ *
+ * @property base - Base class names applied to all variants
+ * @property variants - Object defining available variants and their class names
+ * @property defaultVariants - Default values for optional variants
+ * @property compoundVariants - Rules for class names applied when multiple variants match
+ *
+ * @example
+ * const config: VariantsConfig<{ color: { primary: string } }> = {
+ *   base: 'btn',
+ *   variants: {
+ *     color: { primary: 'bg-blue-500' }
+ *   },
+ *   defaultVariants: { color: 'primary' }
+ * };
+ */
 export type VariantsConfig<V extends VariantsSchema> = {
   base?: ClassNameValue;
   variants?: V;
@@ -122,6 +154,24 @@ type OptionalVariantNames<
   V extends VariantsSchema = NonNullable<C['variants']>
 > = keyof BooleanVariants<C, V> | keyof DefaultVariants<C, V>;
 
+/**
+ * Extracts the variant props type from a configuration.
+ * Required variants become required props, optional variants (boolean or with defaults) become optional props.
+ *
+ * @template C - The variants configuration type
+ * @template V - The variants schema type
+ *
+ * @example
+ * type Config = {
+ *   variants: {
+ *     color: { primary: string; secondary: string };
+ *     disabled: { true: string; false: string };
+ *   };
+ *   defaultVariants: { color: 'primary' };
+ * };
+ * type Options = VariantOptions<Config>;
+ * // { color?: 'primary' | 'secondary'; disabled?: boolean }
+ */
 export type VariantOptions<
   C extends VariantsConfig<V>,
   V extends VariantsSchema = NonNullable<C['variants']>
@@ -132,7 +182,18 @@ export type VariantOptions<
 
 // ----------------------------------------------------------------------
 
+/**
+ * Options for configuring the variant factory via defineConfig.
+ */
 export interface VariantFactoryOptions {
+  /**
+   * Optional function to process/merge the final class name string.
+   * Useful for integrating with utilities like tailwind-merge.
+   *
+   * @example
+   * import { twMerge } from 'tailwind-merge';
+   * const { variants } = defineConfig({ onClassesMerged: twMerge });
+   */
   onClassesMerged?: (className: string) => string;
 }
 
@@ -195,6 +256,18 @@ type VariantPropsResolverFn<
 
 /**
  * Configuration for variant component with optional render prop control.
+ *
+ * @template V - The variants schema type
+ *
+ * @property withoutRenderProp - When true, disables the polymorphic `render` prop pattern
+ * @property forwardProps - Array of variant prop names to forward to the rendered element
+ *
+ * @example
+ * const config: VariantComponentConfig<{ size: { sm: string } }> = {
+ *   variants: { size: { sm: 'text-sm' } },
+ *   forwardProps: ['size'],
+ *   withoutRenderProp: true
+ * };
  */
 export type VariantComponentConfig<V extends VariantsSchema> =
   VariantsConfig<V> & {
@@ -204,6 +277,11 @@ export type VariantComponentConfig<V extends VariantsSchema> =
 
 /**
  * Base props for a variant component, combining variant options with component props.
+ * Variant props take precedence over native element props when there are naming conflicts.
+ *
+ * @template T - The element type (HTML tag or component)
+ * @template C - The variant component configuration type
+ * @template V - The variants schema type
  */
 export type BaseVariantComponentProps<
   T extends ElementType,
