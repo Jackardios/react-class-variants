@@ -24,8 +24,12 @@ type OmitByValue<T, Value> = {
   [P in keyof T as T[P] extends Value ? never : P]: T[P];
 };
 type StringToBoolean<T> = T extends 'true' | 'false' ? boolean : T;
-type Simplify<T> = { [K in keyof T]: T[K] };
-type Prettify<T> = {
+
+/**
+ * Simplifies a type by expanding intersections and mapped types for better IDE display.
+ * The `& {}` forces TypeScript to eagerly evaluate the type.
+ */
+type Simplify<T> = {
   [K in keyof T]: T[K];
 } & {};
 type Exact<T, Shape> = T extends Shape
@@ -315,7 +319,7 @@ export type ExtractVariantConfig<T> = T extends {
   __config?: infer Config;
 }
   ? Config extends VariantsConfig<any>
-    ? Prettify<Config>
+    ? Simplify<Config>
     : never
   : never;
 
@@ -351,7 +355,7 @@ export type ExtractVariantOptions<T> = T extends {
   __config?: infer Config;
 }
   ? Config extends VariantsConfig<infer Schema>
-    ? Prettify<VariantOptions<Config, Schema>>
+    ? Simplify<VariantOptions<Config, Schema>>
     : never
   : never;
 
@@ -370,7 +374,7 @@ type RenderPropType<
   V extends VariantsSchema
 > =
   | RenderPropFn<
-      Prettify<
+      Simplify<
         {
           className: string;
           ref?: Ref<any>;
