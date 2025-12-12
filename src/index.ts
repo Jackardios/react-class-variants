@@ -461,43 +461,52 @@ export function defineConfig(options?: VariantFactoryOptions) {
     C extends VariantsConfig<V>,
     V extends VariantsSchema = NonNullable<C['variants']>
   >(config: Exact<Simplify<C>, VariantsConfig<V>>): VariantsResolverFn<C, V> {
-    const { base, variants, compoundVariants, defaultVariants } = config;
+    const { base, variants: configVariants, compoundVariants, defaultVariants } =
+      config;
 
-    if (!('variants' in config) || !config.variants) {
+    if (!configVariants) {
       return (props?: { className?: ClassNameValue }) =>
         mergeClassNames(base, props?.className);
     }
 
-    function isBooleanVariant(name: keyof V) {
-      const variant = (variants as V)?.[name];
-      return variant && ('false' in variant || 'true' in variant);
+    // Store a reference to variants that TypeScript knows is defined
+    const variants = configVariants;
+
+    // Pre-compute boolean variants for performance (avoids repeated 'in' checks)
+    const booleanVariants = new Set<string>();
+    const variantNames: string[] = [];
+    for (const name of Object.keys(variants)) {
+      variantNames.push(name);
+      const variant = variants[name];
+      if (variant && ('false' in variant || 'true' in variant)) {
+        booleanVariants.add(name);
+      }
     }
 
     return function (...[props]) {
-      const result = [base];
+      const result: ClassNameValue[] = [base];
 
-      const getSelectedVariant = (name: keyof V) =>
+      const getSelectedVariant = (name: string) =>
         (props as any)?.[name] ??
-        defaultVariants?.[name] ??
-        (isBooleanVariant(name) ? false : undefined);
+        defaultVariants?.[name as keyof V] ??
+        (booleanVariants.has(name) ? false : undefined);
 
-      for (let name in variants) {
+      for (const name of variantNames) {
         const selected = getSelectedVariant(name);
         if (selected !== undefined) result.push(variants[name]?.[selected]);
       }
 
-      for (let { variants, className } of compoundVariants ?? []) {
-        function isSelectedVariant(name: string) {
+      for (const cv of compoundVariants ?? []) {
+        const cvVariants = cv.variants;
+        const matches = Object.keys(cvVariants).every((name) => {
           const selected = getSelectedVariant(name);
-          const cvSelector = variants[name];
-
+          const cvSelector = cvVariants[name];
           return Array.isArray(cvSelector)
             ? cvSelector.includes(selected)
             : selected === cvSelector;
-        }
-
-        if (Object.keys(variants).every(isSelectedVariant)) {
-          result.push(className);
+        });
+        if (matches) {
+          result.push(cv.className);
         }
       }
 
