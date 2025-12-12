@@ -622,10 +622,25 @@ export function defineConfig(options?: VariantFactoryOptions) {
 
     const resolveProps = variantPropsResolver<C, V>(config);
 
+    // Helper to get display name for the component
+    const getDisplayName = (): string => {
+      if (typeof elementType === 'string') {
+        return elementType;
+      }
+      return (
+        (elementType as { displayName?: string }).displayName ||
+        (elementType as { name?: string }).name ||
+        'Component'
+      );
+    };
+
     if (typeof elementType !== 'string' || withoutRenderProp) {
-      return ((props: BaseProps) => {
+      const component = ((props: BaseProps) => {
         return createElement(elementType, resolveProps(props as any));
       }) as VariantComponentType<T, C, V>;
+      (component as { displayName?: string }).displayName =
+        `Variant(${getDisplayName()})`;
+      return component;
     }
 
     type ComponentProps = VariantComponentPropsWithRender<BaseProps, C, V>;
@@ -649,6 +664,9 @@ export function defineConfig(options?: VariantFactoryOptions) {
 
       return createElement(elementType, { ...resolvedProps, ref: mergedRef });
     }) as VariantComponentType<T, C, V>;
+
+    (component as { displayName?: string }).displayName =
+      `Variant(${getDisplayName()})`;
 
     return component;
   }
