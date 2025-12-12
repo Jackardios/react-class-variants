@@ -730,3 +730,265 @@ expectAssignable<ComponentConfig['base']>('container');
 expectAssignable<NonNullable<ComponentConfig['variants']>['spacing']['normal']>(
   'p-4'
 );
+
+// =============================================================================
+// Compound Variants Type Tests
+// =============================================================================
+
+// Compound variants with array matching
+const compoundArrayVariants = variants({
+  variants: {
+    color: {
+      primary: 'bg-blue',
+      secondary: 'bg-gray',
+      danger: 'bg-red',
+    },
+    size: {
+      sm: 'text-sm',
+      lg: 'text-lg',
+    },
+  },
+  compoundVariants: [
+    {
+      variants: {
+        color: ['primary', 'secondary'],
+        size: 'lg',
+      },
+      className: 'font-bold',
+    },
+  ],
+});
+
+expectType<string>(compoundArrayVariants({ color: 'primary', size: 'lg' }));
+expectType<string>(compoundArrayVariants({ color: 'danger', size: 'sm' }));
+
+// Compound variants should not affect required vs optional
+expectError(compoundArrayVariants());
+expectError(compoundArrayVariants({ color: 'primary' }));
+
+// =============================================================================
+// ClassNameValue in Different Positions Type Tests
+// =============================================================================
+
+// Array className in variants
+const arrayClassVariants = variants({
+  base: ['base', 'class'],
+  variants: {
+    color: {
+      primary: ['bg-blue', 'text-white'],
+      secondary: ['bg-gray', null, 'text-black'],
+    },
+  },
+  compoundVariants: [
+    {
+      variants: { color: 'primary' },
+      className: ['compound', ['nested']],
+    },
+  ],
+});
+
+expectType<string>(arrayClassVariants({ color: 'primary' }));
+
+// Null/undefined in className arrays
+const nullableClassVariants = variants({
+  base: [null, 'base', undefined],
+  variants: {
+    size: {
+      sm: [null, 'sm', undefined],
+    },
+  },
+});
+
+expectType<string>(nullableClassVariants({ size: 'sm' }));
+
+// =============================================================================
+// Component with Complex Props Type Tests
+// =============================================================================
+
+// Component with intersection of variant props and HTML attributes
+const ComplexButton = variantComponent('button', {
+  base: 'btn',
+  variants: {
+    color: { primary: 'bg-blue' },
+    // 'type' is also an HTML button attribute - variant should win
+    variant: { solid: 'solid', outline: 'outline' },
+  },
+});
+
+expectType<ReactNode>(
+  ComplexButton({
+    color: 'primary',
+    variant: 'solid',
+    type: 'submit', // HTML attribute
+    children: 'Click',
+  })
+);
+
+// =============================================================================
+// defineConfig Type Tests
+// =============================================================================
+
+// With onClassesMerged callback
+const { variants: mergedVariants } = defineConfig({
+  onClassesMerged: (cls: string) => cls.toUpperCase(),
+});
+
+const mergedButton = mergedVariants({
+  base: 'btn',
+});
+
+expectType<string>(mergedButton());
+
+// Empty config
+const { variants: emptyConfigVariants } = defineConfig({});
+const emptyConfigButton = emptyConfigVariants({ base: 'btn' });
+expectType<string>(emptyConfigButton());
+
+// =============================================================================
+// Type Inference Edge Cases
+// =============================================================================
+
+// Variant with undefined value
+const undefinedVariantValue = variants({
+  base: 'btn',
+  variants: {
+    color: {
+      primary: 'bg-blue',
+      none: undefined,
+    },
+  },
+});
+
+expectType<string>(undefinedVariantValue({ color: 'primary' }));
+expectType<string>(undefinedVariantValue({ color: 'none' }));
+
+// Variant with null value
+const nullVariantValue = variants({
+  base: 'btn',
+  variants: {
+    color: {
+      primary: 'bg-blue',
+      none: null,
+    },
+  },
+});
+
+expectType<string>(nullVariantValue({ color: 'primary' }));
+expectType<string>(nullVariantValue({ color: 'none' }));
+
+// Many variants
+const manyVariants = variants({
+  variants: {
+    a: { x: 'a' },
+    b: { x: 'b' },
+    c: { x: 'c' },
+    d: { x: 'd' },
+    e: { x: 'e' },
+    f: { true: 'f-true', false: 'f-false' },
+    g: { true: 'g-true', false: 'g-false' },
+  },
+  defaultVariants: {
+    a: 'x',
+    b: 'x',
+  },
+});
+
+// c, d, e are required; a, b have defaults; f, g are boolean (optional)
+expectError(manyVariants());
+expectType<string>(manyVariants({ c: 'x', d: 'x', e: 'x' }));
+expectType<string>(manyVariants({ a: 'x', c: 'x', d: 'x', e: 'x', f: true }));
+
+// =============================================================================
+// Render Prop Edge Cases Type Tests
+// =============================================================================
+
+// Render function should receive correct props type
+const RenderPropsButton = variantComponent('button', {
+  variants: {
+    color: { primary: 'bg-blue' },
+  },
+});
+
+expectType<ReactNode>(
+  RenderPropsButton({
+    color: 'primary',
+    id: 'custom-id',
+    render: (props) => {
+      // Should have className
+      expectType<string>(props.className);
+      // Should have id passed through
+      expectAssignable<string | undefined>(props.id);
+      // Should NOT have color (variant prop)
+      expectError(props.color);
+      return <div {...props} />;
+    },
+  })
+);
+
+// =============================================================================
+// Empty/Minimal Configuration Type Tests
+// =============================================================================
+
+// Completely empty variants object
+const emptyVariantsObject = variants({
+  variants: {},
+});
+expectType<string>(emptyVariantsObject());
+expectType<string>(emptyVariantsObject({ className: 'test' }));
+
+// Undefined variants
+const undefinedVariantsConfig = variants({
+  base: 'btn',
+  variants: undefined,
+});
+expectType<string>(undefinedVariantsConfig());
+
+// Empty component config
+const EmptyComponent = variantComponent('div', {});
+expectType<ReactNode>(EmptyComponent({ children: 'test' }));
+expectType<ReactNode>(EmptyComponent({ className: 'custom' }));
+
+// =============================================================================
+// forwardProps Type Tests
+// =============================================================================
+
+// forwardProps should include variant props in render function
+const ForwardAllButton = variantComponent('button', {
+  variants: {
+    color: { primary: 'bg-blue', secondary: 'bg-gray' },
+    size: { sm: 'text-sm', lg: 'text-lg' },
+  },
+  forwardProps: ['color', 'size'],
+});
+
+expectType<ReactNode>(
+  ForwardAllButton({
+    color: 'primary',
+    size: 'lg',
+    render: (props) => {
+      // Both color and size should be available since they're forwarded
+      expectAssignable<string>(props.color);
+      expectAssignable<string>(props.size);
+      expectType<string>(props.className);
+      return <span {...props} />;
+    },
+  })
+);
+
+// Empty forwardProps
+const NoForwardButton = variantComponent('button', {
+  variants: {
+    color: { primary: 'bg-blue' },
+  },
+  forwardProps: [],
+});
+
+expectType<ReactNode>(
+  NoForwardButton({
+    color: 'primary',
+    render: (props) => {
+      expectError(props.color); // Not forwarded
+      return <span {...props} />;
+    },
+  })
+);

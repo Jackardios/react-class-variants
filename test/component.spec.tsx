@@ -664,4 +664,247 @@ describe('variantComponent', () => {
       expect(button).not.toHaveClass('bg-blue');
     });
   });
+
+  describe('displayName', () => {
+    it('should set displayName for string element type', () => {
+      const Button = variantComponent('button', {
+        base: 'btn',
+      });
+
+      expect((Button as any).displayName).toBe('Variant(button)');
+    });
+
+    it('should set displayName for custom component with displayName', () => {
+      const CustomButton = forwardRef<
+        HTMLButtonElement,
+        ComponentPropsWithRef<'button'>
+      >((props, ref) => <button {...props} ref={ref} />);
+      CustomButton.displayName = 'CustomButton';
+
+      const Button = variantComponent(CustomButton, {
+        base: 'btn',
+      });
+
+      expect((Button as any).displayName).toBe('Variant(CustomButton)');
+    });
+
+    it('should set displayName for custom component with name property', () => {
+      function NamedButton(props: ComponentPropsWithRef<'button'>) {
+        return <button {...props} />;
+      }
+
+      const Button = variantComponent(NamedButton, {
+        base: 'btn',
+      });
+
+      expect((Button as any).displayName).toBe('Variant(NamedButton)');
+    });
+
+    it('should set displayName for anonymous component', () => {
+      const Button = variantComponent(
+        forwardRef<HTMLButtonElement, ComponentPropsWithRef<'button'>>(
+          (props, ref) => <button {...props} ref={ref} />
+        ),
+        { base: 'btn' }
+      );
+
+      // Anonymous forwardRef components have empty displayName
+      expect((Button as any).displayName).toMatch(/^Variant\(/);
+    });
+
+    it('should set displayName with withoutRenderProp', () => {
+      const Button = variantComponent('button', {
+        base: 'btn',
+        withoutRenderProp: true,
+      });
+
+      expect((Button as any).displayName).toBe('Variant(button)');
+    });
+
+    it('should set displayName for different HTML elements', () => {
+      const Div = variantComponent('div', { base: 'box' });
+      const Span = variantComponent('span', { base: 'inline' });
+      const Input = variantComponent('input', { base: 'field' });
+      const Anchor = variantComponent('a', { base: 'link' });
+
+      expect((Div as any).displayName).toBe('Variant(div)');
+      expect((Span as any).displayName).toBe('Variant(span)');
+      expect((Input as any).displayName).toBe('Variant(input)');
+      expect((Anchor as any).displayName).toBe('Variant(a)');
+    });
+  });
+
+  describe('various HTML elements', () => {
+    it('should work with div element', () => {
+      const Box = variantComponent('div', {
+        base: 'box',
+        variants: {
+          padding: { sm: 'p-2', lg: 'p-8' },
+        },
+      });
+
+      render(<Box padding="lg" data-testid="box">Content</Box>);
+      const box = screen.getByTestId('box');
+
+      expect(box.tagName).toBe('DIV');
+      expect(box).toHaveClass('box', 'p-8');
+    });
+
+    it('should work with span element', () => {
+      const Badge = variantComponent('span', {
+        base: 'badge',
+        variants: {
+          color: { success: 'bg-green', error: 'bg-red' },
+        },
+      });
+
+      render(<Badge color="success">OK</Badge>);
+      const badge = screen.getByText('OK');
+
+      expect(badge.tagName).toBe('SPAN');
+      expect(badge).toHaveClass('badge', 'bg-green');
+    });
+
+    it('should work with input element', () => {
+      const Input = variantComponent('input', {
+        base: 'input',
+        variants: {
+          size: { sm: 'text-sm', lg: 'text-lg' },
+        },
+      });
+
+      render(<Input size="sm" placeholder="Enter text" data-testid="input" />);
+      const input = screen.getByTestId('input');
+
+      expect(input.tagName).toBe('INPUT');
+      expect(input).toHaveClass('input', 'text-sm');
+      expect(input).toHaveAttribute('placeholder', 'Enter text');
+    });
+
+    it('should work with textarea element', () => {
+      const Textarea = variantComponent('textarea', {
+        base: 'textarea',
+      });
+
+      render(<Textarea rows={5} data-testid="textarea" />);
+      const textarea = screen.getByTestId('textarea');
+
+      expect(textarea.tagName).toBe('TEXTAREA');
+      expect(textarea).toHaveAttribute('rows', '5');
+    });
+
+    it('should work with select element', () => {
+      const Select = variantComponent('select', {
+        base: 'select',
+      });
+
+      render(
+        <Select data-testid="select">
+          <option value="1">One</option>
+          <option value="2">Two</option>
+        </Select>
+      );
+      const select = screen.getByTestId('select');
+
+      expect(select.tagName).toBe('SELECT');
+      expect(select).toHaveClass('select');
+    });
+  });
+
+  describe('aria and accessibility attributes', () => {
+    it('should pass through aria attributes', () => {
+      const Button = variantComponent('button', { base: 'btn' });
+
+      render(
+        <Button
+          aria-label="Close dialog"
+          aria-pressed={true}
+          aria-disabled={false}
+          aria-describedby="tooltip"
+        >
+          ×
+        </Button>
+      );
+
+      const button = screen.getByRole('button');
+      expect(button).toHaveAttribute('aria-label', 'Close dialog');
+      expect(button).toHaveAttribute('aria-pressed', 'true');
+      expect(button).toHaveAttribute('aria-disabled', 'false');
+      expect(button).toHaveAttribute('aria-describedby', 'tooltip');
+    });
+
+    it('should pass through role attribute', () => {
+      const Div = variantComponent('div', { base: 'alert' });
+
+      render(<Div role="alert">Error message</Div>);
+
+      const element = screen.getByRole('alert');
+      expect(element).toBeInTheDocument();
+    });
+
+    it('should work with disabled button', () => {
+      const Button = variantComponent('button', {
+        base: 'btn',
+        variants: {
+          variant: { primary: 'bg-blue', disabled: 'bg-gray' },
+        },
+      });
+
+      render(
+        <Button variant="disabled" disabled>
+          Disabled
+        </Button>
+      );
+
+      const button = screen.getByRole('button');
+      expect(button).toBeDisabled();
+      expect(button).toHaveClass('bg-gray');
+    });
+  });
+
+  describe('multiple instances', () => {
+    it('should create independent component instances', () => {
+      const Button = variantComponent('button', {
+        base: 'btn',
+        variants: {
+          color: { red: 'bg-red', blue: 'bg-blue' },
+        },
+      });
+
+      render(
+        <>
+          <Button color="red" data-testid="btn1">Red</Button>
+          <Button color="blue" data-testid="btn2">Blue</Button>
+        </>
+      );
+
+      const btn1 = screen.getByTestId('btn1');
+      const btn2 = screen.getByTestId('btn2');
+
+      expect(btn1).toHaveClass('bg-red');
+      expect(btn1).not.toHaveClass('bg-blue');
+      expect(btn2).toHaveClass('bg-blue');
+      expect(btn2).not.toHaveClass('bg-red');
+    });
+
+    it('should handle rapid state changes', () => {
+      const Button = variantComponent('button', {
+        base: 'btn',
+        variants: {
+          active: { true: 'active', false: 'inactive' },
+        },
+      });
+
+      const { rerender } = render(<Button active={true}>Test</Button>);
+
+      // Loop 10 times (0-9), last iteration i=9, 9%2===1, so active=false
+      for (let i = 0; i < 10; i++) {
+        rerender(<Button active={i % 2 === 0}>Test</Button>);
+      }
+
+      const button = screen.getByText('Test');
+      // Last iteration: 9 % 2 === 1, so active={false} → 'inactive'
+      expect(button).toHaveClass('inactive');
+    });
+  });
 });
