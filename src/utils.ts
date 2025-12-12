@@ -10,6 +10,15 @@ import {
 
 /**
  * Checks whether `prop` is an own property of `obj` or not.
+ * Uses Object.hasOwn when available, falls back to Object.prototype.hasOwnProperty.
+ *
+ * @param object - The object to check
+ * @param prop - The property name to check for
+ * @returns True if the property is an own property of the object
+ *
+ * @example
+ * hasOwnProperty({ foo: 1 }, 'foo'); // true
+ * hasOwnProperty({ foo: 1 }, 'bar'); // false
  */
 export function hasOwnProperty<T extends Record<string, any>>(
   object: T,
@@ -23,7 +32,15 @@ export function hasOwnProperty<T extends Record<string, any>>(
 }
 
 /**
- * Checks if an element is a valid React element with a ref.
+ * Checks if an element is a valid React element with a ref property.
+ *
+ * @param element - The value to check
+ * @returns True if the element is a valid React element with a ref
+ *
+ * @example
+ * isValidElementWithRef(<div ref={ref} />); // true
+ * isValidElementWithRef(<div />); // depends on React version
+ * isValidElementWithRef(null); // false
  */
 export function isValidElementWithRef<P extends { ref?: Ref<any> }>(
   element: unknown
@@ -36,7 +53,16 @@ export function isValidElementWithRef<P extends { ref?: Ref<any> }>(
 }
 
 /**
- * Gets the ref property from a React element.
+ * Extracts the ref property from a React element.
+ * Returns null if the element is not a valid React element or has no ref.
+ *
+ * @param element - The React element to extract ref from
+ * @returns The ref property or null
+ *
+ * @example
+ * const ref = createRef();
+ * getRefProperty(<div ref={ref} />); // ref
+ * getRefProperty(<div />); // null
  */
 export function getRefProperty(element: unknown) {
   if (!isValidElementWithRef(element)) return null;
@@ -45,7 +71,17 @@ export function getRefProperty(element: unknown) {
 }
 
 /**
- * Sets both a function and object React ref.
+ * Sets a React ref value, handling both function refs and object refs.
+ *
+ * @param ref - The ref to set (function ref, object ref, or null/undefined)
+ * @param value - The value to set the ref to
+ *
+ * @example
+ * const objRef = createRef<HTMLDivElement>();
+ * setRef(objRef, element); // objRef.current = element
+ *
+ * const fnRef = (el) => console.log(el);
+ * setRef(fnRef, element); // calls fnRef(element)
  */
 export function setRef<T>(
   ref: RefCallback<T> | RefObject<T> | null | undefined,
@@ -59,7 +95,16 @@ export function setRef<T>(
 }
 
 /**
- * Merges two sets of props.
+ * Merges two sets of props with special handling for className, style, and event handlers.
+ *
+ * - className: Concatenated with space separator
+ * - style: Shallow merged (override wins for same property)
+ * - event handlers (on*): Both handlers are called (override first, then base)
+ * - other props: Override replaces base
+ *
+ * @param base - Base props object
+ * @param overrides - Props to merge on top of base
+ * @returns Merged props object
  */
 export function mergeProps<T extends HTMLAttributes<any>>(
   base: T,
