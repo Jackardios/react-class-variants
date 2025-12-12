@@ -1,5 +1,11 @@
 # react-tailwind-variants
 
+## 2.0.0-alpha.2
+
+### Patch Changes
+
+- 5dab28e: Optimize variants resolver function performance by pre-computing boolean variants and caching variant names
+
 ## 2.0.0-alpha.1
 
 ### Minor Changes
