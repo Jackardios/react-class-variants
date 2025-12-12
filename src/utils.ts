@@ -109,17 +109,22 @@ export function setRef<T>(
 export function mergeProps<T extends HTMLAttributes<any>>(
   base: T,
   overrides: T
-) {
+): T {
   const props = { ...base };
 
   for (const key in overrides) {
     if (!hasOwnProperty(overrides, key)) continue;
 
     if (key === 'className') {
-      const prop = 'className';
-      props[prop] = base[prop]
-        ? `${base[prop]} ${overrides[prop]}`
-        : overrides[prop];
+      const baseClass = base.className;
+      const overrideClass = overrides.className;
+
+      if (baseClass && overrideClass) {
+        props.className = `${baseClass} ${overrideClass}`;
+      } else if (overrideClass !== undefined) {
+        props.className = overrideClass;
+      }
+
       continue;
     }
 
