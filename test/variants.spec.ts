@@ -1234,5 +1234,134 @@ describe('variantPropsResolver()', () => {
         onClick,
       });
     });
+
+    describe('with compound variants', () => {
+      it('should apply compound variant classes', () => {
+        const resolve = variantPropsResolver({
+          base: 'btn',
+          variants: {
+            color: { primary: 'bg-blue', secondary: 'bg-gray' },
+            size: { sm: 'text-sm', lg: 'text-lg' },
+          },
+          compoundVariants: [
+            {
+              variants: { color: 'primary', size: 'lg' },
+              className: 'font-bold',
+            },
+          ],
+        });
+
+        const result = resolve({ color: 'primary', size: 'lg' } as any);
+        expect(result.className).toBe('btn bg-blue text-lg font-bold');
+      });
+
+      it('should not apply compound variant when conditions not met', () => {
+        const resolve = variantPropsResolver({
+          base: 'btn',
+          variants: {
+            color: { primary: 'bg-blue', secondary: 'bg-gray' },
+            size: { sm: 'text-sm', lg: 'text-lg' },
+          },
+          compoundVariants: [
+            {
+              variants: { color: 'primary', size: 'lg' },
+              className: 'font-bold',
+            },
+          ],
+        });
+
+        const result = resolve({ color: 'primary', size: 'sm' } as any);
+        expect(result.className).toBe('btn bg-blue text-sm');
+        expect(result.className).not.toContain('font-bold');
+      });
+
+      it('should work with array variant selectors in compound variants', () => {
+        const resolve = variantPropsResolver({
+          base: 'btn',
+          variants: {
+            color: { primary: 'bg-blue', secondary: 'bg-gray', danger: 'bg-red' },
+            size: { sm: 'text-sm', lg: 'text-lg' },
+          },
+          compoundVariants: [
+            {
+              variants: { color: ['primary', 'secondary'], size: 'lg' },
+              className: 'ring-2',
+            },
+          ],
+        });
+
+        expect(resolve({ color: 'primary', size: 'lg' } as any).className).toContain('ring-2');
+        expect(resolve({ color: 'secondary', size: 'lg' } as any).className).toContain('ring-2');
+        expect(resolve({ color: 'danger', size: 'lg' } as any).className).not.toContain('ring-2');
+      });
+
+      it('should apply multiple compound variants when all match', () => {
+        const resolve = variantPropsResolver({
+          variants: {
+            color: { primary: 'bg-blue' },
+            size: { lg: 'text-lg' },
+            disabled: { true: 'opacity-50', false: 'opacity-100' },
+          },
+          compoundVariants: [
+            {
+              variants: { color: 'primary', size: 'lg' },
+              className: 'font-bold',
+            },
+            {
+              variants: { color: 'primary', disabled: true },
+              className: 'cursor-not-allowed',
+            },
+          ],
+        });
+
+        const result = resolve({ color: 'primary', size: 'lg', disabled: true } as any);
+        expect(result.className).toContain('font-bold');
+        expect(result.className).toContain('cursor-not-allowed');
+      });
+
+      it('should work with default variants in compound matching', () => {
+        const resolve = variantPropsResolver({
+          variants: {
+            color: { primary: 'bg-blue', secondary: 'bg-gray' },
+            size: { sm: 'text-sm', lg: 'text-lg' },
+          },
+          defaultVariants: {
+            size: 'lg',
+          },
+          compoundVariants: [
+            {
+              variants: { color: 'primary', size: 'lg' },
+              className: 'font-bold',
+            },
+          ],
+        });
+
+        // size defaults to 'lg', so compound should match
+        const result = resolve({ color: 'primary' } as any);
+        expect(result.className).toContain('font-bold');
+      });
+
+      it('should combine forwardProps with compound variants', () => {
+        const resolve = variantPropsResolver({
+          variants: {
+            color: { primary: 'bg-blue' },
+            size: { lg: 'text-lg' },
+          },
+          compoundVariants: [
+            {
+              variants: { color: 'primary', size: 'lg' },
+              className: 'font-bold',
+            },
+          ],
+          forwardProps: ['size'],
+        });
+
+        const result = resolve({ color: 'primary', size: 'lg', id: 'test' } as any);
+        expect(result.className).toBe('bg-blue text-lg font-bold');
+        expect(result).toHaveProperty('size', 'lg'); // forwarded
+        expect(result).not.toHaveProperty('color'); // not forwarded
+        expect(result).toHaveProperty('id', 'test');
+      });
+    });
   });
 });

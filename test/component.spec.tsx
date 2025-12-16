@@ -907,4 +907,262 @@ describe('variantComponent', () => {
       expect(button).toHaveClass('inactive');
     });
   });
+
+  describe('SSR compatibility', () => {
+    it('should render to string without errors', async () => {
+      const { renderToString } = await import('react-dom/server');
+
+      const Button = variantComponent('button', {
+        base: 'btn',
+        variants: {
+          color: { primary: 'bg-blue', secondary: 'bg-gray' },
+        },
+      });
+
+      const html = renderToString(<Button color="primary">SSR Button</Button>);
+
+      expect(html).toContain('btn');
+      expect(html).toContain('bg-blue');
+      expect(html).toContain('SSR Button');
+    });
+
+    it('should handle all variant types in SSR', async () => {
+      const { renderToString } = await import('react-dom/server');
+
+      const Button = variantComponent('button', {
+        base: 'btn',
+        variants: {
+          color: { primary: 'bg-blue' },
+          disabled: { true: 'opacity-50', false: 'opacity-100' },
+        },
+        defaultVariants: { color: 'primary' },
+        compoundVariants: [
+          {
+            variants: { color: 'primary', disabled: true },
+            className: 'cursor-not-allowed',
+          },
+        ],
+      });
+
+      const html = renderToString(<Button disabled>Disabled</Button>);
+
+      expect(html).toContain('btn');
+      expect(html).toContain('bg-blue');
+      expect(html).toContain('opacity-50');
+      expect(html).toContain('cursor-not-allowed');
+    });
+
+    it('should render polymorphic components in SSR', async () => {
+      const { renderToString } = await import('react-dom/server');
+
+      const Button = variantComponent('button', {
+        base: 'btn',
+        variants: {
+          color: { primary: 'bg-blue' },
+        },
+      });
+
+      const html = renderToString(
+        <Button color="primary" render={<a href="/test" />}>
+          Link
+        </Button>
+      );
+
+      expect(html).toContain('<a');
+      expect(html).toContain('href="/test"');
+      expect(html).toContain('btn');
+      expect(html).toContain('bg-blue');
+    });
+  });
+
+  describe('event handler edge cases', () => {
+    it('should preserve event.preventDefault when composing handlers', () => {
+      const Button = variantComponent('button', {
+        base: 'btn',
+      });
+
+      const preventDefaultSpy = vi.fn();
+      const originalHandler = vi.fn((e: React.MouseEvent) => {
+        e.preventDefault();
+        preventDefaultSpy();
+      });
+
+      render(
+        <Button
+          render={<a href="/test" onClick={originalHandler} />}
+          onClick={() => {}}
+        >
+          Link
+        </Button>
+      );
+
+      const link = screen.getByText('Link');
+      link.click();
+
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+
+    it('should call both handlers when composing onClick', () => {
+      const Button = variantComponent('button', {
+        base: 'btn',
+      });
+
+      const handler1 = vi.fn();
+      const handler2 = vi.fn();
+
+      render(
+        <Button render={<a href="#" onClick={handler1} />} onClick={handler2}>
+          Link
+        </Button>
+      );
+
+      const link = screen.getByText('Link');
+      link.click();
+
+      expect(handler1).toHaveBeenCalled();
+      expect(handler2).toHaveBeenCalled();
+    });
+
+    it('should call handlers in correct order (override first, then base)', () => {
+      const Button = variantComponent('button', {
+        base: 'btn',
+      });
+
+      const order: string[] = [];
+      const baseHandler = vi.fn(() => order.push('base'));
+      const overrideHandler = vi.fn(() => order.push('override'));
+
+      render(
+        <Button render={<a href="#" onClick={overrideHandler} />} onClick={baseHandler}>
+          Link
+        </Button>
+      );
+
+      const link = screen.getByText('Link');
+      link.click();
+
+      expect(order).toEqual(['override', 'base']);
+    });
+
+    it('should handle multiple event types independently', () => {
+      const Button = variantComponent('button', {
+        base: 'btn',
+      });
+
+      const onClickBase = vi.fn();
+      const onClickOverride = vi.fn();
+      const onFocusBase = vi.fn();
+      const onFocusOverride = vi.fn();
+
+      render(
+        <Button
+          render={
+            <a
+              href="#"
+              onClick={onClickOverride}
+              onFocus={onFocusOverride}
+            />
+          }
+          onClick={onClickBase}
+          onFocus={onFocusBase}
+        >
+          Link
+        </Button>
+      );
+
+      const link = screen.getByText('Link');
+
+      link.click();
+      expect(onClickBase).toHaveBeenCalled();
+      expect(onClickOverride).toHaveBeenCalled();
+
+      link.focus();
+      expect(onFocusBase).toHaveBeenCalled();
+      expect(onFocusOverride).toHaveBeenCalled();
+    });
+  });
+
+  describe('forwardProps with render prop', () => {
+    it('should forward specified props to render element', () => {
+      const Button = variantComponent('button', {
+        base: 'btn',
+        variants: {
+          size: { sm: 'text-sm', lg: 'text-lg' },
+        },
+        forwardProps: ['size'],
+      });
+
+      render(
+        <Button
+          size="lg"
+          render={(props) => <div data-testid="custom" data-size={props.size} />}
+        >
+          Test
+        </Button>
+      );
+
+      const element = screen.getByTestId('custom');
+      expect(element).toHaveAttribute('data-size', 'lg');
+    });
+
+    it('should not forward variant props not in forwardProps', () => {
+      const Button = variantComponent('button', {
+        base: 'btn',
+        variants: {
+          color: { primary: 'bg-blue' },
+          size: { lg: 'text-lg' },
+        },
+        forwardProps: ['size'],
+      });
+
+      const renderFn = vi.fn((props: any) => <div data-testid="custom" />);
+
+      render(
+        <Button color="primary" size="lg" render={renderFn}>
+          Test
+        </Button>
+      );
+
+      expect(renderFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          size: 'lg',
+        })
+      );
+      expect(renderFn).toHaveBeenCalledWith(
+        expect.not.objectContaining({
+          color: 'primary',
+        })
+      );
+    });
+
+    it('should work with compound variants and forwardProps', () => {
+      const Button = variantComponent('button', {
+        base: 'btn',
+        variants: {
+          color: { primary: 'bg-blue' },
+          size: { lg: 'text-lg' },
+        },
+        compoundVariants: [
+          {
+            variants: { color: 'primary', size: 'lg' },
+            className: 'font-bold',
+          },
+        ],
+        forwardProps: ['size'],
+      });
+
+      render(
+        <Button
+          color="primary"
+          size="lg"
+          render={<a href="#" data-testid="link" />}
+        >
+          Link
+        </Button>
+      );
+
+      const link = screen.getByTestId('link');
+      expect(link).toHaveClass('btn', 'bg-blue', 'text-lg', 'font-bold');
+    });
+  });
 });
