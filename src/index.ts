@@ -485,8 +485,12 @@ export function defineConfig(options?: VariantFactoryOptions) {
     C extends VariantsConfig<V>,
     V extends VariantsSchema = NonNullable<C['variants']>
   >(config: Exact<Simplify<C>, VariantsConfig<V>>): VariantsResolverFn<C, V> {
-    const { base, variants: configVariants, compoundVariants, defaultVariants } =
-      config;
+    const {
+      base,
+      variants: configVariants,
+      compoundVariants,
+      defaultVariants,
+    } = config;
 
     if (!configVariants) {
       return (props?: { className?: ClassNameValue }) =>
@@ -522,7 +526,7 @@ export function defineConfig(options?: VariantFactoryOptions) {
 
       for (const cv of compoundVariants ?? []) {
         const cvVariants = cv.variants;
-        const matches = Object.keys(cvVariants).every((name) => {
+        const matches = Object.keys(cvVariants).every(name => {
           const selected = getSelectedVariant(name);
           const cvSelector = cvVariants[name];
           return Array.isArray(cvSelector)
@@ -667,8 +671,9 @@ export function defineConfig(options?: VariantFactoryOptions) {
       const component = ((props: BaseProps) => {
         return createElement(elementType, resolveProps(props as any));
       }) as VariantComponentType<T, C, V>;
-      (component as { displayName?: string }).displayName =
-        `Variant(${getDisplayName()})`;
+      (
+        component as { displayName?: string }
+      ).displayName = `Variant(${getDisplayName()})`;
       return component;
     }
 
@@ -694,8 +699,9 @@ export function defineConfig(options?: VariantFactoryOptions) {
       return createElement(elementType, { ...resolvedProps, ref: mergedRef });
     }) as VariantComponentType<T, C, V>;
 
-    (component as { displayName?: string }).displayName =
-      `Variant(${getDisplayName()})`;
+    (
+      component as { displayName?: string }
+    ).displayName = `Variant(${getDisplayName()})`;
 
     return component;
   }

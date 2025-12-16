@@ -110,6 +110,10 @@ export function mergeProps<T extends HTMLAttributes<any>>(
   base: T,
   overrides: T
 ): T {
+  if (!overrides || Object.keys(overrides).length === 0) {
+    return base;
+  }
+
   const props = { ...base };
 
   for (const key in overrides) {
@@ -157,21 +161,43 @@ export function mergeProps<T extends HTMLAttributes<any>>(
 }
 
 /**
+ * Creates a merged ref callback from multiple refs.
+ * Use this in event handlers or conditional branches where hooks cannot be used.
+ *
+ * @param refs - Array of refs to merge
+ * @returns A callback ref that sets all provided refs, or undefined if no valid refs
+ *
+ * @example
+ * const merged = mergeRefs(ref1, ref2);
+ * // Use in cloneElement or other non-hook contexts
+ */
+export function mergeRefs<T = any>(
+  ...refs: Array<Ref<T> | undefined | null>
+): Ref<T> | undefined {
+  const validRefs = refs.filter((ref): ref is Ref<T> => Boolean(ref));
+
+  if (validRefs.length === 0) return;
+  if (validRefs.length === 1) return validRefs[0];
+
+  return (value: T | null) => {
+    for (const ref of validRefs) {
+      setRef(ref, value);
+    }
+  };
+}
+
+/**
  * Merges React Refs into a single memoized function ref so you can pass it to
- * an element.
+ * an element. This is a hook version that memoizes the merged ref.
+ *
  * @example
  * const Component = forwardRef((props, ref) => {
  *   const internalRef = useRef();
  *   return <div {...props} ref={useMergeRefs(internalRef, ref)} />;
  * });
  */
-export function useMergeRefs(...refs: Array<Ref<any> | undefined>) {
-  return useMemo(() => {
-    if (!refs.some(Boolean)) return;
-    return (value: unknown) => {
-      for (const ref of refs) {
-        setRef(ref, value);
-      }
-    };
-  }, refs);
+export function useMergeRefs<T = any>(
+  ...refs: Array<Ref<T> | undefined | null>
+): Ref<T> | undefined {
+  return useMemo(() => mergeRefs(...refs), refs);
 }
