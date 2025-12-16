@@ -32,6 +32,15 @@ type StringToBoolean<T> = T extends 'true' | 'false' ? boolean : T;
 type Simplify<T> = {
   [K in keyof T]: T[K];
 } & {};
+
+/**
+ * Ensures T exactly matches Shape with no extra properties.
+ * Used to catch typos in config objects that would otherwise be silently ignored.
+ *
+ * @template T - The type to check
+ * @template Shape - The expected shape
+ * @returns T if it matches Shape exactly, never otherwise
+ */
 type Exact<T, Shape> = T extends Shape
   ? Exclude<keyof T, keyof Shape> extends never
     ? T
@@ -369,7 +378,22 @@ type RenderPropFn<P = HTMLAttributes<any> & { ref?: Ref<any> }> = (
   props: P
 ) => ReactNode;
 
-type RenderPropType<
+/**
+ * Type for the render prop, which can be either a function or a React element.
+ * When using a function, it receives resolved props including className and ref.
+ * When using an element, it will be cloned with merged props.
+ *
+ * @template C - The variant component configuration type
+ * @template V - The variants schema type
+ *
+ * @example
+ * // As a React element
+ * <Button render={<a href="/" />}>Link styled as button</Button>
+ *
+ * // As a function
+ * <Button render={(props) => <a {...props} href="/" />}>Link</Button>
+ */
+export type RenderPropType<
   C extends VariantComponentConfig<V>,
   V extends VariantsSchema
 > =
@@ -483,7 +507,7 @@ export function defineConfig(options?: VariantFactoryOptions) {
       }
     }
 
-    return function (...[props]) {
+    return function resolveVariantClasses(...[props]) {
       const result: ClassNameValue[] = [base];
 
       const getSelectedVariant = (name: string) =>
@@ -552,7 +576,7 @@ export function defineConfig(options?: VariantFactoryOptions) {
 
     type ForwardPropKey = NonNullable<C['forwardProps']>;
 
-    return function <P extends OnlyVariantProps>(props: P) {
+    return function resolveVariantProps<P extends OnlyVariantProps>(props: P) {
       const result = { ...props } as { className: string } & Omit<
         P,
         ForwardPropKey extends any[]
@@ -565,15 +589,12 @@ export function defineConfig(options?: VariantFactoryOptions) {
       } as OnlyVariantProps;
 
       if (config.variants) {
-        for (const variantKey in config.variants) {
-          if (
-            hasOwnProperty(config.variants, variantKey) &&
-            hasOwnProperty(result, variantKey)
-          ) {
+        for (const variantKey of Object.keys(config.variants)) {
+          if (hasOwnProperty(result, variantKey)) {
             onlyVariantProps[variantKey] = result[variantKey];
 
             if (!forwardProps || !forwardProps.includes(variantKey)) {
-              delete result[variantKey];
+              delete (result as Record<string, unknown>)[variantKey];
             }
           }
         }
@@ -594,6 +615,14 @@ export function defineConfig(options?: VariantFactoryOptions) {
    * @param elementType - The base element type to render
    * @param config - The variants configuration object with optional withoutRenderProp flag
    * @returns A React component with variant props
+   *
+   * @remarks
+   * When using the `render` prop pattern, props are merged in this order:
+   * 1. Resolved variant props (base + variant classes)
+   * 2. Render element's own props (take precedence over resolved props)
+   *
+   * This allows the render element to customize or override variant styles when needed.
+   * Event handlers are composed (both are called), classNames are concatenated.
    *
    * @example
    * const Button = variantComponent('button', {
