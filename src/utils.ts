@@ -125,7 +125,7 @@ export function mergeProps<T extends HTMLAttributes<any>>(
 
       if (baseClass && overrideClass) {
         props.className = `${baseClass} ${overrideClass}`;
-      } else if (overrideClass !== undefined) {
+      } else if (overrideClass) {
         props.className = overrideClass;
       }
 

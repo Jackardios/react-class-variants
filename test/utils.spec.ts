@@ -197,19 +197,27 @@ describe('mergeProps', () => {
       expect(result.className).toBe('override-class');
     });
 
-    it('should use empty string when override className is empty', () => {
+    it('should preserve base className when override is empty string', () => {
       const base = { className: 'base-class' };
       const overrides = { className: '' };
       const result = mergeProps(base, overrides);
-      // Empty string is an explicit override, so it replaces base
-      expect(result.className).toBe('');
+      // Empty string is falsy, so base className is preserved
+      expect(result.className).toBe('base-class');
     });
 
-    it('should use base className when override is undefined', () => {
+    it('should preserve base className when override is undefined', () => {
       const base = { className: 'base-class' } as HTMLAttributes<any>;
       const overrides = { className: undefined } as HTMLAttributes<any>;
       const result = mergeProps(base, overrides);
-      // undefined falls back to base via nullish coalescing
+      // undefined is falsy, so base className is preserved
+      expect(result.className).toBe('base-class');
+    });
+
+    it('should preserve base className when override is null', () => {
+      const base = { className: 'base-class' };
+      const overrides = { className: null } as any;
+      const result = mergeProps(base, overrides);
+      // null is falsy, so base className is preserved
       expect(result.className).toBe('base-class');
     });
   });
