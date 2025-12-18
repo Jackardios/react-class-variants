@@ -161,8 +161,9 @@ export function mergeProps<T extends HTMLAttributes<any>>(
       ) {
         type EventKey = Extract<keyof HTMLAttributes<any>, `on${string}`>;
         props[key as EventKey] = (...args) => {
-          overrideValue(...args);
+          const result = overrideValue(...args);
           baseValue(...args);
+          return result;
         };
         continue;
       }
