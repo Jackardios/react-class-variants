@@ -345,6 +345,28 @@ describe('mergeProps', () => {
       expect(overrideFn).toHaveBeenCalledTimes(1);
       expect(baseFn).not.toHaveBeenCalled();
     });
+
+    it('should preserve base handler when override is undefined', () => {
+      const baseHandler = vi.fn();
+      const base = { onClick: baseHandler } as HTMLAttributes<any>;
+      const overrides = { onClick: undefined } as HTMLAttributes<any>;
+      const result = mergeProps(base, overrides);
+
+      expect(result.onClick).toBe(baseHandler);
+      result.onClick?.({} as any);
+      expect(baseHandler).toHaveBeenCalledTimes(1);
+    });
+
+    it('should preserve base handler when override is null', () => {
+      const baseHandler = vi.fn();
+      const base = { onClick: baseHandler };
+      const overrides = { onClick: null } as any;
+      const result = mergeProps(base, overrides);
+
+      expect(result.onClick).toBe(baseHandler);
+      result.onClick?.({} as any);
+      expect(baseHandler).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('regular prop handling', () => {

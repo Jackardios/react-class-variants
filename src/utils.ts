@@ -142,17 +142,23 @@ export function mergeProps<T extends HTMLAttributes<any>>(
 
     const overrideValue = overrides[key];
 
-    const isEventHandler =
-      typeof overrideValue === 'function' &&
+    const isEventHandlerKey =
       key.length > 2 &&
       key[0] === 'o' &&
       key[1] === 'n' &&
       key[2] >= 'A' &&
       key[2] <= 'Z';
 
-    if (isEventHandler) {
+    if (isEventHandlerKey) {
+      if (overrideValue == null) {
+        continue;
+      }
+
       const baseValue = base[key];
-      if (typeof baseValue === 'function') {
+      if (
+        typeof overrideValue === 'function' &&
+        typeof baseValue === 'function'
+      ) {
         type EventKey = Extract<keyof HTMLAttributes<any>, `on${string}`>;
         props[key as EventKey] = (...args) => {
           overrideValue(...args);
