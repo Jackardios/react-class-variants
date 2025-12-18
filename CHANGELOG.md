@@ -1,5 +1,15 @@
 # react-tailwind-variants
 
+## 2.0.0-alpha.3
+
+### Patch Changes
+
+- d33c8fe: Fix `mergeProps` utility:
+
+  - Preserve base `className` when override is falsy (null, undefined, empty string)
+  - Preserve base event handler when override is null/undefined
+  - Only merge React event handlers (onClick, onMouseDown, etc.), not props like "onboarding"
+
 ## 2.0.0-alpha.2
 
 ### Patch Changes
