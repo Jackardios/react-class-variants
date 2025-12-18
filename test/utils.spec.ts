@@ -328,6 +328,23 @@ describe('mergeProps', () => {
       const result = mergeProps(base, overrides);
       expect(result.onClick).toBe('not-a-function');
     });
+
+    it('should not merge props starting with "on" but not React events', () => {
+      // "onboarding", "ongoing", "once" are NOT event handlers
+      // React events follow camelCase: onClick, onMouseDown (uppercase after "on")
+      const baseFn = vi.fn();
+      const overrideFn = vi.fn();
+
+      const base = { onboarding: baseFn } as any;
+      const overrides = { onboarding: overrideFn } as any;
+      const result = mergeProps(base, overrides);
+
+      // Should NOT merge - just override
+      expect(result.onboarding).toBe(overrideFn);
+      result.onboarding();
+      expect(overrideFn).toHaveBeenCalledTimes(1);
+      expect(baseFn).not.toHaveBeenCalled();
+    });
   });
 
   describe('regular prop handling', () => {

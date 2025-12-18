@@ -142,7 +142,15 @@ export function mergeProps<T extends HTMLAttributes<any>>(
 
     const overrideValue = overrides[key];
 
-    if (typeof overrideValue === 'function' && key.startsWith('on')) {
+    const isEventHandler =
+      typeof overrideValue === 'function' &&
+      key.length > 2 &&
+      key[0] === 'o' &&
+      key[1] === 'n' &&
+      key[2] >= 'A' &&
+      key[2] <= 'Z';
+
+    if (isEventHandler) {
       const baseValue = base[key];
       if (typeof baseValue === 'function') {
         type EventKey = Extract<keyof HTMLAttributes<any>, `on${string}`>;
