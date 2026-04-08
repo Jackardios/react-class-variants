@@ -60,5 +60,5 @@ npm dist-tag add react-class-variants@2.0.0-alpha.4 alpha
 npm dist-tag add react-class-variants@2.0.0-alpha.4 latest
 
 # Deprecate the legacy package after publishing v1.0.4
-npm deprecate "react-tailwind-variants@<=1.0.4" "Package renamed to react-class-variants. The v2 line is currently published as react-class-variants@alpha. Migration guide: https://github.com/jackardios/react-class-variants/blob/next/docs/migration-from-react-tailwind-variants.md"
+npm deprecate "react-tailwind-variants@<=1.0.4" "Package renamed to react-class-variants. The v2 line is currently published as react-class-variants@alpha. Migration guide: https://github.com/Jackardios/react-class-variants/blob/next/docs/migration-from-react-tailwind-variants.md"
 ```

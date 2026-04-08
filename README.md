@@ -11,7 +11,7 @@ A lightweight, type-safe library for building composable React components with d
 > `react-tailwind-variants` was renamed to `react-class-variants`.
 > The v2 line is currently published on the `alpha` channel, so the recommended install command is `react-class-variants@alpha`.
 > The legacy `react-tailwind-variants` package is frozen and kept only for migration and maintenance notices.
-> Start with the [Migration Guide](https://github.com/jackardios/react-class-variants/blob/next/docs/migration-from-react-tailwind-variants.md) and keep the [Legacy v1 Docs](https://github.com/jackardios/react-class-variants/blob/next/docs/react-tailwind-variants-v1.md) handy while migrating.
+> Start with the [Migration Guide](https://github.com/Jackardios/react-class-variants/blob/next/docs/migration-from-react-tailwind-variants.md) and keep the [Legacy v1 Docs](https://github.com/Jackardios/react-class-variants/blob/next/docs/react-tailwind-variants-v1.md) handy while migrating.
 
 ## Why React Class Variants?
 
@@ -107,8 +107,8 @@ No more messy `className` logic, no more props duplication, just clean, type-saf
 - Renamed package: `react-tailwind-variants` -> `react-class-variants`
 - Current release channel: `alpha`
 - Recommended install for v2: `npm install react-class-variants@alpha`
-- Migration guide: [docs/migration-from-react-tailwind-variants.md](https://github.com/jackardios/react-class-variants/blob/next/docs/migration-from-react-tailwind-variants.md)
-- Legacy v1 docs: [docs/react-tailwind-variants-v1.md](https://github.com/jackardios/react-class-variants/blob/next/docs/react-tailwind-variants-v1.md)
+- Migration guide: [docs/migration-from-react-tailwind-variants.md](https://github.com/Jackardios/react-class-variants/blob/next/docs/migration-from-react-tailwind-variants.md)
+- Legacy v1 docs: [docs/react-tailwind-variants-v1.md](https://github.com/Jackardios/react-class-variants/blob/next/docs/react-tailwind-variants-v1.md)
 
 ## Installation
 
@@ -1192,7 +1192,7 @@ Contributions are welcome! Please check out our [Contributing Guide](CONTRIBUTIN
 
 ```bash
 # Clone the repo
-git clone https://github.com/jackardios/react-class-variants.git
+git clone https://github.com/Jackardios/react-class-variants.git
 
 # Install dependencies
 pnpm install
@@ -1220,14 +1220,14 @@ The alpha line is maintained from the `next` branch.
 
 ## License
 
-MIT © [Salavat Salakhutdinov](https://github.com/jackardios)
+MIT © [Salavat Salakhutdinov](https://github.com/Jackardios)
 
 ## Links
 
-- [GitHub](https://github.com/jackardios/react-class-variants)
+- [GitHub](https://github.com/Jackardios/react-class-variants)
 - [npm](https://www.npmjs.com/package/react-class-variants)
-- [Issues](https://github.com/jackardios/react-class-variants/issues)
-- [Changelog](https://github.com/jackardios/react-class-variants/releases)
-- [Migration Guide](https://github.com/jackardios/react-class-variants/blob/next/docs/migration-from-react-tailwind-variants.md)
-- [Legacy v1 Docs](https://github.com/jackardios/react-class-variants/blob/next/docs/react-tailwind-variants-v1.md)
-- [Release Process](https://github.com/jackardios/react-class-variants/blob/next/docs/release-process.md)
+- [Issues](https://github.com/Jackardios/react-class-variants/issues)
+- [Changelog](https://github.com/Jackardios/react-class-variants/releases)
+- [Migration Guide](https://github.com/Jackardios/react-class-variants/blob/next/docs/migration-from-react-tailwind-variants.md)
+- [Legacy v1 Docs](https://github.com/Jackardios/react-class-variants/blob/next/docs/react-tailwind-variants-v1.md)
+- [Release Process](https://github.com/Jackardios/react-class-variants/blob/next/docs/release-process.md)
