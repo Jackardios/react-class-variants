@@ -7,6 +7,12 @@
 
 A lightweight, type-safe library for building composable React components with dynamic CSS class variations. Works seamlessly with **Tailwind CSS**, **CSS Modules**, or any CSS solution.
 
+> [!IMPORTANT]
+> `react-tailwind-variants` was renamed to `react-class-variants`.
+> The v2 line is currently published on the `alpha` channel, so the recommended install command is `react-class-variants@alpha`.
+> The legacy `react-tailwind-variants` package is frozen and kept only for migration and maintenance notices.
+> Start with the [Migration Guide](https://github.com/jackardios/react-class-variants/blob/next/docs/migration-from-react-tailwind-variants.md) and keep the [Legacy v1 Docs](https://github.com/jackardios/react-class-variants/blob/next/docs/react-tailwind-variants-v1.md) handy while migrating.
+
 ## Why React Class Variants?
 
 Building UI components often requires managing multiple visual states and combinations. React Class Variants provides a powerful API inspired by [Stitches.js](https://stitches.dev/) that makes this trivial:
@@ -49,6 +55,7 @@ No more messy `className` logic, no more props duplication, just clean, type-saf
 
 - [Why React Class Variants?](#why-react-class-variants)
 - [Features](#features)
+- [Migration](#migration)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
   - [1. Basic Usage](#1-basic-usage)
@@ -90,22 +97,31 @@ No more messy `className` logic, no more props duplication, just clean, type-saf
   - [Forwarding Variant Props](#forwarding-variant-props)
 - [Performance](#performance)
 - [Comparison](#comparison)
+- [Release Process](#release-process)
 - [Contributing](#contributing)
 - [License](#license)
 - [Links](#links)
 
+## Migration
+
+- Renamed package: `react-tailwind-variants` -> `react-class-variants`
+- Current release channel: `alpha`
+- Recommended install for v2: `npm install react-class-variants@alpha`
+- Migration guide: [docs/migration-from-react-tailwind-variants.md](https://github.com/jackardios/react-class-variants/blob/next/docs/migration-from-react-tailwind-variants.md)
+- Legacy v1 docs: [docs/react-tailwind-variants-v1.md](https://github.com/jackardios/react-class-variants/blob/next/docs/react-tailwind-variants-v1.md)
+
 ## Installation
 
 ```bash
-npm install react-class-variants
+npm install react-class-variants@alpha
 ```
 
 ```bash
-yarn add react-class-variants
+yarn add react-class-variants@alpha
 ```
 
 ```bash
-pnpm add react-class-variants
+pnpm add react-class-variants@alpha
 ```
 
 **Optional:** For Tailwind CSS class conflict resolution:
@@ -1191,6 +1207,16 @@ pnpm build
 pnpm ci
 ```
 
+## Release Process
+
+The alpha line is maintained from the `next` branch.
+
+- Open all v2 feature and fix PRs against `next`
+- Add a changeset for any source, package metadata, public type, or build/release-affecting change
+- Use `pnpm run check:changeset` locally to validate the current branch
+- Alpha publishes are triggered from `next`, and the release workflow keeps `latest` and `alpha` dist-tags aligned until stable `2.0.0` ships
+- When the package is ready for stable, run `changeset pre exit`, publish `2.0.0`, and then fast-forward `main` to the stable release commit
+
 ## License
 
 MIT © [Salavat Salakhutdinov](https://github.com/jackardios)
@@ -1201,8 +1227,6 @@ MIT © [Salavat Salakhutdinov](https://github.com/jackardios)
 - [npm](https://www.npmjs.com/package/react-class-variants)
 - [Issues](https://github.com/jackardios/react-class-variants/issues)
 - [Changelog](https://github.com/jackardios/react-class-variants/releases)
-
----
-
-**Built with ❤️ for the React community**
-`
+- [Migration Guide](https://github.com/jackardios/react-class-variants/blob/next/docs/migration-from-react-tailwind-variants.md)
+- [Legacy v1 Docs](https://github.com/jackardios/react-class-variants/blob/next/docs/react-tailwind-variants-v1.md)
+- [Release Process](https://github.com/jackardios/react-class-variants/blob/next/docs/release-process.md)

@@ -1,0 +1,20 @@
+name: Changeset Check
+on:
+  pull_request:
+    branches:
+      - 'next'
+
+jobs:
+  changeset:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fetch base branch
+        run: git fetch origin "${{ github.base_ref }}:${{ github.base_ref }}"
+      - name: Check changeset coverage
+        run: node scripts/check-changeset.cjs
+        env:
+          GITHUB_BASE_REF: ${{ github.base_ref }}

@@ -66,7 +66,7 @@ describe('defineConfig', () => {
 
     it('should work with tailwind-merge-like deduplication', () => {
       const { variants } = defineConfig({
-        onClassesMerged: (cls) => {
+        onClassesMerged: cls => {
           // Simple mock: remove duplicate "px-" prefixed classes, keeping last
           const classes = cls.split(' ');
           const seen = new Map<string, string>();
@@ -888,7 +888,7 @@ describe('variants()', () => {
 
     it('should merge className with onClassesMerged', () => {
       const { variants } = defineConfig({
-        onClassesMerged: (cls) => cls.replace(/\s+/g, '-'),
+        onClassesMerged: cls => cls.replace(/\s+/g, '-'),
       });
       const button = variants({ base: 'btn rounded' });
       expect(button({ className: 'custom' })).toBe('btn-rounded-custom');
@@ -1279,7 +1279,11 @@ describe('variantPropsResolver()', () => {
         const resolve = variantPropsResolver({
           base: 'btn',
           variants: {
-            color: { primary: 'bg-blue', secondary: 'bg-gray', danger: 'bg-red' },
+            color: {
+              primary: 'bg-blue',
+              secondary: 'bg-gray',
+              danger: 'bg-red',
+            },
             size: { sm: 'text-sm', lg: 'text-lg' },
           },
           compoundVariants: [
@@ -1290,9 +1294,15 @@ describe('variantPropsResolver()', () => {
           ],
         });
 
-        expect(resolve({ color: 'primary', size: 'lg' } as any).className).toContain('ring-2');
-        expect(resolve({ color: 'secondary', size: 'lg' } as any).className).toContain('ring-2');
-        expect(resolve({ color: 'danger', size: 'lg' } as any).className).not.toContain('ring-2');
+        expect(
+          resolve({ color: 'primary', size: 'lg' } as any).className
+        ).toContain('ring-2');
+        expect(
+          resolve({ color: 'secondary', size: 'lg' } as any).className
+        ).toContain('ring-2');
+        expect(
+          resolve({ color: 'danger', size: 'lg' } as any).className
+        ).not.toContain('ring-2');
       });
 
       it('should apply multiple compound variants when all match', () => {
@@ -1314,7 +1324,11 @@ describe('variantPropsResolver()', () => {
           ],
         });
 
-        const result = resolve({ color: 'primary', size: 'lg', disabled: true } as any);
+        const result = resolve({
+          color: 'primary',
+          size: 'lg',
+          disabled: true,
+        } as any);
         expect(result.className).toContain('font-bold');
         expect(result.className).toContain('cursor-not-allowed');
       });
@@ -1356,7 +1370,11 @@ describe('variantPropsResolver()', () => {
           forwardProps: ['size'],
         });
 
-        const result = resolve({ color: 'primary', size: 'lg', id: 'test' } as any);
+        const result = resolve({
+          color: 'primary',
+          size: 'lg',
+          id: 'test',
+        } as any);
         expect(result.className).toBe('bg-blue text-lg font-bold');
         expect(result).toHaveProperty('size', 'lg'); // forwarded
         expect(result).not.toHaveProperty('color'); // not forwarded

@@ -913,7 +913,7 @@ expectType<ReactNode>(
   RenderPropsButton({
     color: 'primary',
     id: 'custom-id',
-    render: (props) => {
+    render: props => {
       // Should have className
       expectType<string>(props.className);
       // Should have id passed through
@@ -965,7 +965,7 @@ expectType<ReactNode>(
   ForwardAllButton({
     color: 'primary',
     size: 'lg',
-    render: (props) => {
+    render: props => {
       // Both color and size should be available since they're forwarded
       expectAssignable<string>(props.color);
       expectAssignable<string>(props.size);
@@ -986,7 +986,7 @@ const NoForwardButton = variantComponent('button', {
 expectType<ReactNode>(
   NoForwardButton({
     color: 'primary',
-    render: (props) => {
+    render: props => {
       expectError(props.color); // Not forwarded
       return <span {...props} />;
     },

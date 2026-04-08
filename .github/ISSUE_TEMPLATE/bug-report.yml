@@ -1,0 +1,56 @@
+name: Bug report
+description: Report a reproducible problem with the library.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: dropdown
+    id: package_name
+    attributes:
+      label: Package name
+      description: Which published package are you using?
+      options:
+        - react-class-variants
+        - react-tailwind-variants
+    validations:
+      required: true
+  - type: input
+    id: package_version
+    attributes:
+      label: Package version
+      description: Include the exact npm version, for example `2.0.0-alpha.3` or `1.0.3`.
+      placeholder: 2.0.0-alpha.3
+    validations:
+      required: true
+  - type: dropdown
+    id: release_channel
+    attributes:
+      label: Release channel
+      description: Helps distinguish the legacy v1 line from the alpha v2 line.
+      options:
+        - alpha / prerelease
+        - stable / legacy
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Share the smallest possible code sample or repository that reproduces the issue.
+      placeholder: |
+        import { defineConfig } from 'react-class-variants';
+        // ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true

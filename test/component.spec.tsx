@@ -743,7 +743,11 @@ describe('variantComponent', () => {
         },
       });
 
-      render(<Box padding="lg" data-testid="box">Content</Box>);
+      render(
+        <Box padding="lg" data-testid="box">
+          Content
+        </Box>
+      );
       const box = screen.getByTestId('box');
 
       expect(box.tagName).toBe('DIV');
@@ -873,8 +877,12 @@ describe('variantComponent', () => {
 
       render(
         <>
-          <Button color="red" data-testid="btn1">Red</Button>
-          <Button color="blue" data-testid="btn2">Blue</Button>
+          <Button color="red" data-testid="btn1">
+            Red
+          </Button>
+          <Button color="blue" data-testid="btn2">
+            Blue
+          </Button>
         </>
       );
 
@@ -1033,7 +1041,10 @@ describe('variantComponent', () => {
       const overrideHandler = vi.fn(() => order.push('override'));
 
       render(
-        <Button render={<a href="#" onClick={overrideHandler} />} onClick={baseHandler}>
+        <Button
+          render={<a href="#" onClick={overrideHandler} />}
+          onClick={baseHandler}
+        >
           Link
         </Button>
       );
@@ -1057,11 +1068,7 @@ describe('variantComponent', () => {
       render(
         <Button
           render={
-            <a
-              href="#"
-              onClick={onClickOverride}
-              onFocus={onFocusOverride}
-            />
+            <a href="#" onClick={onClickOverride} onFocus={onFocusOverride} />
           }
           onClick={onClickBase}
           onFocus={onFocusBase}
@@ -1095,7 +1102,7 @@ describe('variantComponent', () => {
       render(
         <Button
           size="lg"
-          render={(props) => <div data-testid="custom" data-size={props.size} />}
+          render={props => <div data-testid="custom" data-size={props.size} />}
         >
           Test
         </Button>

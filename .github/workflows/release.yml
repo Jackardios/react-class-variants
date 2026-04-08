@@ -6,7 +6,7 @@ on:
         required: true
   push:
     branches:
-      - 'main'
+      - 'next'
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -14,9 +14,14 @@ jobs:
   build:
     name: Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Setup PNPM
         uses: pnpm/action-setup@v4
         with:
@@ -26,8 +31,16 @@ jobs:
         with:
           node-version: 22.x
           cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Configure npm auth
+        run: |
+          cat <<EOF > "$HOME/.npmrc"
+          //registry.npmjs.org/:_authToken=${NPM_TOKEN}
+          EOF
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Create Release Pull Request or Publish
         id: changesets
         uses: changesets/action@v1
@@ -36,3 +49,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Sync dist-tags for alpha releases
+        if: steps.changesets.outputs.published == 'true'
+        run: pnpm run release:sync-dist-tags
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.publishedPackages }}
+      - name: Verify dist-tags
+        if: steps.changesets.outputs.published == 'true'
+        run: pnpm run release:verify-dist-tags

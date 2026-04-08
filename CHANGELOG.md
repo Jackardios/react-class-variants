@@ -1,4 +1,4 @@
-# react-tailwind-variants
+# react-class-variants
 
 ## 2.0.0-alpha.3
 

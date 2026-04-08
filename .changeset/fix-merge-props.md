@@ -1,5 +1,5 @@
 ---
-"react-class-variants": patch
+'react-class-variants': patch
 ---
 
 Fix `mergeProps` utility:

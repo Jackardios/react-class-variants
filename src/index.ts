@@ -272,6 +272,7 @@ type VariantPropsResolverFn<
  *
  * @template V - The variants schema type
  *
+ * @property displayName - Custom display name for the component (used in React DevTools)
  * @property withoutRenderProp - When true, disables the polymorphic `render` prop pattern
  * @property forwardProps - Array of variant prop names to forward to the rendered element
  *
@@ -279,11 +280,13 @@ type VariantPropsResolverFn<
  * const config: VariantComponentConfig<{ size: { sm: string } }> = {
  *   variants: { size: { sm: 'text-sm' } },
  *   forwardProps: ['size'],
- *   withoutRenderProp: true
+ *   withoutRenderProp: true,
+ *   displayName: 'Button'
  * };
  */
 export type VariantComponentConfig<V extends VariantsSchema> =
   VariantsConfig<V> & {
+    displayName?: string;
     withoutRenderProp?: boolean;
     forwardProps?: (keyof V)[];
   };
@@ -448,16 +451,21 @@ export type VariantComponentType<
 export function defineConfig(options?: VariantFactoryOptions) {
   const { onClassesMerged } = options ?? {};
 
-  function mergeClassNames(...classNames: ClassNameValue[]): string {
-    const flattened = (classNames as string[]).flat(Infinity) as (
+  function flattenClasses(classes: ClassNameValue[]): string {
+    const flattened = (classes as string[]).flat(Infinity) as (
       | string
       | null
       | undefined
     )[];
-    const filtered = flattened.filter((cls): cls is string => Boolean(cls));
-    const joined = filtered.join(' ');
+    return flattened.filter((c): c is string => Boolean(c)).join(' ');
+  }
 
-    return onClassesMerged ? onClassesMerged(joined) : joined;
+  function applyPostProcess(className: string): string {
+    return onClassesMerged ? onClassesMerged(className) : className;
+  }
+
+  function concatClasses(base: string, addition: string): string {
+    return base ? `${base} ${addition}` : addition;
   }
 
   /**
@@ -487,62 +495,183 @@ export function defineConfig(options?: VariantFactoryOptions) {
   >(config: Exact<Simplify<C>, VariantsConfig<V>>): VariantsResolverFn<C, V> {
     const {
       base,
-      variants: configVariants,
+      variants: variantsDef,
       compoundVariants,
       defaultVariants,
     } = config;
 
-    if (!configVariants) {
-      return (props?: { className?: ClassNameValue }) =>
-        mergeClassNames(base, props?.className);
+    // Simple case: no variants defined
+    if (!variantsDef) {
+      const baseClassName = Array.isArray(base)
+        ? flattenClasses([base])
+        : (base as string) || '';
+      return (props?: { className?: ClassNameValue }) => {
+        if (!props?.className) return applyPostProcess(baseClassName);
+        const extra = Array.isArray(props.className)
+          ? flattenClasses([props.className])
+          : props.className;
+        return applyPostProcess(
+          baseClassName ? concatClasses(baseClassName, extra) : extra
+        );
+      };
     }
 
-    // Store a reference to variants that TypeScript knows is defined
-    const variants = configVariants;
+    // Analyze variant definitions
+    const variantKeys = Object.keys(variantsDef);
+    const isBooleanVariant: Record<string, true> = {};
+    let hasArrayClassNames = Array.isArray(base);
 
-    // Pre-compute boolean variants for performance (avoids repeated 'in' checks)
-    const booleanVariants = new Set<string>();
-    const variantNames: string[] = [];
-    for (const name of Object.keys(variants)) {
-      variantNames.push(name);
-      const variant = variants[name];
-      if (variant && ('false' in variant || 'true' in variant)) {
-        booleanVariants.add(name);
+    for (const key of variantKeys) {
+      const variantOptions = variantsDef[key];
+      if (!variantOptions) continue;
+
+      if ('true' in variantOptions || 'false' in variantOptions) {
+        isBooleanVariant[key] = true;
+      }
+
+      if (!hasArrayClassNames) {
+        for (const optionKey in variantOptions) {
+          if (Array.isArray(variantOptions[optionKey])) {
+            hasArrayClassNames = true;
+            break;
+          }
+        }
       }
     }
 
-    return function resolveVariantClasses(...[props]) {
-      const result: ClassNameValue[] = [base];
+    // Pre-process compound variants
+    type MatchCondition =
+      | { key: string; value: unknown }
+      | { key: string; values: Set<unknown> };
 
-      const getSelectedVariant = (name: string) =>
-        (props as any)?.[name] ??
-        defaultVariants?.[name as keyof V] ??
-        (booleanVariants.has(name) ? false : undefined);
+    interface ProcessedCompound {
+      conditions: MatchCondition[];
+      className: ClassNameValue;
+    }
 
-      for (const name of variantNames) {
-        const selected = getSelectedVariant(name);
-        if (selected !== undefined) result.push(variants[name]?.[selected]);
+    const compounds: ProcessedCompound[] = [];
+
+    if (compoundVariants) {
+      for (const compound of compoundVariants) {
+        if (!hasArrayClassNames && Array.isArray(compound.className)) {
+          hasArrayClassNames = true;
+        }
+
+        const conditions: MatchCondition[] = [];
+        for (const key in compound.variants) {
+          const selector = compound.variants[key];
+          conditions.push(
+            Array.isArray(selector)
+              ? { key, values: new Set(selector) }
+              : { key, value: selector }
+          );
+        }
+
+        compounds.push({ conditions, className: compound.className });
       }
+    }
 
-      for (const cv of compoundVariants ?? []) {
-        const cvVariants = cv.variants;
-        const matches = Object.keys(cvVariants).every(name => {
-          const selected = getSelectedVariant(name);
-          const cvSelector = cvVariants[name];
-          return Array.isArray(cvSelector)
-            ? cvSelector.includes(selected)
-            : selected === cvSelector;
-        });
-        if (matches) {
-          result.push(cv.className);
+    // Fast path: string concatenation (when config has no array class names)
+    if (!hasArrayClassNames) {
+      const baseClassName = (base as string) || '';
+
+      return function resolveVariants(...[props]) {
+        let result = baseClassName;
+        const variantProps = props as Record<string, unknown> | undefined;
+
+        // Resolve each variant
+        for (const key of variantKeys) {
+          const selected =
+            variantProps?.[key] ??
+            defaultVariants?.[key as keyof V] ??
+            (isBooleanVariant[key] ? false : undefined);
+
+          if (selected !== undefined) {
+            const className = variantsDef[key]?.[selected as string] as
+              | string
+              | undefined;
+            if (className) result = concatClasses(result, className);
+          }
+        }
+
+        // Check compound variants
+        for (const compound of compounds) {
+          let matches = true;
+          for (const condition of compound.conditions) {
+            const selected =
+              variantProps?.[condition.key] ??
+              defaultVariants?.[condition.key as keyof V] ??
+              (isBooleanVariant[condition.key] ? false : undefined);
+
+            const isMatch =
+              'values' in condition
+                ? condition.values.has(selected)
+                : selected === condition.value;
+
+            if (!isMatch) {
+              matches = false;
+              break;
+            }
+          }
+
+          if (matches && compound.className) {
+            result = concatClasses(result, compound.className as string);
+          }
+        }
+
+        // Append extra className from props
+        if (props?.className) {
+          const extra = Array.isArray(props.className)
+            ? flattenClasses([props.className])
+            : props.className;
+          if (extra) result = concatClasses(result, extra);
+        }
+
+        return applyPostProcess(result);
+      };
+    }
+
+    // Slow path: array accumulation + flatten (when config has array class names)
+    return function resolveVariants(...[props]) {
+      const classes: ClassNameValue[] = [base];
+      const variantProps = props as Record<string, unknown> | undefined;
+
+      for (const key of variantKeys) {
+        const selected =
+          variantProps?.[key] ??
+          defaultVariants?.[key as keyof V] ??
+          (isBooleanVariant[key] ? false : undefined);
+
+        if (selected !== undefined) {
+          classes.push(variantsDef[key]?.[selected as string]);
         }
       }
 
-      if (props?.className) {
-        result.push(props.className);
+      for (const compound of compounds) {
+        let matches = true;
+        for (const condition of compound.conditions) {
+          const selected =
+            variantProps?.[condition.key] ??
+            defaultVariants?.[condition.key as keyof V] ??
+            (isBooleanVariant[condition.key] ? false : undefined);
+
+          const isMatch =
+            'values' in condition
+              ? condition.values.has(selected)
+              : selected === condition.value;
+
+          if (!isMatch) {
+            matches = false;
+            break;
+          }
+        }
+
+        if (matches) classes.push(compound.className);
       }
 
-      return mergeClassNames(result);
+      if (props?.className) classes.push(props.className);
+
+      return applyPostProcess(flattenClasses(classes));
     };
   }
 
@@ -569,43 +698,46 @@ export function defineConfig(options?: VariantFactoryOptions) {
     C extends VariantComponentConfig<V>,
     V extends VariantsSchema = NonNullable<C['variants']>
   >(config: Exact<Simplify<C>, VariantComponentConfig<V>>) {
-    const { forwardProps, withoutRenderProp, ...variantsConfig } = config;
-    const variantsResolver = variants(variantsConfig);
+    const {
+      forwardProps,
+      withoutRenderProp: _withoutRenderProp,
+      displayName: _displayName,
+      ...variantsConfig
+    } = config;
 
-    type OnlyVariantProps = (keyof V extends never
+    const resolveClassName = variants(variantsConfig);
+    const variantKeys = config.variants ? Object.keys(config.variants) : [];
+
+    type VariantPropsWithClassName = (keyof V extends never
       ? {}
       : VariantOptions<typeof config, V>) & {
       className?: string;
     };
 
-    type ForwardPropKey = NonNullable<C['forwardProps']>;
+    type ForwardPropKeys = NonNullable<C['forwardProps']>;
+    type ResultType<P> = { className: string } & Omit<
+      P,
+      ForwardPropKeys extends unknown[]
+        ? Exclude<keyof V, ForwardPropKeys[number]>
+        : keyof V
+    >;
 
-    return function resolveVariantProps<P extends OnlyVariantProps>(props: P) {
-      const result = { ...props } as { className: string } & Omit<
-        P,
-        ForwardPropKey extends any[]
-          ? Exclude<keyof V, ForwardPropKey[number]>
-          : keyof V
-      >;
-
-      const onlyVariantProps = {
+    return function resolve<P extends VariantPropsWithClassName>(props: P) {
+      const result = { ...props } as ResultType<P>;
+      const variantPropsOnly = {
         className: result.className,
-      } as OnlyVariantProps;
+      } as VariantPropsWithClassName;
 
-      if (config.variants) {
-        for (const variantKey of Object.keys(config.variants)) {
-          if (hasOwnProperty(result, variantKey)) {
-            onlyVariantProps[variantKey] = result[variantKey];
-
-            if (!forwardProps || !forwardProps.includes(variantKey)) {
-              delete (result as Record<string, unknown>)[variantKey];
-            }
+      for (const key of variantKeys) {
+        if (hasOwnProperty(result, key)) {
+          variantPropsOnly[key] = result[key];
+          if (!forwardProps || !forwardProps.includes(key)) {
+            delete (result as Record<string, unknown>)[key];
           }
         }
       }
 
-      result.className = variantsResolver(onlyVariantProps as any);
-
+      result.className = resolveClassName(variantPropsOnly as any);
       return result;
     } as VariantPropsResolverFn<C, V>;
   }
@@ -650,60 +782,57 @@ export function defineConfig(options?: VariantFactoryOptions) {
     elementType: T,
     config: Exact<Simplify<C>, VariantComponentConfig<V>>
   ): VariantComponentType<T, C, V> {
-    const { withoutRenderProp } = config;
-    type BaseProps = BaseVariantComponentProps<T, C, V>;
-
+    const { withoutRenderProp, displayName: customDisplayName } = config;
     const resolveProps = variantPropsResolver<C, V>(config);
 
-    // Helper to get display name for the component
-    const getDisplayName = (): string => {
-      if (typeof elementType === 'string') {
-        return elementType;
-      }
-      return (
-        (elementType as { displayName?: string }).displayName ||
-        (elementType as { name?: string }).name ||
-        'Component'
-      );
-    };
+    type BaseProps = BaseVariantComponentProps<T, C, V>;
+    type PropsWithRender = VariantComponentPropsWithRender<BaseProps, C, V>;
 
+    const displayName =
+      customDisplayName ||
+      (typeof elementType === 'string'
+        ? elementType
+        : (elementType as { displayName?: string }).displayName ||
+          (elementType as { name?: string }).name ||
+          'Component');
+
+    // Simple component without render prop support
     if (typeof elementType !== 'string' || withoutRenderProp) {
-      const component = ((props: BaseProps) => {
-        return createElement(elementType, resolveProps(props as any));
-      }) as VariantComponentType<T, C, V>;
+      const Component = (props: BaseProps) =>
+        createElement(elementType, resolveProps(props as any));
+
       (
-        component as { displayName?: string }
-      ).displayName = `Variant(${getDisplayName()})`;
-      return component;
+        Component as { displayName?: string }
+      ).displayName = `Variant(${displayName})`;
+      return Component as VariantComponentType<T, C, V>;
     }
 
-    type ComponentProps = VariantComponentPropsWithRender<BaseProps, C, V>;
-
-    const component = ((props: ComponentProps) => {
+    // Component with render prop support for polymorphism
+    const Component = (props: PropsWithRender) => {
       const { render, ...rest } = props;
+      const resolvedProps = resolveProps(rest as any);
       const mergedRef = useMergeRefs(
         (rest as { ref?: Ref<unknown> }).ref,
         getRefProperty(render)
       );
-      const resolvedProps = resolveProps(rest as any);
 
       if (render) {
         if (isValidElement(render)) {
-          const renderProps = { ...render.props, ref: mergedRef };
-          return cloneElement(render, mergeProps(resolvedProps, renderProps));
-        } else {
-          return render(resolvedProps as any) as ReactElement;
+          return cloneElement(
+            render,
+            mergeProps(resolvedProps, { ...render.props, ref: mergedRef })
+          );
         }
+        return render(resolvedProps as any) as ReactElement;
       }
 
       return createElement(elementType, { ...resolvedProps, ref: mergedRef });
-    }) as VariantComponentType<T, C, V>;
+    };
 
     (
-      component as { displayName?: string }
-    ).displayName = `Variant(${getDisplayName()})`;
-
-    return component;
+      Component as { displayName?: string }
+    ).displayName = `Variant(${displayName})`;
+    return Component as VariantComponentType<T, C, V>;
   }
 
   return {
@@ -712,3 +841,5 @@ export function defineConfig(options?: VariantFactoryOptions) {
     variantComponent,
   } as const;
 }
+
+export { mergeProps, mergeRefs, useMergeRefs, hasOwnProperty } from './utils';
