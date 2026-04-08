@@ -1214,7 +1214,8 @@ The alpha line is maintained from the `next` branch.
 - Open all v2 feature and fix PRs against `next`
 - Add a changeset for any source, package metadata, public type, or build/release-affecting change
 - Use `pnpm run check:changeset` locally to validate the current branch
-- Alpha publishes are triggered from `next`, and the release workflow keeps `latest` and `alpha` dist-tags aligned until stable `2.0.0` ships
+- Alpha publishes are triggered from `next` via npm trusted publishing
+- After each alpha publish, run the manual npm `dist-tag` and legacy `deprecate` commands from the release process doc
 - When the package is ready for stable, run `changeset pre exit`, publish `2.0.0`, and then fast-forward `main` to the stable release commit
 
 ## License

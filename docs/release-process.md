@@ -11,13 +11,14 @@
 1. Open v2 feature and fix PRs against `next`.
 2. Add a changeset for any source, package metadata, public type, or build/release-affecting change.
 3. Use `pnpm run check:changeset` before opening the PR when the change should affect release intent.
-4. Merge to `next`; the release workflow handles alpha publishing.
+4. Merge to `next`; the release workflow publishes through npm trusted publishing.
 
 ## Alpha release policy
 
 - `changesets` remains in prerelease mode with the `alpha` tag
-- Alpha releases publish from `next`
-- After publish, the workflow syncs `latest` to the newly published alpha and verifies `latest === alpha`
+- Alpha releases publish from `next` through npm trusted publishing
+- `npm publish` runs in GitHub Actions without a long-lived `NPM_TOKEN`
+- `npm dist-tag` and `npm deprecate` remain manual npm-authenticated steps because trusted publishing only covers `npm publish`
 - This policy remains in place until stable `2.0.0` is cut
 
 ## Stable release checklist
@@ -35,15 +36,28 @@ These settings must be applied in GitHub and npm because they are outside the re
 - Set GitHub default branch to `next` during the alpha period
 - Protect `next` as the release branch for v2 alpha work
 - Restrict direct development on `main` until stable `2.0.0`
+- Configure npm trusted publishers for both `react-class-variants` and `react-tailwind-variants`
 - Deprecate `react-tailwind-variants` after the legacy `1.0.4` metadata release
 
-## One-time npm commands
+## One-time npm setup
 
-Use these commands once you are authenticated with npm.
+- Configure a trusted publisher for `react-class-variants`:
+  - Publisher: `GitHub Actions`
+  - Organization or user: `jackardios`
+  - Repository: `react-class-variants`
+  - Workflow filename: `release.yml`
+  - Environment name: blank unless you intentionally publish from a GitHub Environment
+- Configure the same trusted publisher settings for `react-tailwind-variants`
+- In npm package settings, `Require two-factor authentication and disallow tokens` is compatible with trusted publishing and is the preferred end state once publish succeeds
+
+## Manual npm commands after publish
+
+Use these commands once the corresponding version has been published and you are authenticated with npm locally.
 
 ```bash
-# Immediately align the currently published alpha line
-npm dist-tag add react-class-variants@2.0.0-alpha.3 latest
+# Keep prerelease installs explicit while the package is alpha-only
+npm dist-tag add react-class-variants@2.0.0-alpha.4 alpha
+npm dist-tag add react-class-variants@2.0.0-alpha.4 latest
 
 # Deprecate the legacy package after publishing v1.0.4
 npm deprecate "react-tailwind-variants@<=1.0.4" "Package renamed to react-class-variants. The v2 line is currently published as react-class-variants@alpha. Migration guide: https://github.com/jackardios/react-class-variants/blob/next/docs/migration-from-react-tailwind-variants.md"

@@ -40,8 +40,6 @@
     "format": "prettier --write .",
     "bench": "vitest bench",
     "ci": "pnpm run lint && pnpm run lint:eslint && pnpm run test && pnpm run build && pnpm run test:types",
-    "release:sync-dist-tags": "node scripts/sync-dist-tags.cjs",
-    "release:verify-dist-tags": "node scripts/verify-dist-tags.cjs",
     "release": "pnpm run ci && changeset publish"
   },
   "license": "MIT",
