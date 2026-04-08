@@ -1,5 +1,11 @@
 # react-tailwind-variants
 
+## 1.0.4
+
+### Patch Changes
+
+- 443448f: Mark the v1 package as legacy and point users to the v2 migration guide.
+
 ## 1.0.3
 
 ### Patch Changes
