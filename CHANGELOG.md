@@ -1,5 +1,11 @@
 # react-class-variants
 
+## 2.0.0-alpha.4
+
+### Patch Changes
+
+- fb2953c: Ensure merged React event handlers preserve the override handler return value.
+
 ## 2.0.0-alpha.3
 
 ### Patch Changes

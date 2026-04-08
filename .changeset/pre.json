@@ -6,6 +6,7 @@
   },
   "changesets": [
     "add-type-utilities",
+    "five-moons-return",
     "fix-merge-props",
     "green-geckos-fix",
     "major-v2-refactor"
