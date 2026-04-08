@@ -1,6 +1,6 @@
 {
   "name": "react-tailwind-variants",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Legacy v1 React variants API for Tailwind CSS classes",
   "private": false,
   "main": "./dist/index.js",
