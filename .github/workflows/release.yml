@@ -40,30 +40,42 @@ jobs:
           title: Version Packages (alpha)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Read package metadata
-        id: package
-        if: steps.changesets.outputs.hasChangesets == 'false'
-        run: |
-          echo "name=$(node -p 'require(\"./package.json\").name')" >> "$GITHUB_OUTPUT"
-          echo "version=$(node -p 'require(\"./package.json\").version')" >> "$GITHUB_OUTPUT"
       - name: Publish package to npm
         if: steps.changesets.outputs.hasChangesets == 'false'
         run: pnpm run release
-      - name: Push release tag
+      - name: Push release tags
         if: steps.changesets.outputs.hasChangesets == 'false'
         run: |
-          tag="${{ steps.package.outputs.name }}@${{ steps.package.outputs.version }}"
-          if ! git rev-parse "$tag" >/dev/null 2>&1; then
-            git tag "$tag"
+          mapfile -t tags < <(git tag --points-at HEAD 'v*')
+          if [ "${#tags[@]}" -eq 0 ]; then
+            echo "No release tags found on HEAD."
+            exit 0
           fi
-          git push origin "$tag"
-      - name: Create GitHub release
+          for tag in "${tags[@]}"; do
+            git push origin "$tag"
+          done
+      - name: Create GitHub releases
         if: steps.changesets.outputs.hasChangesets == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tag="${{ steps.package.outputs.name }}@${{ steps.package.outputs.version }}"
-          gh release view "$tag" >/dev/null 2>&1 || \
-            gh release create "$tag" \
-              --title "$tag" \
-              --notes "Published from ${GITHUB_REF_NAME} via npm trusted publishing."
+          mapfile -t tags < <(git tag --points-at HEAD 'v*')
+          if [ "${#tags[@]}" -eq 0 ]; then
+            echo "No release tags found on HEAD."
+            exit 0
+          fi
+          for tag in "${tags[@]}"; do
+            if gh release view "$tag" >/dev/null 2>&1; then
+              continue
+            fi
+            if [[ "$tag" == *-* ]]; then
+              gh release create "$tag" \
+                --prerelease \
+                --title "$tag" \
+                --notes "Published from ${GITHUB_REF_NAME} via npm trusted publishing."
+            else
+              gh release create "$tag" \
+                --title "$tag" \
+                --notes "Published from ${GITHUB_REF_NAME} via npm trusted publishing."
+            fi
+          done
