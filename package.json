@@ -1,7 +1,7 @@
 {
   "name": "react-tailwind-variants",
   "version": "1.0.3",
-  "description": "React Stitches-like variants API for tailwindcss classes",
+  "description": "Legacy v1 React variants API for Tailwind CSS classes",
   "private": false,
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -36,12 +36,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jackardios/react-tailwind-variants.git"
+    "url": "git+https://github.com/jackardios/react-class-variants.git"
   },
   "bugs": {
-    "url": "https://github.com/jackardios/react-tailwind-variants/issues"
+    "url": "https://github.com/jackardios/react-class-variants/issues"
   },
-  "homepage": "https://github.com/jackardios/react-tailwind-variants#readme",
+  "homepage": "https://github.com/jackardios/react-class-variants/blob/next/docs/react-tailwind-variants-v1.md",
   "devDependencies": {
     "@changesets/cli": "^2.26.0",
     "@testing-library/dom": "^10.4.0",
