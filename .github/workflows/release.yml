@@ -35,6 +35,35 @@ jobs:
         id: changesets
         uses: changesets/action@v1
         with:
-          publish: pnpm run release
+          version: pnpm exec changeset version
+          commit: Version Packages (alpha)
+          title: Version Packages (alpha)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Read package metadata
+        id: package
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        run: |
+          echo "name=$(node -p 'require(\"./package.json\").name')" >> "$GITHUB_OUTPUT"
+          echo "version=$(node -p 'require(\"./package.json\").version')" >> "$GITHUB_OUTPUT"
+      - name: Publish package to npm
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        run: pnpm run release
+      - name: Push release tag
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        run: |
+          tag="${{ steps.package.outputs.name }}@${{ steps.package.outputs.version }}"
+          if ! git rev-parse "$tag" >/dev/null 2>&1; then
+            git tag "$tag"
+          fi
+          git push origin "$tag"
+      - name: Create GitHub release
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${{ steps.package.outputs.name }}@${{ steps.package.outputs.version }}"
+          gh release view "$tag" >/dev/null 2>&1 || \
+            gh release create "$tag" \
+              --title "$tag" \
+              --notes "Published from ${GITHUB_REF_NAME} via npm trusted publishing."
