@@ -12,7 +12,7 @@ This is a modified version of the [`classname-variants`](https://github.com/fgna
 > `react-tailwind-variants` is the legacy v1 package line.
 > New development moved to [`react-class-variants`](https://www.npmjs.com/package/react-class-variants), and the current v2 line is published on the `alpha` channel.
 > Install v2 with `npm install react-class-variants@alpha`.
-> Use the [Migration Guide](https://github.com/jackardios/react-class-variants/blob/next/docs/migration-from-react-tailwind-variants.md) to move off v1 when you are ready.
+> Use the [Migration Guide](https://github.com/Jackardios/react-class-variants/blob/next/docs/migration-from-react-tailwind-variants.md) to move off v1 when you are ready.
 
 ## Features
 
@@ -33,8 +33,8 @@ npm install tailwind-merge react-tailwind-variants
 - `react-tailwind-variants` remains installable for existing applications
 - The package is frozen and only receives metadata and documentation maintenance
 - The successor package is `react-class-variants`
-- Migration guide: <https://github.com/jackardios/react-class-variants/blob/next/docs/migration-from-react-tailwind-variants.md>
-- Legacy v1 docs: <https://github.com/jackardios/react-class-variants/blob/next/docs/react-tailwind-variants-v1.md>
+- Migration guide: <https://github.com/Jackardios/react-class-variants/blob/next/docs/migration-from-react-tailwind-variants.md>
+- Legacy v1 docs: <https://github.com/Jackardios/react-class-variants/blob/next/docs/react-tailwind-variants-v1.md>
 
 ## Usage
 

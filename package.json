@@ -18,7 +18,7 @@
   "author": {
     "name": "Salavat Salakhutdinov",
     "email": "salahutdinov.salavat@gmail.com",
-    "url": "https://github.com/jackardios"
+    "url": "https://github.com/Jackardios"
   },
   "keywords": [
     "tailwind",
@@ -36,12 +36,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jackardios/react-class-variants.git"
+    "url": "https://github.com/Jackardios/react-class-variants"
   },
   "bugs": {
-    "url": "https://github.com/jackardios/react-class-variants/issues"
+    "url": "https://github.com/Jackardios/react-class-variants/issues"
   },
-  "homepage": "https://github.com/jackardios/react-class-variants/blob/next/docs/react-tailwind-variants-v1.md",
+  "homepage": "https://github.com/Jackardios/react-class-variants/blob/next/docs/react-tailwind-variants-v1.md",
   "devDependencies": {
     "@changesets/cli": "^2.26.0",
     "@testing-library/dom": "^10.4.0",
