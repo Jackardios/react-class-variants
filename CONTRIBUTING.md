@@ -25,5 +25,5 @@ pnpm test:types
 ## Release flow
 
 - Alpha releases are published from `next`
-- The release workflow syncs the `latest` and `alpha` dist-tags while the package stays in prerelease mode
+- After publish, verify npm dist-tags manually while the package stays in prerelease mode
 - Stable `2.0.0` should be published only after `changeset pre exit`

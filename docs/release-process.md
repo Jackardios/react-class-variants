@@ -43,7 +43,7 @@ These settings must be applied in GitHub and npm because they are outside the re
 
 - Configure a trusted publisher for `react-class-variants`:
   - Publisher: `GitHub Actions`
-  - Organization or user: `jackardios`
+  - Organization or user: `Jackardios`
   - Repository: `react-class-variants`
   - Workflow filename: `release.yml`
   - Environment name: blank unless you intentionally publish from a GitHub Environment
