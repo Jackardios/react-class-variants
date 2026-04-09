@@ -1,7 +1,7 @@
 import {
+  type CSSProperties,
   isValidElement,
   useMemo,
-  type HTMLAttributes,
   type ReactElement,
   type Ref,
   type RefCallback,
@@ -20,9 +20,9 @@ import {
  * hasOwnProperty({ foo: 1 }, 'foo'); // true
  * hasOwnProperty({ foo: 1 }, 'bar'); // false
  */
-export function hasOwnProperty<T extends Record<string, any>>(
+export function hasOwnProperty<T extends object>(
   object: T,
-  prop: keyof any
+  prop: PropertyKey
 ): prop is keyof T {
   if (typeof Object.hasOwn === 'function') {
     return Object.hasOwn(object, prop);
@@ -42,11 +42,11 @@ export function hasOwnProperty<T extends Record<string, any>>(
  * isValidElementWithRef(<div />); // depends on React version
  * isValidElementWithRef(null); // false
  */
-export function isValidElementWithRef<P extends { ref?: Ref<any> }>(
+export function isValidElementWithRef<P extends { ref?: Ref<unknown> }>(
   element: unknown
-): element is ReactElement<P> & { ref?: Ref<any> } {
+): element is ReactElement<P> & { ref?: Ref<unknown> } {
   if (!element) return false;
-  if (!isValidElement<{ ref?: Ref<any> }>(element)) return false;
+  if (!isValidElement<{ ref?: Ref<unknown> }>(element)) return false;
   if ('ref' in element.props) return true;
   if ('ref' in element) return true;
   return false;
@@ -64,10 +64,10 @@ export function isValidElementWithRef<P extends { ref?: Ref<any> }>(
  * getRefProperty(<div ref={ref} />); // ref
  * getRefProperty(<div />); // null
  */
-export function getRefProperty(element: unknown) {
+export function getRefProperty(element: unknown): Ref<unknown> | null {
   if (!isValidElementWithRef(element)) return null;
   const props = { ...element.props };
-  return props.ref || element.ref;
+  return props.ref ?? element.ref ?? null;
 }
 
 /**
@@ -106,22 +106,32 @@ export function setRef<T>(
  * @param overrides - Props to merge on top of base
  * @returns Merged props object
  */
-export function mergeProps<T extends HTMLAttributes<any>>(
-  base: T,
-  overrides: T
-): T {
+type MergeableProps = {
+  className?: string | null | undefined;
+  style?: CSSProperties | undefined;
+};
+
+type MergedProps<TBase extends object, TOverrides extends object> = TBase &
+  TOverrides;
+
+export function mergeProps<TBase extends object, TOverrides extends object>(
+  base: TBase & MergeableProps,
+  overrides: TOverrides & MergeableProps
+): MergedProps<TBase, TOverrides> {
   if (!overrides || Object.keys(overrides).length === 0) {
-    return base;
+    return base as MergedProps<TBase, TOverrides>;
   }
 
-  const props = { ...base };
+  const props = { ...base } as Record<string, unknown> & MergeableProps;
+  const baseProps = base as Record<string, unknown> & MergeableProps;
+  const overrideProps = overrides as Record<string, unknown> & MergeableProps;
 
-  for (const key in overrides) {
-    if (!hasOwnProperty(overrides, key)) continue;
+  for (const key in overrideProps) {
+    if (!hasOwnProperty(overrideProps, key)) continue;
 
     if (key === 'className') {
-      const baseClass = base.className;
-      const overrideClass = overrides.className;
+      const baseClass = baseProps.className;
+      const overrideClass = overrideProps.className;
 
       if (baseClass && overrideClass) {
         props.className = `${baseClass} ${overrideClass}`;
@@ -133,14 +143,13 @@ export function mergeProps<T extends HTMLAttributes<any>>(
     }
 
     if (key === 'style') {
-      const prop = 'style';
-      props[prop] = base[prop]
-        ? { ...base[prop], ...overrides[prop] }
-        : overrides[prop];
+      props.style = baseProps.style
+        ? { ...baseProps.style, ...overrideProps.style }
+        : overrideProps.style;
       continue;
     }
 
-    const overrideValue = overrides[key];
+    const overrideValue = overrideProps[key];
 
     const isEventHandlerKey =
       key.length > 2 &&
@@ -154,13 +163,12 @@ export function mergeProps<T extends HTMLAttributes<any>>(
         continue;
       }
 
-      const baseValue = base[key];
+      const baseValue = baseProps[key];
       if (
         typeof overrideValue === 'function' &&
         typeof baseValue === 'function'
       ) {
-        type EventKey = Extract<keyof HTMLAttributes<any>, `on${string}`>;
-        props[key as EventKey] = (...args) => {
+        props[key] = (...args: unknown[]) => {
           const result = overrideValue(...args);
           baseValue(...args);
           return result;
@@ -172,7 +180,23 @@ export function mergeProps<T extends HTMLAttributes<any>>(
     props[key] = overrideValue;
   }
 
-  return props;
+  return props as MergedProps<TBase, TOverrides>;
+}
+
+function mergeRefsImpl<T>(
+  refs: Array<Ref<T> | undefined | null>
+): Ref<T> | RefCallback<T> | undefined {
+  if (refs.length === 0) return;
+  if (refs.length === 1) return refs[0] || undefined;
+
+  const validRefs = refs.filter((ref): ref is Ref<T> => Boolean(ref));
+  if (validRefs.length === 0) return;
+
+  return (value: T | null) => {
+    for (const ref of validRefs) {
+      setRef(ref, value);
+    }
+  };
 }
 
 /**
@@ -186,19 +210,19 @@ export function mergeProps<T extends HTMLAttributes<any>>(
  * const merged = mergeRefs(ref1, ref2);
  * // Use in cloneElement or other non-hook contexts
  */
-export function mergeRefs<T = any>(
+export function mergeRefs(): undefined;
+export function mergeRefs<T>(
+  ref: Ref<T> | undefined | null
+): Ref<T> | undefined;
+export function mergeRefs<T>(
+  refA: Ref<T> | undefined | null,
+  refB: Ref<T> | undefined | null,
   ...refs: Array<Ref<T> | undefined | null>
-): Ref<T> | undefined {
-  const validRefs = refs.filter((ref): ref is Ref<T> => Boolean(ref));
-
-  if (validRefs.length === 0) return;
-  if (validRefs.length === 1) return validRefs[0];
-
-  return (value: T | null) => {
-    for (const ref of validRefs) {
-      setRef(ref, value);
-    }
-  };
+): RefCallback<T> | undefined;
+export function mergeRefs<T = unknown>(
+  ...refs: Array<Ref<T> | undefined | null>
+): Ref<T> | RefCallback<T> | undefined {
+  return mergeRefsImpl(refs);
 }
 
 /**
@@ -211,8 +235,17 @@ export function mergeRefs<T = any>(
  *   return <div {...props} ref={useMergeRefs(internalRef, ref)} />;
  * });
  */
-export function useMergeRefs<T = any>(
+export function useMergeRefs(): undefined;
+export function useMergeRefs<T>(
+  ref: Ref<T> | undefined | null
+): Ref<T> | undefined;
+export function useMergeRefs<T>(
+  refA: Ref<T> | undefined | null,
+  refB: Ref<T> | undefined | null,
   ...refs: Array<Ref<T> | undefined | null>
-): Ref<T> | undefined {
-  return useMemo(() => mergeRefs(...refs), refs);
+): RefCallback<T> | undefined;
+export function useMergeRefs<T = unknown>(
+  ...refs: Array<Ref<T> | undefined | null>
+): Ref<T> | RefCallback<T> | undefined {
+  return useMemo(() => mergeRefsImpl(refs), refs);
 }

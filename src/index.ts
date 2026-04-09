@@ -24,6 +24,10 @@ type OmitByValue<T, Value> = {
   [P in keyof T as T[P] extends Value ? never : P]: T[P];
 };
 type StringToBoolean<T> = T extends 'true' | 'false' ? boolean : T;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- render props need to support refs for arbitrary element types in the public API.
+type AnyRef = Ref<any>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- render props need to stay compatible with arbitrary HTML element attributes in the public API.
+type AnyHtmlAttributes = HTMLAttributes<any>;
 
 /**
  * Simplifies a type by expanding intersections and mapped types for better IDE display.
@@ -139,7 +143,9 @@ type BooleanVariants<
   C extends VariantsConfig<V>,
   V extends VariantsSchema = NonNullable<C['variants']>
 > = {
-  [Variant in keyof V as V[Variant] extends { true: any } | { false: any }
+  [Variant in keyof V as V[Variant] extends
+    | { true: unknown }
+    | { false: unknown }
     ? Variant
     : never]: V[Variant];
 };
@@ -330,7 +336,7 @@ export type BaseVariantComponentProps<
 export type ExtractVariantConfig<T> = T extends {
   __config?: infer Config;
 }
-  ? Config extends VariantsConfig<any>
+  ? Config extends VariantsConfig<VariantsSchema>
     ? Simplify<Config>
     : never
   : never;
@@ -377,7 +383,7 @@ export type ExtractVariantOptions<T> = T extends {
  * @example
  * const children: RenderPropFn = (props) => <div {...props} />;
  */
-type RenderPropFn<P = HTMLAttributes<any> & { ref?: Ref<any> }> = (
+type RenderPropFn<P = AnyHtmlAttributes & { ref?: AnyRef }> = (
   props: P
 ) => ReactNode;
 
@@ -404,12 +410,12 @@ export type RenderPropType<
       Simplify<
         {
           className: string;
-          ref?: Ref<any>;
+          ref?: AnyRef;
         } & (C['forwardProps'] extends (keyof VariantOptions<C, V>)[]
           ? Pick<VariantOptions<C, V>, C['forwardProps'][number]>
           : {}) &
           Omit<
-            HTMLAttributes<any>,
+            AnyHtmlAttributes,
             'render' | 'className' | keyof VariantOptions<C, V>
           >
       >
@@ -452,12 +458,25 @@ export function defineConfig(options?: VariantFactoryOptions) {
   const { onClassesMerged } = options ?? {};
 
   function flattenClasses(classes: ClassNameValue[]): string {
-    const flattened = (classes as string[]).flat(Infinity) as (
-      | string
-      | null
-      | undefined
-    )[];
-    return flattened.filter((c): c is string => Boolean(c)).join(' ');
+    const flattened: string[] = [];
+    const stack = [...classes].reverse();
+
+    while (stack.length > 0) {
+      const value = stack.pop();
+
+      if (Array.isArray(value)) {
+        for (let i = value.length - 1; i >= 0; i -= 1) {
+          stack.push(value[i]);
+        }
+        continue;
+      }
+
+      if (value) {
+        flattened.push(value);
+      }
+    }
+
+    return flattened.join(' ');
   }
 
   function applyPostProcess(className: string): string {
@@ -510,6 +529,7 @@ export function defineConfig(options?: VariantFactoryOptions) {
         const extra = Array.isArray(props.className)
           ? flattenClasses([props.className])
           : props.className;
+        if (!extra) return applyPostProcess(baseClassName);
         return applyPostProcess(
           baseClassName ? concatClasses(baseClassName, extra) : extra
         );
@@ -737,7 +757,10 @@ export function defineConfig(options?: VariantFactoryOptions) {
         }
       }
 
-      result.className = resolveClassName(variantPropsOnly as any);
+      const resolveVariantClassName = resolveClassName as (
+        props: VariantPropsWithClassName
+      ) => string;
+      result.className = resolveVariantClassName(variantPropsOnly);
       return result;
     } as VariantPropsResolverFn<C, V>;
   }
@@ -795,11 +818,15 @@ export function defineConfig(options?: VariantFactoryOptions) {
         : (elementType as { displayName?: string }).displayName ||
           (elementType as { name?: string }).name ||
           'Component');
+    type ResolvedPropsInput = VariantOptions<C, V> & { className?: string };
 
     // Simple component without render prop support
     if (typeof elementType !== 'string' || withoutRenderProp) {
       const Component = (props: BaseProps) =>
-        createElement(elementType, resolveProps(props as any));
+        createElement(
+          elementType,
+          resolveProps(props as unknown as ResolvedPropsInput)
+        );
 
       (
         Component as { displayName?: string }
@@ -810,7 +837,7 @@ export function defineConfig(options?: VariantFactoryOptions) {
     // Component with render prop support for polymorphism
     const Component = (props: PropsWithRender) => {
       const { render, ...rest } = props;
-      const resolvedProps = resolveProps(rest as any);
+      const resolvedProps = resolveProps(rest as unknown as ResolvedPropsInput);
       const mergedRef = useMergeRefs(
         (rest as { ref?: Ref<unknown> }).ref,
         getRefProperty(render)
@@ -823,7 +850,7 @@ export function defineConfig(options?: VariantFactoryOptions) {
             mergeProps(resolvedProps, { ...render.props, ref: mergedRef })
           );
         }
-        return render(resolvedProps as any) as ReactElement;
+        return render(resolvedProps) as ReactElement;
       }
 
       return createElement(elementType, { ...resolvedProps, ref: mergedRef });

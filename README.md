@@ -7,7 +7,8 @@
 
 A lightweight, type-safe library for building composable React components with dynamic CSS class variations. Works seamlessly with **Tailwind CSS**, **CSS Modules**, or any CSS solution.
 
-> [!IMPORTANT]
+> **Important**
+>
 > `react-tailwind-variants` was renamed to `react-class-variants`.
 > The v2 line is currently published on the `alpha` channel, so the recommended install command is `react-class-variants@alpha`.
 > The legacy `react-tailwind-variants` package is frozen and kept only for migration and maintenance notices.
@@ -472,6 +473,7 @@ Creates a React component with variant support.
 const Button = variantComponent(
   element: string | React.ComponentType,
   config: VariantsConfig & {
+    displayName?: string;
     withoutRenderProp?: boolean;
     forwardProps?: string[];
   }
@@ -481,6 +483,7 @@ const Button = variantComponent(
 **Config Options:**
 
 - All `VariantsConfig` options (`base`, `variants`, `compoundVariants`, `defaultVariants`)
+- `displayName` - Custom React DevTools display name for the generated component (optional)
 - `withoutRenderProp` - Disables the `render` prop pattern (optional)
 - `forwardProps` - Array of variant prop names to forward to the rendered element (optional)
 
@@ -576,7 +579,6 @@ import type {
   VariantsConfig,
   VariantOptions,
   ClassNameValue,
-  VariantComponentProps,
   ExtractVariantOptions,
   ExtractVariantConfig,
 } from 'react-class-variants';
@@ -663,6 +665,17 @@ function ButtonGroup({ variant }: { variant: ButtonOptions1['color'] }) {
 - Respects optional vs required variants (based on `defaultVariants` and boolean variants)
 - Includes only variant props (excludes native element props like `onClick`, `className`, etc.)
 - Useful for prop forwarding and composition
+
+React Class Variants also exports runtime utilities from the package root:
+
+```typescript
+import {
+  hasOwnProperty,
+  mergeProps,
+  mergeRefs,
+  useMergeRefs,
+} from 'react-class-variants';
+```
 
 #### `ExtractVariantConfig<T>`
 
@@ -1197,6 +1210,12 @@ git clone https://github.com/Jackardios/react-class-variants.git
 # Install dependencies
 pnpm install
 
+# Type-check publish surface
+pnpm lint
+
+# Type-check src plus runtime tests (excluding tsd files)
+pnpm lint:all
+
 # Run tests in watch mode
 pnpm dev
 
@@ -1204,8 +1223,10 @@ pnpm dev
 pnpm build
 
 # Run all checks
-pnpm ci
+pnpm run ci
 ```
+
+`pnpm run ci` runs the full local gate: changeset check, `lint`, `lint:all`, ESLint, Prettier, runtime tests, build, and `tsd`.
 
 ## Release Process
 

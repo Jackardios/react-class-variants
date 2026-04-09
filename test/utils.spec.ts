@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createElement, createRef, forwardRef, HTMLAttributes } from 'react';
+import {
+  createElement,
+  createRef,
+  forwardRef,
+  type ComponentPropsWithoutRef,
+  type HTMLAttributes,
+} from 'react';
 import { renderHook } from '@testing-library/react';
 import {
   hasOwnProperty,
@@ -497,8 +503,13 @@ describe('mergeProps additional cases', () => {
   });
 
   it('should handle boolean props', () => {
-    const base = { disabled: false, hidden: true } as HTMLAttributes<any>;
-    const overrides = { disabled: true } as HTMLAttributes<any>;
+    const base: ComponentPropsWithoutRef<'button'> = {
+      disabled: false,
+      hidden: true,
+    };
+    const overrides: Partial<ComponentPropsWithoutRef<'button'>> = {
+      disabled: true,
+    };
     const result = mergeProps(base, overrides);
     expect(result.disabled).toBe(true);
     expect(result.hidden).toBe(true);
@@ -610,12 +621,12 @@ describe('useMergeRefs', () => {
     const ref3 = vi.fn();
 
     const { result, rerender } = renderHook(
-      ({ refs }) => useMergeRefs(...refs),
-      { initialProps: { refs: [ref1, ref2] } }
+      ({ refs }) => useMergeRefs(refs[0], refs[1]),
+      { initialProps: { refs: [ref1, ref2] as const } }
     );
 
     const firstResult = result.current;
-    rerender({ refs: [ref1, ref3] });
+    rerender({ refs: [ref1, ref3] as const });
 
     expect(result.current).not.toBe(firstResult);
   });

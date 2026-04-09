@@ -674,6 +674,15 @@ describe('variantComponent', () => {
       expect((Button as any).displayName).toBe('Variant(button)');
     });
 
+    it('should prefer a custom displayName when provided', () => {
+      const Button = variantComponent('button', {
+        base: 'btn',
+        displayName: 'MyButton',
+      });
+
+      expect((Button as any).displayName).toBe('Variant(MyButton)');
+    });
+
     it('should set displayName for custom component with displayName', () => {
       const CustomButton = forwardRef<
         HTMLButtonElement,

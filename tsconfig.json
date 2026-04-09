@@ -14,6 +14,6 @@
     "noEmit": true,
     "types": ["@testing-library/jest-dom"]
   },
-  "include": ["src", "test"],
-  "exclude": ["node_modules", "dist", "test/types.test-d.tsx"]
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
 }

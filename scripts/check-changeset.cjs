@@ -62,7 +62,7 @@ const baseRef = resolveBaseRef(baseBranch);
 const mergeBase = git(['merge-base', 'HEAD', baseRef]);
 const changedFiles = git(['diff', '--name-only', `${mergeBase}...HEAD`])
   .split('\n')
-  .map((file) => file.trim())
+  .map(file => file.trim())
   .filter(Boolean);
 
 const releaseAffectingFiles = changedFiles.filter(isReleaseAffecting);

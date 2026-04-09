@@ -17,10 +17,16 @@
 ```bash
 pnpm install
 pnpm lint
+pnpm lint:all
 pnpm test
 pnpm build
 pnpm test:types
+pnpm run ci
 ```
+
+- `pnpm lint` checks the publish surface in `src/`
+- `pnpm lint:all` checks `src/` plus runtime tests and excludes `tsd` files, which are covered separately by `pnpm test:types`
+- `pnpm run ci` is the full local gate before opening a release-affecting PR
 
 ## Release flow
 

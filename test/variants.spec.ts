@@ -886,12 +886,35 @@ describe('variants()', () => {
       expect(button({ className: undefined })).toBe('btn');
     });
 
+    it('should handle empty array className without trailing whitespace', () => {
+      const button = variants({ base: 'btn' });
+      expect(button({ className: [] })).toBe('btn');
+    });
+
+    it('should handle nested empty array className without trailing whitespace', () => {
+      const button = variants({ base: 'btn' });
+      expect(button({ className: [[]] })).toBe('btn');
+    });
+
+    it('should merge base and className in the no-variants fast path', () => {
+      const button = variants({ base: 'btn' });
+      expect(button({ className: 'custom' })).toBe('btn custom');
+    });
+
     it('should merge className with onClassesMerged', () => {
       const { variants } = defineConfig({
         onClassesMerged: cls => cls.replace(/\s+/g, '-'),
       });
       const button = variants({ base: 'btn rounded' });
       expect(button({ className: 'custom' })).toBe('btn-rounded-custom');
+    });
+
+    it('should preserve onClassesMerged behavior for empty array className', () => {
+      const { variants } = defineConfig({
+        onClassesMerged: cls => cls.replace(/\s+/g, '-'),
+      });
+      const button = variants({ base: 'btn rounded' });
+      expect(button({ className: [] })).toBe('btn-rounded');
     });
   });
 

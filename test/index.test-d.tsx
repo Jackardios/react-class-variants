@@ -4,13 +4,23 @@ import {
   expectNotAssignable,
   expectError,
 } from 'tsd';
-import { type Ref, type ReactElement, type ReactNode } from 'react';
+import {
+  createRef,
+  type ComponentPropsWithoutRef,
+  type Ref,
+  type RefCallback,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 import {
   defineConfig,
   type VariantOptions,
   type ClassNameValue,
   type ExtractVariantOptions,
   type ExtractVariantConfig,
+  mergeProps,
+  mergeRefs,
+  useMergeRefs,
 } from '../src/index';
 
 const { variants, variantPropsResolver, variantComponent } = defineConfig();
@@ -30,6 +40,35 @@ expectAssignable<ClassNameValue>([[['deeply', 'nested']]]);
 expectNotAssignable<ClassNameValue>(123);
 expectNotAssignable<ClassNameValue>(true);
 expectNotAssignable<ClassNameValue>({ foo: 'bar' });
+
+// =============================================================================
+// Root Utility Type Tests
+// =============================================================================
+
+const buttonBaseProps: ComponentPropsWithoutRef<'button'> = {
+  className: 'base',
+  disabled: false,
+  type: 'button',
+};
+const buttonOverrideProps: Partial<ComponentPropsWithoutRef<'button'>> = {
+  className: 'override',
+  disabled: true,
+};
+const mergedButtonProps = mergeProps(buttonBaseProps, buttonOverrideProps);
+expectType<boolean | undefined>(mergedButtonProps.disabled);
+expectType<string | undefined>(mergedButtonProps.className);
+expectType<'button' | 'submit' | 'reset' | undefined>(mergedButtonProps.type);
+
+const buttonRefObject = createRef<HTMLButtonElement>();
+const buttonRefCallback: RefCallback<HTMLButtonElement> = () => {};
+const mergedRefCallback = mergeRefs(buttonRefObject, buttonRefCallback);
+expectType<RefCallback<HTMLButtonElement> | undefined>(mergedRefCallback);
+
+const singleMergedRef = mergeRefs(buttonRefObject);
+expectType<Ref<HTMLButtonElement> | undefined>(singleMergedRef);
+
+const hookMergedRef = useMergeRefs(buttonRefObject, buttonRefCallback);
+expectType<RefCallback<HTMLButtonElement> | undefined>(hookMergedRef);
 
 // =============================================================================
 // Variant Options Type Tests - Required vs Optional
@@ -947,6 +986,14 @@ expectType<string>(undefinedVariantsConfig());
 const EmptyComponent = variantComponent('div', {});
 expectType<ReactNode>(EmptyComponent({ children: 'test' }));
 expectType<ReactNode>(EmptyComponent({ className: 'custom' }));
+
+const DisplayNameButton = variantComponent('button', {
+  variants: {
+    color: { primary: 'bg-blue' },
+  },
+  displayName: 'MyButton',
+});
+expectType<ReactNode>(DisplayNameButton({ color: 'primary' }));
 
 // =============================================================================
 // forwardProps Type Tests

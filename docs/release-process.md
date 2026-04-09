@@ -11,7 +11,8 @@
 1. Open v2 feature and fix PRs against `next`.
 2. Add a changeset for any source, package metadata, public type, or build/release-affecting change.
 3. Use `pnpm run check:changeset` before opening the PR when the change should affect release intent.
-4. Merge to `next`; the release workflow publishes through npm trusted publishing.
+4. Run `pnpm run ci` locally before opening a release-affecting PR or cutting a release.
+5. Merge to `next`; the release workflow publishes through npm trusted publishing.
 
 ## Alpha release policy
 
@@ -57,7 +58,6 @@ Use these commands once the corresponding version has been published and you are
 ```bash
 # Keep prerelease installs explicit while the package is alpha-only
 npm dist-tag add react-class-variants@2.0.0-alpha.4 alpha
-npm dist-tag add react-class-variants@2.0.0-alpha.4 latest
 
 # Deprecate the legacy package after publishing v1.0.4
 npm deprecate "react-tailwind-variants@<=1.0.4" "Package renamed to react-class-variants. The v2 line is currently published as react-class-variants@alpha. Migration guide: https://github.com/Jackardios/react-class-variants/blob/next/docs/migration-from-react-tailwind-variants.md"
