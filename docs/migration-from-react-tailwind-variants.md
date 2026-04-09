@@ -17,7 +17,7 @@ The good news: the core variant config model is still familiar. `base`, `variant
 - v2 is published under a new package name: `react-class-variants`.
 - The current v2 release channel is `alpha`.
 - v1 and v2 can coexist in the same application during migration because they have different package names.
-- v2 requires `react@^19`, `react-dom@^19`, and Node `>=18`.
+- v2 requires `react@^19`, `react-dom@^19`, and Node `>=20.19`.
 - `tailwind-merge` is no longer a peer dependency. Install it only if you want Tailwind conflict resolution.
 - v2 ships an `exports` map, so import from the package root rather than internal paths.
 
@@ -396,7 +396,7 @@ If you only added `tailwindCSS.experimental.classRegex` for `tw`, you can remove
 ## Breaking changes summary
 
 - Package renamed from `react-tailwind-variants` to `react-class-variants`.
-- v2 requires React 19, React DOM 19, and Node 18+.
+- v2 requires React 19, React DOM 19, and Node 20.19+.
 - `defineConfig()` is now the entrypoint for all helper creation.
 - `styled()` was replaced by `variantComponent()`.
 - `variantProps()` was renamed to `variantPropsResolver()`.

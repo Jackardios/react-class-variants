@@ -118,7 +118,7 @@ No more messy `className` logic, no more props duplication, just clean, type-saf
 Compatibility:
 
 - React `19+`
-- Node.js `18+`
+- Node.js `20.19+`
 - Current v2 install channel: `react-class-variants@alpha`
 
 ```bash
