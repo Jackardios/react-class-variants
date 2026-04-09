@@ -1,4 +1,6 @@
-## 'react-class-variants': patch
+---
+'react-class-variants': patch
+---
 
 Improve reusable config ergonomics by adding `defineVariantConfig()` for
 literal-preserving hoisted configs and by accepting readonly arrays in
