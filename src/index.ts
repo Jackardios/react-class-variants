@@ -288,7 +288,9 @@ type VariantPropsResolverFn<
  *
  * @property displayName - Custom display name for the component (used in React DevTools)
  * @property withoutRenderProp - When true, disables the polymorphic `render` prop pattern
- * @property forwardProps - Array of variant prop names to forward to the rendered element
+ * @property forwardProps - Array of variant prop names to keep in the resolved props object
+ * and expose to `render` functions or custom targets. Native DOM reflection still depends on
+ * the rendered target accepting that prop.
  *
  * @example
  * const config: VariantComponentConfig<{ size: { sm: string } }> = {
@@ -413,9 +415,11 @@ type RenderResolvedProps<
 
 /**
  * Type for the render prop, which can be either a function or a React element.
- * When using a function, it intentionally receives broad DOM props including
- * className, ref, and any forwarded variant props for ergonomic cross-element
- * composition.
+ * When using a function, it intentionally receives a broad, spread-safe prop bag:
+ * `className`, `ref`, generic `HTMLAttributes<any>`, and any variant props listed in
+ * `forwardProps`. Base-element-specific props such as `type`, `disabled`, `form`,
+ * `href`, and `target` are not part of this typed/stable contract, even if a runtime
+ * implementation happens to pass them through incidentally.
  * When using an element, it will be cloned with merged props.
  *
  * @template C - The variant component configuration type
@@ -809,6 +813,10 @@ export function defineConfig(options?: VariantFactoryOptions) {
    *
    * This allows the render element to customize or override variant styles when needed.
    * Event handlers are composed (both are called), classNames are concatenated.
+   * The typed/stable contract for function-form `render` is intentionally broad and
+   * cross-element-friendly: `className`, `ref`, generic `HTMLAttributes<any>`, and any
+   * `forwardProps`. Base-element-specific props such as `type`, `disabled`, `form`,
+   * `href`, and `target` are not guaranteed there.
    *
    * @example
    * const Button = variantComponent('button', {

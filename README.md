@@ -115,6 +115,12 @@ No more messy `className` logic, no more props duplication, just clean, type-saf
 
 ## Installation
 
+Compatibility:
+
+- React `19+`
+- Node.js `18+`
+- Current v2 install channel: `react-class-variants@alpha`
+
 ```bash
 npm install react-class-variants@alpha
 ```
@@ -416,7 +422,7 @@ import { Link } from 'react-router-dom';
 ```
 
 Props, refs, and event handlers are automatically merged!
-When `render` is a function, its argument is intentionally broad: it includes merged DOM props, a flattened `className`, an optional `ref`, and any variant props listed in `forwardProps`.
+When `render` is a function, its argument is intentionally broad and spread-safe: it includes generic `HTMLAttributes<any>`, a flattened `className`, an optional `ref`, and any variant props listed in `forwardProps`. Base-element-specific props like `type`, `disabled`, `form`, `href`, and `target` are intentionally not part of the typed/stable callback contract.
 
 > **Note:** The `render` prop pattern is a well-established composition pattern in the React ecosystem, used by libraries like [Base UI](https://base-ui.com/) and [Ariakit](https://ariakit.org/) for building accessible, composable components.
 
@@ -528,14 +534,14 @@ const Button = variantComponent(
 - All `VariantsConfig` options (`base`, `variants`, `compoundVariants`, `defaultVariants`)
 - `displayName` - Custom React DevTools display name for the generated component (optional)
 - `withoutRenderProp` - Disables the `render` prop pattern (optional)
-- `forwardProps` - Array of variant prop names to forward to the rendered element (optional)
+- `forwardProps` - Array of variant prop names to keep in the resolved props object and expose to `render` or custom targets (optional)
 
 **Component Props:**
 
 - All variant props (inferred from config)
 - Native element props (e.g., `onClick`, `disabled`)
 - `className` - Additional classes (merged with highest priority)
-- `render` - Polymorphic rendering (unless `withoutRenderProp` is true). Function renders receive broad DOM props, a flattened `className: string`, an optional `ref`, and any forwarded variant props.
+- `render` - Polymorphic rendering (unless `withoutRenderProp` is true). Function renders receive a broad spread-safe prop bag: generic `HTMLAttributes<any>`, a flattened `className: string`, an optional `ref`, and any forwarded variant props. Base-element-specific props like `type`, `disabled`, `form`, `href`, and `target` are intentionally not part of the typed/stable callback contract.
 
 ---
 
@@ -1253,7 +1259,7 @@ const Button = variantComponent('button', {
 
 ### Forwarding Variant Props
 
-By default, variant props are consumed and not passed to the rendered element. Use `forwardProps` to forward specific variant props:
+By default, variant props are consumed and removed from the resolved props object. Use `forwardProps` to keep specific variant props available for valid DOM props, custom components, or `render` functions:
 
 ```tsx
 const Button = variantComponent('button', {
@@ -1268,18 +1274,37 @@ const Button = variantComponent('button', {
       false: '',
     },
   },
-  // Forward 'disabled' prop to the <button> element
+  // Keep 'disabled' in the resolved props object. Since <button> accepts it,
+  // React will also reflect it to the DOM.
   forwardProps: ['disabled'],
 });
 
-// The 'color' prop is consumed (not forwarded)
-// The 'disabled' prop is both used for styling AND forwarded as HTML attribute
+// The 'color' prop is consumed and removed from the resolved props object
+// The 'disabled' prop is used for styling and remains available to <button>
 <Button color="primary" disabled>
   Submit
 </Button>;
 ```
 
-This is useful when you want variant props to also be available as HTML attributes (like `disabled`, `aria-*`, `data-*`) or for integration with third-party components that expect certain props.
+`forwardProps` does not force React to render arbitrary unknown props on native DOM elements. It keeps the selected variant props in the resolved props object; native DOM reflection only happens when the rendered target actually accepts that prop.
+
+For non-DOM variant keys, map them explicitly in `render` or a custom component:
+
+```tsx
+const Button = variantComponent('button', {
+  variants: {
+    size: {
+      sm: 'text-sm',
+      lg: 'text-lg',
+    },
+  },
+  forwardProps: ['size'],
+});
+
+<Button size="lg" render={props => <div {...props} data-size={props.size} />}>
+  Custom target
+</Button>;
+```
 
 ## Performance
 
@@ -1321,17 +1346,22 @@ pnpm lint
 # Type-check src plus runtime tests (excluding tsd files)
 pnpm lint:all
 
+# Run the reusable verification gate
+pnpm run verify
+
 # Run tests in watch mode
 pnpm dev
 
 # Build
 pnpm build
 
-# Run all checks
+# Run release-intent checks
 pnpm run ci
 ```
 
-`pnpm run ci` runs the full local gate: changeset check, `lint`, `lint:all`, ESLint, Prettier, runtime tests, build, and `tsd`.
+`pnpm run verify` runs the reusable package gate: `lint`, `lint:all`, ESLint, Prettier, runtime tests, type tests, and package linting with `publint`.
+
+`pnpm run ci` adds the release-intent `changeset` check on top of `verify`.
 
 ## Release Process
 
@@ -1339,7 +1369,8 @@ The alpha line is maintained from the `next` branch.
 
 - Open all v2 feature and fix PRs against `next`
 - Add a changeset for any source, package metadata, public type, or build/release-affecting change
-- Use `pnpm run check:changeset` locally to validate the current branch
+- Use `pnpm run verify` for the reusable package gate
+- Use `pnpm run check:changeset` or `pnpm run ci` to validate release intent on the current branch
 - Alpha publishes are triggered from `next` via npm trusted publishing
 - After each alpha publish, run the manual npm `dist-tag` and legacy `deprecate` commands from the release process doc
 - When the package is ready for stable, run `changeset pre exit`, publish `2.0.0`, and then fast-forward `main` to the stable release commit

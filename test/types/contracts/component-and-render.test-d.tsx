@@ -94,6 +94,9 @@ expectType<ReactNode>(
       expectAssignable<Ref<unknown> | undefined>(props.ref);
       expectAssignable<HTMLAttributes<HTMLElement>['onClick']>(props.onClick);
       expectAssignable<string | undefined>(props.id);
+      expectAssignable<string | undefined>(props.title);
+      expectAssignable<HTMLAttributes<HTMLElement>['role']>(props.role);
+      expectAssignable<string | undefined>(props['aria-label']);
       expectError(props.color);
       expectError(props.type);
       expectError(props.disabled);

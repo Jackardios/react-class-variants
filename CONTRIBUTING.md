@@ -23,6 +23,8 @@ pnpm build
 pnpm test:types:contracts
 pnpm test:types:exports
 pnpm test:types:consumers
+pnpm lint:pkg
+pnpm run verify
 pnpm test:types
 pnpm run ci
 ```
@@ -32,8 +34,10 @@ pnpm run ci
 - `pnpm test:types:contracts` runs `tsd` against the built package root instead of importing `src/` directly
 - `pnpm test:types:exports` validates packed `types`, `main`, `module`, and `exports` wiring with `attw`
 - `pnpm test:types:consumers` compiles packed ESM, CJS, and Bundler fixtures to catch consumer-facing DX regressions
+- `pnpm lint:pkg` runs `publint` against the packed package metadata and publish surface
+- `pnpm run verify` is the reusable package gate: lint + tests + type checks + package linting
 - `pnpm test:types` runs the full type gate: build + contracts + packed export validation + packed consumer fixtures
-- `pnpm run ci` is the full local gate before opening a release-affecting PR
+- `pnpm run ci` adds the release-intent changeset check on top of `verify`
 
 When a change affects public types, exports, or package metadata, run `pnpm test:types` locally before opening the PR. For the first release that changes the type-testing pipeline itself, do one manual VS Code / TS Server smoke-check against a consumer fixture to confirm completions still match the automated guarantees.
 

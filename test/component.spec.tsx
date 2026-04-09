@@ -312,20 +312,36 @@ describe('variantComponent', () => {
       expect(ref.current?.textContent).toBe('Ref target');
     });
 
-    it('should pass native base element props to render function', () => {
+    it('should pass broad spread-safe props and forwardProps to render function', () => {
       const Button = variantComponent('button', {
         base: 'btn',
+        variants: {
+          disabled: {
+            true: 'opacity-50',
+            false: 'opacity-100',
+          },
+        },
+        forwardProps: ['disabled'],
       });
 
       const onClick = vi.fn();
-      const renderFn = vi.fn(props => <button {...props} />);
+      const ref = createRef<HTMLButtonElement>();
+      let seenRef: unknown = null;
+      const renderFn = vi.fn(props => {
+        seenRef = props.ref;
+        return <button {...props} data-testid="rendered-button" />;
+      });
 
       render(
         <Button
-          type="submit"
           disabled
-          form="checkout-form"
+          id="submit-action"
+          title="Submit action"
+          role="button"
+          aria-label="Submit form"
+          data-track="checkout"
           onClick={onClick}
+          ref={ref}
           render={renderFn}
         >
           Submit
@@ -334,14 +350,19 @@ describe('variantComponent', () => {
 
       expect(renderFn).toHaveBeenCalledWith(
         expect.objectContaining({
-          className: 'btn',
-          type: 'submit',
+          className: 'btn opacity-50',
           disabled: true,
-          form: 'checkout-form',
+          id: 'submit-action',
+          title: 'Submit action',
+          role: 'button',
+          'aria-label': 'Submit form',
+          'data-track': 'checkout',
           onClick,
           children: 'Submit',
         })
       );
+      expect(seenRef).toEqual(expect.any(Function));
+      expect(ref.current).toBeInstanceOf(HTMLButtonElement);
     });
 
     it('should exclude variant props from render function args', () => {
@@ -515,7 +536,7 @@ describe('variantComponent', () => {
   });
 
   describe('forwardProps option', () => {
-    it('should forward specified variant props to DOM', () => {
+    it('should keep non-intrinsic forwarded variant props available without relying on DOM reflection', () => {
       const Button = variantComponent('button', {
         variants: {
           color: { primary: 'bg-blue' },
@@ -531,13 +552,12 @@ describe('variantComponent', () => {
       );
 
       const button = screen.getByTestId('btn');
-      // forwardProps keeps the prop in the resolved props object
-      // It doesn't automatically create DOM attributes for custom props
-      // The className should still be resolved correctly
+      // forwardProps keeps the prop in the resolved props object, but native DOM
+      // reflection still depends on whether the rendered target accepts that prop.
       expect(button).toHaveClass('bg-blue', 'text-lg');
     });
 
-    it('should forward props to render element', () => {
+    it('should preserve styling when forwarded props are unused by a render element', () => {
       const Button = variantComponent('button', {
         variants: {
           size: { large: 'text-lg' },
@@ -552,9 +572,25 @@ describe('variantComponent', () => {
       );
 
       const link = screen.getByText('Link');
-      // forwardProps keeps the prop available in resolved props
-      // but doesn't force it as a DOM attribute
       expect(link).toHaveClass('text-lg');
+    });
+
+    it('should preserve valid intrinsic forwarded props for native elements', () => {
+      const Button = variantComponent('button', {
+        variants: {
+          disabled: {
+            true: 'opacity-50 cursor-not-allowed',
+            false: 'opacity-100',
+          },
+        },
+        forwardProps: ['disabled'],
+      });
+
+      render(<Button disabled>Disabled</Button>);
+
+      const button = screen.getByRole('button');
+      expect(button).toBeDisabled();
+      expect(button).toHaveClass('opacity-50', 'cursor-not-allowed');
     });
   });
 

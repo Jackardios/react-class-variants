@@ -228,7 +228,7 @@ Use the function form when you need to adapt props for router links or custom co
 ### Behavior differences to expect
 
 - When `render` receives a React element, that element's props override the resolved props.
-- Render functions receive the resolved props object, not all variant props. Use `forwardProps` if a render function needs a specific variant prop.
+- Render functions receive a broad resolved props bag, not all variant props. The typed/stable contract intentionally guarantees spread-safe HTML attributes, `className`, `ref`, and any variant props listed in `forwardProps`.
 - `className` values are concatenated.
 - `style` objects are shallow-merged.
 - React event handlers are composed, and the render element's handler runs first.

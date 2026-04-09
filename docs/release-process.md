@@ -11,10 +11,10 @@
 1. Open v2 feature and fix PRs against `next`.
 2. Add a changeset for any source, package metadata, public type, or build/release-affecting change.
 3. Use `pnpm run check:changeset` before opening the PR when the change should affect release intent.
-4. Run `pnpm run ci` locally before opening a release-affecting PR or cutting a release.
+4. Run `pnpm run verify` for the reusable package gate, and `pnpm run ci` when you also need to validate release intent.
 5. Merge to `next`; the release workflow publishes through npm trusted publishing.
 
-`pnpm run ci` includes the full type gate via `pnpm test:types`, which builds the package, runs `tsd` against the package root, validates packed exports with `attw`, and compiles packed ESM/CJS/Bundler consumer fixtures.
+`pnpm run verify` includes the full type gate via `pnpm test:types`, which builds the package, runs `tsd` against the package root, validates packed exports with `attw`, compiles packed ESM/CJS/Bundler consumer fixtures, and runs `publint` on the packed package surface. `pnpm run ci` adds the release-intent changeset check on top.
 
 ## Alpha release policy
 
