@@ -1,4 +1,4 @@
-import { defineConfig } from 'react-class-variants';
+import { defineConfig, defineVariantConfig } from 'react-class-variants';
 
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
   ? 1
@@ -7,7 +7,38 @@ type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
   : false;
 type Expect<T extends true> = T;
 
-const { variantComponent, variantPropsResolver } = defineConfig();
+const { variants, variantComponent, variantPropsResolver } = defineConfig();
+
+const badgeConfig = defineVariantConfig({
+  base: ['badge', 'rounded-full'],
+  variants: {
+    tone: {
+      info: 'bg-sky-500',
+      danger: 'bg-rose-500',
+    },
+    size: {
+      sm: 'text-sm',
+      lg: 'text-lg',
+    },
+  },
+  defaultVariants: {
+    tone: 'info',
+    size: 'sm',
+  },
+  compoundVariants: [
+    {
+      variants: {
+        tone: 'danger',
+        size: 'lg',
+      },
+      className: ['tracking-wide'],
+    },
+  ],
+});
+
+const badge = variants(badgeConfig);
+badge();
+badge({ tone: 'danger', size: 'lg' });
 
 const Button = variantComponent('button', {
   variants: {
@@ -20,7 +51,7 @@ const Button = variantComponent('button', {
       lg: 'text-lg',
     },
   },
-  forwardProps: ['tone'],
+  forwardProps: ['tone'] as const,
 });
 
 type ButtonProps = Parameters<typeof Button>[0];

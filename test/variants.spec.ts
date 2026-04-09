@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { defineConfig } from '../src/index';
+import { defineConfig, defineVariantConfig } from '../src/index';
 
 // =============================================================================
 // defineConfig() Tests
@@ -94,6 +94,49 @@ describe('defineConfig', () => {
       expect(empty()).toBe('default');
       expect(mockMerge).toHaveBeenCalledWith('');
     });
+  });
+});
+
+describe('defineVariantConfig()', () => {
+  it('should preserve reusable configs without changing variant resolution', () => {
+    const { variants } = defineConfig();
+
+    const surfaceConfig = defineVariantConfig({
+      base: ['rounded-xl', 'p-4'],
+      variants: {
+        appearance: {
+          outlined: 'bg-white border',
+          soft: 'bg-gray-100 border',
+        },
+        interactive: {
+          true: 'cursor-pointer',
+          false: '',
+        },
+      },
+      compoundVariants: [
+        {
+          variants: {
+            appearance: 'outlined',
+            interactive: true,
+          },
+          className: ['hover:border-blue-500'],
+        },
+      ],
+      defaultVariants: {
+        appearance: 'outlined',
+        interactive: false,
+      },
+    });
+
+    const surface = variants(surfaceConfig);
+
+    expect(surface()).toBe('rounded-xl p-4 bg-white border');
+    expect(surface({ appearance: 'soft' })).toBe(
+      'rounded-xl p-4 bg-gray-100 border'
+    );
+    expect(surface({ interactive: true })).toBe(
+      'rounded-xl p-4 bg-white border cursor-pointer hover:border-blue-500'
+    );
   });
 });
 

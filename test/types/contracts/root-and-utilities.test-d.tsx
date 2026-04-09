@@ -12,6 +12,7 @@ import {
 } from 'react';
 import {
   defineConfig,
+  defineVariantConfig,
   type ClassNameValue,
   type ExtractVariantConfig,
   type ExtractVariantOptions,
@@ -34,6 +35,8 @@ expectAssignable<ClassNameValue>(['string', 'another']);
 expectAssignable<ClassNameValue>(['string', null, undefined]);
 expectAssignable<ClassNameValue>([['nested'], 'string']);
 expectAssignable<ClassNameValue>([[['deeply', 'nested']]]);
+expectAssignable<ClassNameValue>(['string', 'another'] as const);
+expectAssignable<ClassNameValue>([['nested'], 'string'] as const);
 
 expectNotAssignable<ClassNameValue>(123);
 expectNotAssignable<ClassNameValue>(true);
@@ -177,6 +180,102 @@ type ComponentConfig = ExtractVariantConfig<typeof Button>;
 expectAssignable<ComponentConfig['base']>('btn');
 expectAssignable<NonNullable<ComponentConfig['variants']>['intent']['primary']>(
   'btn-primary'
+);
+
+const surfaceConfig = defineVariantConfig({
+  base: ['rounded-xl', 'p-4'],
+  variants: {
+    appearance: {
+      outlined: 'bg-white border',
+      soft: 'bg-gray-100 border',
+    },
+    interactive: {
+      true: 'cursor-pointer',
+      false: '',
+    },
+  },
+  compoundVariants: [
+    {
+      variants: {
+        appearance: 'outlined',
+        interactive: true,
+      },
+      className: ['hover:border-blue-500'],
+    },
+  ],
+  defaultVariants: {
+    appearance: 'outlined',
+    interactive: false,
+  },
+});
+
+const surfaceVariants = variants(surfaceConfig);
+type SurfaceOptions = ExtractVariantOptions<typeof surfaceVariants>;
+expectAssignable<SurfaceOptions>({});
+expectAssignable<SurfaceOptions>({
+  appearance: 'soft',
+  interactive: true,
+});
+expectError<SurfaceOptions>({ appearance: 'ghost' });
+
+const Surface = variantComponent('div', surfaceConfig);
+type SurfaceProps = Parameters<typeof Surface>[0];
+expectAssignable<SurfaceProps>({});
+expectAssignable<SurfaceProps>({
+  appearance: 'soft',
+  interactive: true,
+});
+expectError<SurfaceProps>({ appearance: 'ghost' });
+
+const readonlySurfaceConfig = {
+  base: ['rounded-xl', 'p-4'],
+  variants: {
+    appearance: {
+      outlined: ['bg-white', 'border'],
+      soft: ['bg-gray-100', 'border'],
+    },
+    interactive: {
+      true: 'cursor-pointer',
+      false: '',
+    },
+  },
+  compoundVariants: [
+    {
+      variants: {
+        appearance: 'outlined',
+        interactive: true,
+      },
+      className: ['hover:border-blue-500'],
+    },
+  ],
+  defaultVariants: {
+    appearance: 'outlined',
+    interactive: false,
+  },
+} as const;
+
+const readonlySurfaceVariants = variants(readonlySurfaceConfig);
+expectType<string>(readonlySurfaceVariants());
+
+const ReadonlySurface = variantComponent('div', readonlySurfaceConfig);
+type ReadonlySurfaceProps = Parameters<typeof ReadonlySurface>[0];
+expectAssignable<ReadonlySurfaceProps>({});
+expectAssignable<ReadonlySurfaceProps>({
+  appearance: 'soft',
+  interactive: true,
+});
+
+expectError(
+  defineVariantConfig({
+    variants: {
+      appearance: {
+        outlined: 'bg-white border',
+      },
+    },
+    defaultVariants: {
+      appearance: 'ghost',
+    },
+  })
 );
 
 // =============================================================================

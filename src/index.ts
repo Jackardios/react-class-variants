@@ -64,7 +64,11 @@ type Exact<T, Shape> = T extends Shape
  * const c: ClassNameValue = [['px-4'], ['py-2', null]];
  * const d: ClassNameValue = null;
  */
-export type ClassNameValue = string | null | undefined | ClassNameValue[];
+export type ClassNameValue =
+  | string
+  | null
+  | undefined
+  | readonly ClassNameValue[];
 
 /**
  * Definition of the available variants and their options.
@@ -109,7 +113,9 @@ export type VariantsConfig<V extends VariantsSchema> = {
   defaultVariants?: keyof V extends never
     ? Record<string, never>
     : Partial<Variants<V>>;
-  compoundVariants?: keyof V extends never ? never[] : CompoundVariant<V>[];
+  compoundVariants?: keyof V extends never
+    ? readonly never[]
+    : readonly CompoundVariant<V>[];
 };
 
 /**
@@ -133,7 +139,7 @@ type Variants<V extends VariantsSchema> = {
 type VariantsMulti<V extends VariantsSchema> = {
   [Variant in keyof V]:
     | StringToBoolean<keyof V[Variant]>
-    | StringToBoolean<keyof V[Variant]>[];
+    | readonly StringToBoolean<keyof V[Variant]>[];
 };
 
 /**
@@ -259,7 +265,7 @@ type VariantPropsResolverFn<
   P,
   | 'className'
   | '__config'
-  | (C['forwardProps'] extends (keyof V)[]
+  | (C['forwardProps'] extends readonly (keyof V)[]
       ? Exclude<keyof V, C['forwardProps'][number]>
       : keyof V)
 >) & {
@@ -296,7 +302,7 @@ export type VariantComponentConfig<V extends VariantsSchema> =
   VariantsConfig<V> & {
     displayName?: string;
     withoutRenderProp?: boolean;
-    forwardProps?: (keyof V)[];
+    forwardProps?: readonly (keyof V)[];
   };
 
 /**
@@ -390,7 +396,7 @@ type RenderPropFn<P> = (props: P) => ReactNode;
 type ForwardedVariantProps<
   C extends VariantComponentConfig<V>,
   V extends VariantsSchema
-> = C['forwardProps'] extends (keyof VariantOptions<C, V>)[]
+> = C['forwardProps'] extends readonly (keyof VariantOptions<C, V>)[]
   ? Pick<VariantOptions<C, V>, C['forwardProps'][number]>
   : {};
 
@@ -459,24 +465,46 @@ export type VariantComponentType<
   __config?: C;
 };
 
+/**
+ * Captures a reusable variants config with deep literal inference.
+ * Useful when hoisting a config into a shared constant before reusing it
+ * across `variants()` and `variantComponent()`.
+ */
+export function defineVariantConfig<
+  const C extends VariantsConfig<V>,
+  V extends VariantsSchema = NonNullable<C['variants']>
+>(config: Exact<Simplify<C>, VariantsConfig<V>>): C {
+  return config;
+}
+
 export function defineConfig(options?: VariantFactoryOptions) {
   const { onClassesMerged } = options ?? {};
 
-  function flattenClasses(classes: ClassNameValue[]): string {
+  function isClassNameArray(
+    value: ClassNameValue
+  ): value is readonly ClassNameValue[] {
+    return Array.isArray(value);
+  }
+
+  function toClassNameString(value: ClassNameValue): string {
+    return isClassNameArray(value) ? flattenClasses(value) : value || '';
+  }
+
+  function flattenClasses(classes: readonly ClassNameValue[]): string {
     const flattened: string[] = [];
     const stack = [...classes].reverse();
 
     while (stack.length > 0) {
       const value = stack.pop();
 
-      if (Array.isArray(value)) {
+      if (isClassNameArray(value)) {
         for (let i = value.length - 1; i >= 0; i -= 1) {
           stack.push(value[i]);
         }
         continue;
       }
 
-      if (value) {
+      if (typeof value === 'string' && value) {
         flattened.push(value);
       }
     }
@@ -526,14 +554,10 @@ export function defineConfig(options?: VariantFactoryOptions) {
 
     // Simple case: no variants defined
     if (!variantsDef) {
-      const baseClassName = Array.isArray(base)
-        ? flattenClasses([base])
-        : (base as string) || '';
+      const baseClassName = toClassNameString(base);
       return (props?: { className?: ClassNameValue }) => {
         if (!props?.className) return applyPostProcess(baseClassName);
-        const extra = Array.isArray(props.className)
-          ? flattenClasses([props.className])
-          : props.className;
+        const extra = toClassNameString(props.className);
         if (!extra) return applyPostProcess(baseClassName);
         return applyPostProcess(
           baseClassName ? concatClasses(baseClassName, extra) : extra
@@ -646,9 +670,7 @@ export function defineConfig(options?: VariantFactoryOptions) {
 
         // Append extra className from props
         if (props?.className) {
-          const extra = Array.isArray(props.className)
-            ? flattenClasses([props.className])
-            : props.className;
+          const extra = toClassNameString(props.className);
           if (extra) result = concatClasses(result, extra);
         }
 
@@ -742,7 +764,7 @@ export function defineConfig(options?: VariantFactoryOptions) {
     type ForwardPropKeys = NonNullable<C['forwardProps']>;
     type ResultType<P> = { className: string } & Omit<
       P,
-      ForwardPropKeys extends unknown[]
+      ForwardPropKeys extends readonly unknown[]
         ? Exclude<keyof V, ForwardPropKeys[number]>
         : keyof V
     >;

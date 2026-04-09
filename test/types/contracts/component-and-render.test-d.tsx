@@ -200,6 +200,32 @@ expectType<ReactNode>(
   })
 );
 
+const readonlyForwardPropsConfig = {
+  variants: {
+    color: { primary: 'bg-blue' },
+    size: { large: 'text-lg' },
+  },
+  forwardProps: ['size'],
+} as const;
+
+const ReadonlyForwardPropsButton = variantComponent(
+  'button',
+  readonlyForwardPropsConfig
+);
+
+expectType<ReactNode>(
+  ReadonlyForwardPropsButton({
+    color: 'primary',
+    size: 'large',
+    render: props => {
+      expectType<string>(props.className);
+      expectAssignable<string>(props.size);
+      expectError(props.color);
+      return <a {...props} href="/readonly-size" />;
+    },
+  })
+);
+
 const ForwardAllButton = variantComponent('button', {
   variants: {
     color: { primary: 'bg-blue', secondary: 'bg-gray' },

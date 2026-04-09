@@ -72,11 +72,13 @@ No more messy `className` logic, no more props duplication, just clean, type-saf
   - [Polymorphic Components](#polymorphic-components)
 - [API Reference](#api-reference)
   - [defineConfig(options?)](#defineconfigoptions)
+  - [defineVariantConfig(config)](#definevariantconfigconfig)
   - [variants(config)](#variantsconfig)
   - [variantComponent(element, config)](#variantcomponentelement-config)
   - [variantPropsResolver(config)](#variantpropsresolverconfig)
 - [TypeScript](#typescript)
   - [Type Inference](#type-inference)
+  - [Reusable Configs](#reusable-configs)
   - [Optional vs Required](#optional-vs-required)
   - [Type Utilities](#type-utilities)
     - [ExtractVariantOptions](#extractvariantoptionst)
@@ -442,21 +444,61 @@ const config = defineConfig({
 
 ---
 
+### `defineVariantConfig(config)`
+
+Captures a reusable variants config with literal-preserving inference.
+
+This is useful when you want to hoist a config into a shared constant and then
+pass it to both `variants()` and `variantComponent()` without adding `as const`
+to each nested value manually.
+
+```typescript
+import { defineConfig, defineVariantConfig } from 'react-class-variants';
+
+const { variants, variantComponent } = defineConfig();
+
+const surfaceConfig = defineVariantConfig({
+  base: ['rounded-xl', 'p-4'],
+  variants: {
+    appearance: {
+      outlined: 'bg-white border',
+      soft: 'bg-gray-100 border',
+    },
+    interactive: {
+      true: 'cursor-pointer',
+      false: '',
+    },
+  },
+  defaultVariants: {
+    appearance: 'outlined',
+    interactive: false,
+  },
+});
+
+const surfaceVariants = variants(surfaceConfig);
+const Surface = variantComponent('div', surfaceConfig);
+```
+
+Top-level `as const` is also supported for reusable configs, including readonly
+class arrays and readonly `compoundVariants` selector arrays.
+
+---
+
 ### `variants(config)`
 
 Creates a function that resolves variant props to class names.
 
 ```typescript
 const buttonVariants = variants({
-  base?: string | string[] | null;
+  base?: ClassNameValue;
   variants?: {
     [variantName: string]: {
-      [variantValue: string]: string | string[] | null;
+      [variantValue: string]: ClassNameValue;
     };
   };
-  compoundVariants?: Array<{
-    variants: Record<string, string | string[]>;
-    className: string | string[] | null;
+  compoundVariants?: ReadonlyArray<{
+    variants: Record<string, string | readonly string[]>;
+    className: ClassNameValue;
   }>;
   defaultVariants?: Record<string, string>;
 });
@@ -476,7 +518,7 @@ const Button = variantComponent(
   config: VariantsConfig & {
     displayName?: string;
     withoutRenderProp?: boolean;
-    forwardProps?: string[];
+    forwardProps?: readonly string[];
   }
 );
 ```
@@ -549,6 +591,65 @@ const Button = variantComponent('button', {
 <Button color="invalid" />              // ❌ Type error
 <Button size="sm" />                    // ❌ Type error (missing color)
 <Button color="primary" size="lg" />    // ✅
+```
+
+### Reusable Configs
+
+Inline configs usually infer well automatically. For hoisted reusable configs,
+use `defineVariantConfig()` to preserve nested literals at the definition site:
+
+```typescript
+import { defineConfig, defineVariantConfig } from 'react-class-variants';
+
+const { variants, variantComponent } = defineConfig();
+
+const badgeConfig = defineVariantConfig({
+  base: ['inline-flex', 'items-center'],
+  variants: {
+    tone: {
+      neutral: 'bg-slate-100 text-slate-900',
+      accent: 'bg-sky-500 text-white',
+    },
+    outlined: {
+      true: 'ring-1 ring-inset',
+      false: '',
+    },
+  },
+  compoundVariants: [
+    {
+      variants: {
+        tone: 'accent',
+        outlined: true,
+      },
+      className: 'ring-sky-300',
+    },
+  ],
+  defaultVariants: {
+    tone: 'neutral',
+    outlined: false,
+  },
+});
+
+const badge = variants(badgeConfig);
+const Badge = variantComponent('span', badgeConfig);
+```
+
+If you prefer, a top-level `as const` now also works cleanly for reusable
+configs, including readonly class arrays:
+
+```typescript
+const badgeConfig = {
+  base: ['inline-flex', 'items-center'],
+  variants: {
+    tone: {
+      neutral: ['bg-slate-100', 'text-slate-900'],
+      accent: ['bg-sky-500', 'text-white'],
+    },
+  },
+  defaultVariants: {
+    tone: 'neutral',
+  },
+} as const;
 ```
 
 ### Optional vs Required
