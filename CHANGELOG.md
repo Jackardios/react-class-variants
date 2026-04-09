@@ -1,5 +1,25 @@
 # react-class-variants
 
+## 2.0.0-alpha.5
+
+### Minor Changes
+
+- 42c538d: Drop official Node.js 18 support and require Node.js 20.19 or newer.
+
+### Patch Changes
+
+- 79bae6f: Fix public type gaps so the published package more accurately matches runtime behavior:
+
+  - keep function-form `variantComponent(...).render` callbacks intentionally broad for ergonomic cross-element composition
+  - allow `variantPropsResolver()` to accept `ClassNameValue` inputs and still return a flattened `className: string`
+  - make `mergeProps()` use override-wins types for overlapping keys instead of impossible intersections like `never`
+
+- 245d885: Improve reusable config ergonomics by adding `defineVariantConfig()` for
+  literal-preserving hoisted configs and by accepting readonly arrays in
+  `ClassNameValue`, `compoundVariants`, and `forwardProps`.
+- 2ca1e17: Clarify the typed `render` contract, align documentation with `forwardProps` behavior, and strengthen verification workflows across the supported Node range.
+- 3b581db: Fix the project-wide typecheck pipeline, improve exported utility typings, and align release hygiene documentation with the current alpha workflow.
+
 ## 2.0.0-alpha.4
 
 ### Patch Changes
