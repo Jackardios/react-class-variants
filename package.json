@@ -46,7 +46,9 @@
     "bench": "vitest bench",
     "verify": "pnpm run lint && pnpm run lint:all && pnpm run lint:eslint && pnpm run lint:format && pnpm run test && pnpm run test:types && pnpm run lint:pkg",
     "ci": "pnpm run check:changeset && pnpm run verify",
-    "release": "pnpm run verify && changeset publish"
+    "release": "pnpm run verify && changeset publish",
+    "verify:release-publication": "node scripts/verify-release-publication.mjs",
+    "sync:prerelease-dist-tag": "node scripts/sync-prerelease-dist-tag.mjs"
   },
   "license": "MIT",
   "author": {

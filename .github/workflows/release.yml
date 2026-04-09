@@ -64,6 +64,14 @@ jobs:
       - name: Publish package to npm
         if: steps.changesets.outputs.hasChangesets == 'false'
         run: pnpm run release
+      - name: Verify npm registry state
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        run: pnpm run verify:release-publication
+      - name: Sync prerelease alpha dist-tag
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_DIST_TAG_TOKEN }}
+        run: pnpm run sync:prerelease-dist-tag
       - name: Push release tags
         if: steps.changesets.outputs.hasChangesets == 'false'
         run: |
