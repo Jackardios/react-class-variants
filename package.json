@@ -30,7 +30,10 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
-    "test:types": "tsd --files test/index.test-d.tsx",
+    "test:types": "pnpm run build && pnpm run test:types:contracts && pnpm run test:types:exports && pnpm run test:types:consumers",
+    "test:types:contracts": "tsd --files test/types/contracts/**/*.test-d.tsx",
+    "test:types:exports": "attw --pack .",
+    "test:types:consumers": "node scripts/test-types-consumers.mjs",
     "check:changeset": "node scripts/check-changeset.cjs",
     "build": "tsup src/index.ts --format cjs,esm --dts",
     "lint": "tsc --project tsconfig.build.json",
@@ -39,7 +42,7 @@
     "lint:format": "prettier --check .",
     "format": "prettier --write .",
     "bench": "vitest bench",
-    "ci": "pnpm run check:changeset && pnpm run lint && pnpm run lint:all && pnpm run lint:eslint && pnpm run lint:format && pnpm run test && pnpm run build && pnpm run test:types",
+    "ci": "pnpm run check:changeset && pnpm run lint && pnpm run lint:all && pnpm run lint:eslint && pnpm run lint:format && pnpm run test && pnpm run test:types",
     "release": "pnpm run ci && changeset publish"
   },
   "license": "MIT",
@@ -74,6 +77,7 @@
     "node": ">=18.0.0"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.2",
     "@changesets/cli": "^2.29.6",
     "@eslint/js": "^9.39.2",
     "@testing-library/dom": "^10.4.1",

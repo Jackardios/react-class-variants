@@ -36,8 +36,8 @@ jobs:
         uses: changesets/action@v1
         with:
           version: pnpm exec changeset version
-          commit: Version Packages (alpha)
-          title: Version Packages (alpha)
+          commit: Version Packages
+          title: Version Packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish package to npm

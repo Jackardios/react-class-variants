@@ -14,13 +14,17 @@
 4. Run `pnpm run ci` locally before opening a release-affecting PR or cutting a release.
 5. Merge to `next`; the release workflow publishes through npm trusted publishing.
 
+`pnpm run ci` includes the full type gate via `pnpm test:types`, which builds the package, runs `tsd` against the package root, validates packed exports with `attw`, and compiles packed ESM/CJS/Bundler consumer fixtures.
+
 ## Alpha release policy
 
 - `changesets` remains in prerelease mode with the `alpha` tag
 - Alpha releases publish from `next` through npm trusted publishing
+- Keep the release workflow `commit` and `title` inputs as plain `Version Packages`; `changesets/action` appends `(alpha)` automatically while pre mode is active
 - `npm publish` runs in GitHub Actions without a long-lived `NPM_TOKEN`
 - `npm dist-tag` and `npm deprecate` remain manual npm-authenticated steps because trusted publishing only covers `npm publish`
 - This policy remains in place until stable `2.0.0` is cut
+- After the first alpha publish that changes the type-testing pipeline itself, do one manual VS Code / TS Server smoke-check against a consumer fixture to confirm completions still match the automated guarantees
 
 ## Stable release checklist
 
