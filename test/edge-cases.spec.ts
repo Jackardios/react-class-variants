@@ -263,7 +263,7 @@ describe('Edge Cases and Complex Scenarios', () => {
       expect(component()).toBe('bg-blue');
     });
 
-    it('should override default with explicit undefined', () => {
+    it('should apply default when explicit undefined is passed', () => {
       const component = variants({
         variants: {
           color: {
@@ -276,9 +276,36 @@ describe('Edge Cases and Complex Scenarios', () => {
         },
       });
 
-      // When explicitly passing undefined, it falls back to default
-      // because the condition is: props?.[name] ?? defaultVariants?.[name]
       expect(component({ color: undefined })).toBe('bg-blue');
+    });
+
+    it('should apply compound variants when explicit undefined falls back to defaults', () => {
+      const component = variants({
+        variants: {
+          color: {
+            primary: 'bg-blue',
+            secondary: 'bg-gray',
+          },
+          size: {
+            sm: 'text-sm',
+            lg: 'text-lg',
+          },
+        },
+        defaultVariants: {
+          color: 'primary',
+          size: 'lg',
+        },
+        compoundVariants: [
+          {
+            variants: { color: 'primary', size: 'lg' },
+            className: 'font-bold',
+          },
+        ],
+      });
+
+      expect(component({ color: undefined } as any)).toBe(
+        'bg-blue text-lg font-bold'
+      );
     });
 
     it('should handle boolean variant defaults', () => {
@@ -296,6 +323,21 @@ describe('Edge Cases and Complex Scenarios', () => {
 
       expect(component()).toBe('opacity-50');
       expect(component({ disabled: false })).toBe('opacity-100');
+    });
+
+    it('should not apply default variants when a non-matching input value is present', () => {
+      const component = variants({
+        variants: {
+          type: {
+            primary: 'bg-blue',
+          },
+        },
+        defaultVariants: {
+          type: 'primary',
+        },
+      } as any);
+
+      expect(component({ type: 'submit' } as any)).toBe('');
     });
   });
 

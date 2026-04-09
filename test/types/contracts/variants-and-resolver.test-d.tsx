@@ -422,6 +422,16 @@ expectError(
   })
 );
 
+expectType<string>(
+  variants({
+    variants: {
+      ref: {
+        primary: 'ring-2',
+      },
+    },
+  })({ ref: 'primary' })
+);
+
 expectError(
   variantPropsResolver({
     variants: {
@@ -445,3 +455,13 @@ expectError(
     },
   })
 );
+
+const genericRenderResolver = variantPropsResolver({
+  variants: {
+    render: {
+      primary: 'bg-blue',
+    },
+  },
+});
+
+expectType<string>(genericRenderResolver({ render: 'primary' }).className);

@@ -37,6 +37,189 @@ type Simplify<T> = {
   [K in keyof T]: T[K];
 } & {};
 
+type GenericReservedVariantKey = 'className';
+type ComponentReservedVariantKey =
+  | GenericReservedVariantKey
+  | 'render'
+  | 'ref'
+  | 'children'
+  | 'style'
+  | 'dangerouslySetInnerHTML'
+  | 'key'
+  | 'suppressHydrationWarning'
+  | 'suppressContentEditableWarning';
+
+type ConfigSchema<C> = C extends { variants?: infer Schema }
+  ? NonNullable<Schema> extends VariantsSchema
+    ? NonNullable<Schema>
+    : Record<string, never>
+  : Record<string, never>;
+type ReservedVariantKeysInConfig<C, ReservedKeys extends PropertyKey> = Extract<
+  keyof ConfigSchema<C>,
+  ReservedKeys
+>;
+type ValidateReservedVariantKeys<C, ReservedKeys extends PropertyKey> = [
+  ReservedVariantKeysInConfig<C, ReservedKeys>
+] extends [never]
+  ? {}
+  : never;
+
+const componentRuntimeReservedKeys = new Set<string>([
+  'className',
+  'render',
+  'ref',
+  'children',
+  'style',
+  'dangerouslySetInnerHTML',
+  'key',
+  'suppressHydrationWarning',
+  'suppressContentEditableWarning',
+]);
+const globalIntrinsicRuntimeDangerousKeys = new Set<string>(['id', 'role']);
+const intrinsicRuntimeDangerousKeysByElement: Record<
+  string,
+  readonly string[]
+> = {
+  a: ['href', 'target'],
+  area: ['alt', 'href', 'target'],
+  base: ['href', 'target'],
+  button: ['formAction', 'name', 'type', 'value'],
+  form: ['action', 'method', 'name', 'target'],
+  iframe: ['name', 'src'],
+  img: ['alt', 'src'],
+  input: [
+    'alt',
+    'checked',
+    'defaultChecked',
+    'defaultValue',
+    'formAction',
+    'name',
+    'src',
+    'type',
+    'value',
+  ],
+  label: ['htmlFor'],
+  link: ['href'],
+  map: ['name'],
+  meta: ['name'],
+  object: ['name'],
+  option: ['selected', 'value'],
+  output: ['htmlFor', 'name'],
+  script: ['src'],
+  select: ['defaultValue', 'name', 'value'],
+  source: ['src'],
+  textarea: ['defaultValue', 'name', 'value'],
+  track: ['src'],
+  video: ['src'],
+};
+
+interface VariantConfigIssue {
+  key: string;
+  reason: string;
+}
+
+function getReservedVariantKeyIssueReason(
+  key: string,
+  reservedKeys: ReadonlySet<string>
+): string | null {
+  if (!reservedKeys.has(key)) {
+    return null;
+  }
+
+  if (key === 'ref') {
+    return 'conflicts with React ref handling.';
+  }
+
+  if (key === 'render') {
+    return 'conflicts with the polymorphic render prop.';
+  }
+
+  if (key === 'className') {
+    return 'conflicts with the className channel used for user classes.';
+  }
+
+  return 'is reserved by React or the component API.';
+}
+
+function getIntrinsicVariantKeyIssueReason(
+  key: string,
+  intrinsicElement?: string
+): string | null {
+  if (!intrinsicElement) {
+    return null;
+  }
+
+  if (
+    !globalIntrinsicRuntimeDangerousKeys.has(key) &&
+    !intrinsicRuntimeDangerousKeysByElement[intrinsicElement]?.includes(key)
+  ) {
+    return null;
+  }
+
+  return `conflicts with the intrinsic prop name "${key}" on "${intrinsicElement}" elements.`;
+}
+
+function formatInvalidConfigError(
+  apiContext: string,
+  issues: VariantConfigIssue[]
+): Error {
+  const lines = [
+    'react-class-variants: invalid variant config',
+    '',
+    `API: ${apiContext}`,
+    '',
+    'Problems:',
+    ...issues.map(issue => `- variant key "${issue.key}" ${issue.reason}`),
+    '',
+    'How to fix:',
+    '- Rename conflicting variant keys to non-reserved names such as "intent", "tone", or "appearance".',
+    '- Keep React/internal/native props for their original purpose and choose a non-conflicting variant key.',
+  ];
+
+  return new Error(lines.join('\n'));
+}
+
+function collectVariantConfigIssues(
+  variantsDef: VariantsSchema | undefined,
+  reservedKeys: ReadonlySet<string>,
+  intrinsicElement?: string
+): VariantConfigIssue[] {
+  if (!variantsDef) {
+    return [];
+  }
+
+  const issues: VariantConfigIssue[] = [];
+
+  for (const key of Object.keys(variantsDef)) {
+    const reason =
+      getReservedVariantKeyIssueReason(key, reservedKeys) ??
+      getIntrinsicVariantKeyIssueReason(key, intrinsicElement);
+
+    if (reason) {
+      issues.push({ key, reason });
+    }
+  }
+
+  return issues;
+}
+
+function assertValidVariantConfig(
+  apiContext: string,
+  variantsDef: VariantsSchema | undefined,
+  reservedKeys: ReadonlySet<string>,
+  intrinsicElement?: string
+) {
+  const issues = collectVariantConfigIssues(
+    variantsDef,
+    reservedKeys,
+    intrinsicElement
+  );
+
+  if (issues.length > 0) {
+    throw formatInvalidConfigError(apiContext, issues);
+  }
+}
+
 /**
  * Ensures T exactly matches Shape with no extra properties.
  * Used to catch typos in config objects that would otherwise be silently ignored.
@@ -477,7 +660,10 @@ export type VariantComponentType<
 export function defineVariantConfig<
   const C extends VariantsConfig<V>,
   V extends VariantsSchema = NonNullable<C['variants']>
->(config: Exact<Simplify<C>, VariantsConfig<V>>): C {
+>(
+  config: Exact<Simplify<C>, VariantsConfig<V>> &
+    ValidateReservedVariantKeys<C, GenericReservedVariantKey>
+): C {
   return config;
 }
 
@@ -520,6 +706,29 @@ export function defineConfig(options?: VariantFactoryOptions) {
     return onClassesMerged ? onClassesMerged(className) : className;
   }
 
+  function getSelectedVariantValue(
+    key: string,
+    variantProps: Record<string, unknown> | undefined,
+    defaultVariantValues: Record<string, unknown> | undefined,
+    isBooleanVariant: Record<string, true>
+  ): unknown {
+    if (variantProps && hasOwnProperty(variantProps, key)) {
+      const explicitValue = variantProps[key];
+      if (explicitValue !== undefined) {
+        return explicitValue;
+      }
+    }
+
+    if (defaultVariantValues && hasOwnProperty(defaultVariantValues, key)) {
+      const defaultValue = defaultVariantValues[key];
+      if (defaultValue !== undefined) {
+        return defaultValue;
+      }
+    }
+
+    return isBooleanVariant[key] ? false : undefined;
+  }
+
   function concatClasses(base: string, addition: string): string {
     return base ? `${base} ${addition}` : addition;
   }
@@ -545,10 +754,9 @@ export function defineConfig(options?: VariantFactoryOptions) {
    *
    * button({ color: 'primary' }); // 'px-4 py-2 bg-blue-500'
    */
-  function variants<
-    C extends VariantsConfig<V>,
-    V extends VariantsSchema = NonNullable<C['variants']>
-  >(config: Exact<Simplify<C>, VariantsConfig<V>>): VariantsResolverFn<C, V> {
+  function createVariantsResolver<V extends VariantsSchema>(
+    config: VariantsConfig<V>
+  ) {
     const {
       base,
       variants: variantsDef,
@@ -571,6 +779,9 @@ export function defineConfig(options?: VariantFactoryOptions) {
 
     // Analyze variant definitions
     const variantKeys = Object.keys(variantsDef);
+    const defaultVariantValues = defaultVariants as
+      | Record<string, unknown>
+      | undefined;
     const isBooleanVariant: Record<string, true> = {};
     let hasArrayClassNames = Array.isArray(base);
 
@@ -628,16 +839,20 @@ export function defineConfig(options?: VariantFactoryOptions) {
     if (!hasArrayClassNames) {
       const baseClassName = (base as string) || '';
 
-      return function resolveVariants(...[props]) {
+      return function resolveVariants(
+        props?: Record<string, unknown> & { className?: ClassNameValue }
+      ) {
         let result = baseClassName;
         const variantProps = props as Record<string, unknown> | undefined;
 
         // Resolve each variant
         for (const key of variantKeys) {
-          const selected =
-            variantProps?.[key] ??
-            defaultVariants?.[key as keyof V] ??
-            (isBooleanVariant[key] ? false : undefined);
+          const selected = getSelectedVariantValue(
+            key,
+            variantProps,
+            defaultVariantValues,
+            isBooleanVariant
+          );
 
           if (selected !== undefined) {
             const className = variantsDef[key]?.[selected as string] as
@@ -651,10 +866,12 @@ export function defineConfig(options?: VariantFactoryOptions) {
         for (const compound of compounds) {
           let matches = true;
           for (const condition of compound.conditions) {
-            const selected =
-              variantProps?.[condition.key] ??
-              defaultVariants?.[condition.key as keyof V] ??
-              (isBooleanVariant[condition.key] ? false : undefined);
+            const selected = getSelectedVariantValue(
+              condition.key,
+              variantProps,
+              defaultVariantValues,
+              isBooleanVariant
+            );
 
             const isMatch =
               'values' in condition
@@ -683,15 +900,19 @@ export function defineConfig(options?: VariantFactoryOptions) {
     }
 
     // Slow path: array accumulation + flatten (when config has array class names)
-    return function resolveVariants(...[props]) {
+    return function resolveVariants(
+      props?: Record<string, unknown> & { className?: ClassNameValue }
+    ) {
       const classes: ClassNameValue[] = [base];
       const variantProps = props as Record<string, unknown> | undefined;
 
       for (const key of variantKeys) {
-        const selected =
-          variantProps?.[key] ??
-          defaultVariants?.[key as keyof V] ??
-          (isBooleanVariant[key] ? false : undefined);
+        const selected = getSelectedVariantValue(
+          key,
+          variantProps,
+          defaultVariantValues,
+          isBooleanVariant
+        );
 
         if (selected !== undefined) {
           classes.push(variantsDef[key]?.[selected as string]);
@@ -701,10 +922,12 @@ export function defineConfig(options?: VariantFactoryOptions) {
       for (const compound of compounds) {
         let matches = true;
         for (const condition of compound.conditions) {
-          const selected =
-            variantProps?.[condition.key] ??
-            defaultVariants?.[condition.key as keyof V] ??
-            (isBooleanVariant[condition.key] ? false : undefined);
+          const selected = getSelectedVariantValue(
+            condition.key,
+            variantProps,
+            defaultVariantValues,
+            isBooleanVariant
+          );
 
           const isMatch =
             'values' in condition
@@ -724,6 +947,18 @@ export function defineConfig(options?: VariantFactoryOptions) {
 
       return applyPostProcess(flattenClasses(classes));
     };
+  }
+
+  function variants<
+    C extends VariantsConfig<V>,
+    V extends VariantsSchema = NonNullable<C['variants']>
+  >(
+    config: Exact<Simplify<C>, VariantsConfig<V>> &
+      ValidateReservedVariantKeys<C, GenericReservedVariantKey>
+  ): VariantsResolverFn<C, V> {
+    return createVariantsResolver(
+      config as VariantsConfig<V>
+    ) as VariantsResolverFn<C, V>;
   }
 
   /**
@@ -748,7 +983,10 @@ export function defineConfig(options?: VariantFactoryOptions) {
   function variantPropsResolver<
     C extends VariantComponentConfig<V>,
     V extends VariantsSchema = NonNullable<C['variants']>
-  >(config: Exact<Simplify<C>, VariantComponentConfig<V>>) {
+  >(
+    config: Exact<Simplify<C>, VariantComponentConfig<V>> &
+      ValidateReservedVariantKeys<C, GenericReservedVariantKey>
+  ) {
     const {
       forwardProps,
       withoutRenderProp: _withoutRenderProp,
@@ -756,7 +994,9 @@ export function defineConfig(options?: VariantFactoryOptions) {
       ...variantsConfig
     } = config;
 
-    const resolveClassName = variants(variantsConfig);
+    const resolveClassName = createVariantsResolver(
+      variantsConfig as VariantsConfig<V>
+    );
     const variantKeys = config.variants ? Object.keys(config.variants) : [];
 
     type VariantPropsWithClassName = (keyof V extends never
@@ -775,23 +1015,20 @@ export function defineConfig(options?: VariantFactoryOptions) {
 
     return function resolve<P extends VariantPropsWithClassName>(props: P) {
       const result = { ...props } as ResultType<P>;
-      const variantPropsOnly = {
-        className: result.className,
-      } as VariantPropsWithClassName;
 
       for (const key of variantKeys) {
-        if (hasOwnProperty(result, key)) {
-          variantPropsOnly[key] = result[key];
-          if (!forwardProps || !forwardProps.includes(key)) {
-            delete (result as Record<string, unknown>)[key];
-          }
+        if (
+          hasOwnProperty(result as Record<string, unknown>, key) &&
+          (!forwardProps || !forwardProps.includes(key))
+        ) {
+          delete (result as Record<string, unknown>)[key];
         }
       }
 
       const resolveVariantClassName = resolveClassName as (
         props: VariantPropsWithClassName
       ) => string;
-      result.className = resolveVariantClassName(variantPropsOnly);
+      result.className = resolveVariantClassName(props);
       return result;
     } as VariantPropsResolverFn<C, V>;
   }
@@ -838,10 +1075,22 @@ export function defineConfig(options?: VariantFactoryOptions) {
     V extends VariantsSchema = NonNullable<C['variants']>
   >(
     elementType: T,
-    config: Exact<Simplify<C>, VariantComponentConfig<V>>
+    config: Exact<Simplify<C>, VariantComponentConfig<V>> &
+      ValidateReservedVariantKeys<C, ComponentReservedVariantKey>
   ): VariantComponentType<T, C, V> {
+    assertValidVariantConfig(
+      typeof elementType === 'string'
+        ? `variantComponent('${elementType}')`
+        : 'variantComponent(custom)',
+      config.variants,
+      componentRuntimeReservedKeys,
+      typeof elementType === 'string' ? elementType : undefined
+    );
     const { withoutRenderProp, displayName: customDisplayName } = config;
-    const resolveProps = variantPropsResolver<C, V>(config);
+    const resolveProps = variantPropsResolver<C, V>(
+      config as Exact<Simplify<C>, VariantComponentConfig<V>> &
+        ValidateReservedVariantKeys<C, GenericReservedVariantKey>
+    );
 
     type BaseProps = BaseVariantComponentProps<T, C, V>;
     type PropsWithRender = VariantComponentPropsWithRender<BaseProps, C, V>;
@@ -856,13 +1105,20 @@ export function defineConfig(options?: VariantFactoryOptions) {
     type ResolvedPropsInput = VariantOptions<C, V> & {
       className?: ClassNameValue;
     };
+    const resolveRuntimeProps = resolveProps as (
+      props: ResolvedPropsInput & Record<string, unknown>
+    ) => Record<string, unknown> & {
+      className: string;
+    };
 
     // Simple component without render prop support
     if (typeof elementType !== 'string' || withoutRenderProp) {
       const Component = (props: BaseProps) =>
         createElement(
           elementType,
-          resolveProps(props as unknown as ResolvedPropsInput)
+          resolveRuntimeProps(
+            props as unknown as ResolvedPropsInput & Record<string, unknown>
+          )
         );
 
       (
@@ -873,12 +1129,15 @@ export function defineConfig(options?: VariantFactoryOptions) {
 
     // Component with render prop support for polymorphism
     const Component = (props: PropsWithRender) => {
-      const { render, ...rest } = props;
-      const resolvedProps = resolveProps(rest as unknown as ResolvedPropsInput);
-      const mergedRef = useMergeRefs(
-        (rest as { ref?: Ref<unknown> }).ref,
-        getRefProperty(render)
+      const runtimeProps = props as unknown as Record<string, unknown> & {
+        ref?: Ref<unknown>;
+        render?: RenderPropType<C, V>;
+      };
+      const { render, ...rest } = runtimeProps;
+      const resolvedProps = resolveRuntimeProps(
+        rest as unknown as ResolvedPropsInput & Record<string, unknown>
       );
+      const mergedRef = useMergeRefs(runtimeProps.ref, getRefProperty(render));
 
       if (render) {
         if (isValidElement(render)) {
@@ -891,8 +1150,8 @@ export function defineConfig(options?: VariantFactoryOptions) {
             })
           );
         }
-        return render({
-          ...resolvedProps,
+        return (render as RenderPropFn<RenderResolvedProps<C, V>>)({
+          ...(resolvedProps as unknown as RenderResolvedProps<C, V>),
           ref: mergedRef,
         }) as ReactElement;
       }

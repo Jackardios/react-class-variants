@@ -233,6 +233,10 @@ Use the function form when you need to adapt props for router links or custom co
 - `style` objects are shallow-merged.
 - React event handlers are composed, and the render element's handler runs first.
 - Refs from the component and the render element are merged.
+- Generic helpers no longer validate variant-key collisions at runtime. Their reserved-name protection is TypeScript-first, so JavaScript consumers should avoid reserved keys like `className` manually.
+- `variantComponent()` rejects component-level collisions such as `render`, `ref`, and React special props, and intrinsic elements additionally reject dangerous intrinsic collisions when they actually apply to that element. Global props like `id` and `role` are always blocked, while element-specific props such as `href`, `src`, `alt`, `htmlFor`, `method`, `target`, `type`, `value`, and `checked` are blocked only on matching intrinsic elements.
+- Other overlaps remain allowed, but they are variant-first: if a prop name is declared in `variants`, it belongs to the variant API unless you rename it.
+- Passing a variant prop as `undefined` now behaves like omission, so `defaultVariants` and boolean `false` fallbacks still apply.
 
 If you do not want polymorphism on a string element component, set `withoutRenderProp: true`. If you pass a custom React component as the base element, the generated component does not expose `render`.
 
@@ -282,7 +286,9 @@ const Button = variantComponent('button', {
 });
 ```
 
-`forwardProps` keeps those props in the resolved props object, which is useful for valid DOM props like `disabled`, custom components, or `render` functions. It does not force React to keep arbitrary unknown attributes on native DOM elements.
+`forwardProps` keeps those props in the resolved props object, which is useful for valid DOM props like `disabled`, custom components, or `render` functions. It does not force React to keep arbitrary unknown attributes on native DOM elements, and it is not a mechanism for restoring native fallback behavior for overlap keys. Dangerous intrinsic collisions such as `id`/`role` globally or `src` on `img`, `method` on `form`, and `href` on anchors are rejected by `variantComponent()` instead.
+
+If a variant key overlaps with a normal intrinsic prop and the overlap is allowed, that key is variant-first. For example, if you declare `size` as a variant on an `<input>`, you should rename the variant key if you still need the native `size` prop.
 
 ## 7. Re-enable Tailwind conflict resolution explicitly
 

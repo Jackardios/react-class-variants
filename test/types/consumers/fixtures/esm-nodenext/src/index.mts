@@ -162,5 +162,34 @@ type _ResolvedButtonClassName = Expect<
   Equal<typeof resolvedButtonProps.className, string>
 >;
 
+const Input = variantComponent('input', {
+  variants: {
+    size: {
+      sm: 'text-xs',
+      lg: 'text-lg',
+    },
+  },
+});
+
+Input({
+  size: 'sm',
+  value: 'variant size',
+});
+
+Input({
+  // @ts-expect-error overlap keys are variant-first and no longer accept native fallback types
+  size: 20,
+  value: 'native size',
+});
+
 const mergedConflictProps = mergeProps({ foo: 'base' }, { foo: 1 });
 type _MergedConflictFoo = Expect<Equal<typeof mergedConflictProps.foo, number>>;
+
+// @ts-expect-error reserved keys must be rejected for ESM consumers
+variantComponent('button', {
+  variants: {
+    render: {
+      primary: 'bg-slate-100',
+    },
+  },
+});

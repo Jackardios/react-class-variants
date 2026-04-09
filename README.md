@@ -70,6 +70,7 @@ No more messy `className` logic, no more props duplication, just clean, type-saf
   - [Compound Variants](#compound-variants)
   - [Default Variants](#default-variants)
   - [Polymorphic Components](#polymorphic-components)
+  - [Prop Name Collisions](#prop-name-collisions)
 - [API Reference](#api-reference)
   - [defineConfig(options?)](#defineconfigoptions)
   - [defineVariantConfig(config)](#definevariantconfigconfig)
@@ -426,6 +427,33 @@ When `render` is a function, its argument is intentionally broad and spread-safe
 
 > **Note:** The `render` prop pattern is a well-established composition pattern in the React ecosystem, used by libraries like [Base UI](https://base-ui.com/) and [Ariakit](https://ariakit.org/) for building accessible, composable components.
 
+### Prop Name Collisions
+
+Generic helpers do not perform runtime validation for variant-key collisions. Their safety for reserved names is TypeScript-first, so JavaScript consumers should avoid reserved keys such as `className` manually.
+
+`variantComponent()` carries the rest of the runtime safety. It rejects component-level collisions such as `render`, `ref`, and React special props like `children` and `style`.
+
+For `variantComponent()` on intrinsic elements, dangerous intrinsic collisions are rejected when they actually apply to that element. Global props like `id` and `role` are always blocked, while element-specific props such as `href`, `src`, `alt`, `htmlFor`, `method`, `target`, `type`, `value`, and `checked` are blocked only on the intrinsic elements where they are meaningful.
+
+Allowed overlaps are variant-first. If you declare an overlap key, that prop name belongs to the variant API:
+
+```tsx
+const Input = variantComponent('input', {
+  variants: {
+    size: {
+      sm: 'text-sm',
+      lg: 'text-lg',
+    },
+  },
+});
+
+<Input size="sm" />; // variant selection
+```
+
+If you still need the native `<input size>` prop, rename the variant key to something like `inputSize` instead of relying on the same prop name. Names such as `onClick`, `size`, or `color` can still be legal overlaps, but they are variant-first and should be chosen carefully.
+
+Passing a variant prop as `undefined` is treated the same as omitting it entirely, so `defaultVariants` and boolean `false` fallbacks still apply.
+
 ## API Reference
 
 ### `defineConfig(options?)`
@@ -686,22 +714,29 @@ const component = variants({
 React Class Variants provides several utility types for working with variants and components:
 
 ```typescript
-import type {
-  VariantsConfig,
-  VariantOptions,
-  ClassNameValue,
-  ExtractVariantOptions,
-  ExtractVariantConfig,
+import {
+  defineConfig,
+  type ClassNameValue,
+  type ExtractVariantOptions,
+  type ExtractVariantConfig,
 } from 'react-class-variants';
 
-// Extract config type
-type Config = VariantsConfig<typeof myConfig>;
+const { variants } = defineConfig();
 
-// Extract variant props
-type Variants = VariantOptions<typeof myConfig>;
+const badge = variants({
+  variants: {
+    tone: {
+      neutral: 'bg-slate-100',
+      accent: 'bg-sky-500',
+    },
+  },
+});
+
+type BadgeConfig = ExtractVariantConfig<typeof badge>;
+type BadgeVariants = ExtractVariantOptions<typeof badge>;
 
 // Use in props
-type Props = {
+type Props = BadgeVariants & {
   className?: ClassNameValue;
 };
 ```
@@ -845,9 +880,21 @@ const Button = variantComponent('button', {
 
 type ButtonConfig2 = ExtractVariantConfig<typeof Button>;
 
-// Reuse config with modifications
-const dangerVariants = variants({
-  ...(buttonVariants as any), // Note: need type assertion for runtime config access
+// Reuse the original config object when you want to derive another config at runtime
+const buttonConfig = defineVariantConfig({
+  base: 'btn',
+  variants: {
+    color: {
+      primary: 'bg-blue',
+      secondary: 'bg-gray',
+    },
+  },
+});
+
+const buttonClasses = variants(buttonConfig);
+
+const dangerConfig = defineVariantConfig({
+  ...buttonConfig,
   variants: {
     color: {
       danger: 'bg-red-500 text-white',
@@ -855,6 +902,8 @@ const dangerVariants = variants({
     },
   },
 });
+
+const dangerVariants = variants(dangerConfig);
 ```
 
 **Key Points:**
@@ -1286,7 +1335,7 @@ const Button = variantComponent('button', {
 </Button>;
 ```
 
-`forwardProps` does not force React to render arbitrary unknown props on native DOM elements. It keeps the selected variant props in the resolved props object; native DOM reflection only happens when the rendered target actually accepts that prop.
+`forwardProps` does not force React to render arbitrary unknown props on native DOM elements. It keeps the selected variant props in the resolved props object; native DOM reflection only happens when the rendered target actually accepts that prop. It is not a mechanism for resolving ambiguous overlap keys: if you declare `size` as a variant on `input`, `size` is still a variant key first and a native fallback is no longer supported. Dangerous intrinsic collisions such as `id`/`role` globally or `src` on `img`, `method` on `form`, and `href` on anchors are rejected up front instead of relying on `forwardProps`.
 
 For non-DOM variant keys, map them explicitly in `render` or a custom component:
 

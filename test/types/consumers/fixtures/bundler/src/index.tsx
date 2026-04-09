@@ -122,5 +122,34 @@ NoRenderButton({
   render: <a href="/" />,
 });
 
+const Input = variantComponent('input', {
+  variants: {
+    size: {
+      sm: 'text-sm',
+      lg: 'text-lg',
+    },
+  },
+});
+
+Input({
+  size: 'sm',
+  value: 'variant input',
+});
+
+Input({
+  // @ts-expect-error overlap keys are variant-first and no longer accept native fallback types
+  size: 20,
+  value: 'typed input',
+});
+
 // @ts-expect-error invalid tone should fail in bundler projects too
 Button({ tone: 'ghost' });
+
+// @ts-expect-error reserved keys must be rejected from packed consumer types
+variantComponent('button', {
+  variants: {
+    ref: {
+      primary: 'ring-2',
+    },
+  },
+});

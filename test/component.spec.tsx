@@ -71,6 +71,26 @@ describe('variantComponent', () => {
       expect(button).toHaveClass('btn', 'bg-blue');
     });
 
+    it('should treat explicit undefined as omission and still apply defaultVariants', () => {
+      const Button = variantComponent('button', {
+        base: 'btn',
+        variants: {
+          color: {
+            primary: 'bg-blue',
+            secondary: 'bg-gray',
+          },
+        },
+        defaultVariants: {
+          color: 'primary',
+        },
+      });
+
+      render(<Button {...({ color: undefined } as any)}>Default</Button>);
+      const button = screen.getByText('Default');
+
+      expect(button).toHaveClass('btn', 'bg-blue');
+    });
+
     it('should handle boolean variants', () => {
       const Button = variantComponent('button', {
         base: 'btn',
@@ -592,6 +612,67 @@ describe('variantComponent', () => {
       expect(button).toBeDisabled();
       expect(button).toHaveClass('opacity-50', 'cursor-not-allowed');
     });
+
+    it('should treat overlap keys as variant-first even for unsupported values', () => {
+      const Input = variantComponent('input', {
+        variants: {
+          size: { sm: 'text-sm', lg: 'text-lg' },
+        },
+      });
+
+      render(
+        <Input
+          {...({
+            size: 20,
+            defaultValue: 'Hello',
+            'data-testid': 'field',
+          } as any)}
+        />
+      );
+
+      const input = screen.getByTestId('field') as HTMLInputElement;
+      expect(input).toHaveValue('Hello');
+      expect(input).not.toHaveAttribute('size');
+      expect(input.className).toBe('');
+    });
+
+    it('should consume matching overlap values as variants', () => {
+      const Input = variantComponent('input', {
+        variants: {
+          size: { sm: 'text-sm', lg: 'text-lg' },
+        },
+      });
+
+      render(<Input size="sm" defaultValue="Hello" data-testid="field" />);
+
+      const input = screen.getByTestId('field');
+      expect(input).toHaveClass('text-sm');
+      expect(input).not.toHaveAttribute('size');
+    });
+
+    it('should forward unsupported overlap values only when forwardProps opts in', () => {
+      const Input = variantComponent('input', {
+        variants: {
+          size: { sm: 'text-sm', lg: 'text-lg' },
+        },
+        forwardProps: ['size'],
+      });
+
+      render(
+        <Input
+          {...({
+            size: 20,
+            defaultValue: 'Hello',
+            'data-testid': 'field',
+          } as any)}
+        />
+      );
+
+      const input = screen.getByTestId('field') as HTMLInputElement;
+      expect(input).toHaveValue('Hello');
+      expect(input).toHaveAttribute('size', '20');
+      expect(input.className).toBe('');
+    });
   });
 
   describe('compound variants in component', () => {
@@ -832,6 +913,199 @@ describe('variantComponent', () => {
       expect((Span as any).displayName).toBe('Variant(span)');
       expect((Input as any).displayName).toBe('Variant(input)');
       expect((Anchor as any).displayName).toBe('Variant(a)');
+    });
+  });
+
+  describe('invalid configuration', () => {
+    it('should throw a detailed aggregated error for component-specific and minimal intrinsic collisions', () => {
+      expect(() =>
+        variantComponent('button', {
+          variants: {
+            ref: { primary: 'ring-2' },
+            children: { primary: 'px-4' },
+            type: { primary: 'bg-blue' },
+          } as any,
+        })
+      ).toThrowError(
+        expect.objectContaining({
+          message: expect.stringContaining("API: variantComponent('button')"),
+        })
+      );
+
+      expect(() =>
+        variantComponent('button', {
+          variants: {
+            ref: { primary: 'ring-2' },
+            children: { primary: 'px-4' },
+            type: { primary: 'bg-blue' },
+          } as any,
+        })
+      ).toThrowError(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            'variant key "ref" conflicts with React ref handling.'
+          ),
+        })
+      );
+
+      expect(() =>
+        variantComponent('button', {
+          variants: {
+            ref: { primary: 'ring-2' },
+            children: { primary: 'px-4' },
+            type: { primary: 'bg-blue' },
+          } as any,
+        })
+      ).toThrowError(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            'variant key "type" conflicts with the intrinsic prop name "type" on "button" elements.'
+          ),
+        })
+      );
+    });
+
+    it('should validate component-only reserved keys for custom components', () => {
+      expect(() =>
+        variantComponent(() => null, {
+          variants: {
+            render: {
+              primary: 'bg-blue',
+            },
+          } as any,
+        })
+      ).toThrowError(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            'conflicts with the polymorphic render prop.'
+          ),
+        })
+      );
+    });
+
+    it('should throw for critical intrinsic collisions like href on anchors', () => {
+      expect(() =>
+        variantComponent('a', {
+          variants: {
+            href: {
+              docs: 'text-blue',
+            },
+          } as any,
+        })
+      ).toThrowError(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            'conflicts with the intrinsic prop name "href" on "a" elements.'
+          ),
+        })
+      );
+    });
+
+    it('should throw for expanded dangerous intrinsic collisions like id, name, src, and htmlFor', () => {
+      expect(() =>
+        variantComponent('input', {
+          variants: {
+            id: {
+              field: 'ring-2',
+            },
+            name: {
+              email: 'border',
+            },
+          } as any,
+        })
+      ).toThrowError(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            'variant key "id" conflicts with the intrinsic prop name "id" on "input" elements.'
+          ),
+        })
+      );
+
+      expect(() =>
+        variantComponent('img', {
+          variants: {
+            src: {
+              hero: 'rounded-xl',
+            },
+          } as any,
+        })
+      ).toThrowError(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            'variant key "src" conflicts with the intrinsic prop name "src" on "img" elements.'
+          ),
+        })
+      );
+
+      expect(() =>
+        variantComponent('label', {
+          variants: {
+            htmlFor: {
+              field: 'font-medium',
+            },
+          } as any,
+        })
+      ).toThrowError(
+        expect.objectContaining({
+          message: expect.stringContaining(
+            'variant key "htmlFor" conflicts with the intrinsic prop name "htmlFor" on "label" elements.'
+          ),
+        })
+      );
+    });
+
+    it('should allow non-dangerous overlap names like onClick and size at runtime', () => {
+      expect(() =>
+        variantComponent('button', {
+          variants: {
+            onClick: {
+              primary: 'cursor-pointer',
+            },
+          } as any,
+        } as any)
+      ).not.toThrow();
+
+      expect(() =>
+        variantComponent('input', {
+          variants: {
+            size: {
+              sm: 'text-sm',
+            },
+          } as any,
+        } as any)
+      ).not.toThrow();
+    });
+
+    it('should not over-restrict element-specific intrinsic collisions on unrelated elements', () => {
+      expect(() =>
+        variantComponent('div', {
+          variants: {
+            method: {
+              post: 'border',
+            },
+          } as any,
+        } as any)
+      ).not.toThrow();
+
+      expect(() =>
+        variantComponent('button', {
+          variants: {
+            alt: {
+              icon: 'rounded',
+            },
+          } as any,
+        } as any)
+      ).not.toThrow();
+
+      expect(() =>
+        variantComponent('span', {
+          variants: {
+            href: {
+              inline: 'underline',
+            },
+          } as any,
+        } as any)
+      ).not.toThrow();
     });
   });
 

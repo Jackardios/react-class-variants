@@ -102,6 +102,26 @@ Button({
   },
 });
 
+const Input = variantComponent('input', {
+  variants: {
+    size: {
+      sm: 'text-sm',
+      lg: 'text-lg',
+    },
+  },
+});
+
+Input({
+  size: 'sm',
+  value: 'variant size',
+});
+
+Input({
+  // @ts-expect-error overlap keys are variant-first and no longer accept native fallback types
+  size: 20,
+  value: 'native size',
+});
+
 const baseButtonProps: ComponentPropsWithoutRef<'button'> = {
   className: 'base',
   disabled: false,
@@ -145,4 +165,13 @@ variantPropsResolver({
   },
   // @ts-expect-error typo in forwardProps must be rejected from require() consumers
   forwardProps: ['sizze'],
+});
+
+// @ts-expect-error reserved keys must be rejected from require() consumers
+variantComponent('button', {
+  variants: {
+    ref: {
+      primary: 'ring-2',
+    },
+  },
 });

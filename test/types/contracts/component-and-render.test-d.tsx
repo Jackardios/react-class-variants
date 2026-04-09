@@ -28,7 +28,7 @@ expectType<ReactNode>(
 
 const RequiredButton = variantComponent('button', {
   variants: {
-    color: {
+    tone: {
       primary: 'bg-blue',
       secondary: 'bg-gray',
     },
@@ -36,21 +36,21 @@ const RequiredButton = variantComponent('button', {
 });
 
 expectError(RequiredButton({ children: 'Click' }));
-expectType<ReactNode>(RequiredButton({ color: 'primary', children: 'Click' }));
+expectType<ReactNode>(RequiredButton({ tone: 'primary', children: 'Click' }));
 
 const OptionalButton = variantComponent('button', {
   variants: {
-    color: {
+    tone: {
       primary: 'bg-blue',
     },
   },
   defaultVariants: {
-    color: 'primary',
+    tone: 'primary',
   },
 });
 
 expectType<ReactNode>(OptionalButton({ children: 'Click' }));
-expectType<ReactNode>(OptionalButton({ color: 'primary', children: 'Click' }));
+expectType<ReactNode>(OptionalButton({ tone: 'primary', children: 'Click' }));
 
 const DisabledButton = variantComponent('button', {
   variants: {
@@ -360,6 +360,42 @@ expectType<ReactNode>(
   })
 );
 
+const InputWithSizeVariant = variantComponent('input', {
+  variants: {
+    size: {
+      sm: 'text-sm',
+      lg: 'text-lg',
+    },
+  },
+});
+
+expectError(
+  InputWithSizeVariant({
+    value: 'test',
+  })
+);
+
+expectType<ReactNode>(
+  InputWithSizeVariant({
+    size: 'sm',
+    value: 'test',
+  })
+);
+
+expectError(
+  InputWithSizeVariant({
+    size: 20,
+    value: 'test',
+  })
+);
+
+expectError(
+  InputWithSizeVariant({
+    size: 'xl',
+    value: 'test',
+  })
+);
+
 // =============================================================================
 // Refs and edge cases
 // =============================================================================
@@ -425,6 +461,16 @@ expectError(
       },
     },
     forwardProps: ['sizze'],
+  })
+);
+
+expectError(
+  variantComponent('button', {
+    variants: {
+      ref: {
+        primary: 'ring-2',
+      },
+    },
   })
 );
 

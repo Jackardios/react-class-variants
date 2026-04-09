@@ -138,6 +138,33 @@ describe('defineVariantConfig()', () => {
       'rounded-xl p-4 bg-white border cursor-pointer hover:border-blue-500'
     );
   });
+
+  it('should not perform runtime validation for generic config collisions', () => {
+    expect(() =>
+      defineVariantConfig({
+        variants: {
+          className: {
+            primary: 'ring-2',
+          },
+        } as any,
+      } as any)
+    ).not.toThrow();
+  });
+
+  it('should allow non-className reserved-looking keys at runtime', () => {
+    expect(() =>
+      defineVariantConfig({
+        variants: {
+          ref: {
+            primary: 'ring-2',
+          },
+          onClick: {
+            primary: 'cursor-pointer',
+          },
+        } as any,
+      } as any)
+    ).not.toThrow();
+  });
 });
 
 // =============================================================================
@@ -244,6 +271,32 @@ describe('variants()', () => {
     it('should handle props with null className', () => {
       const empty = variants({});
       expect(empty({ className: null })).toBe('');
+    });
+  });
+
+  describe('invalid configuration', () => {
+    it('should not perform runtime validation for className collisions', () => {
+      expect(() =>
+        variants({
+          variants: {
+            className: {
+              primary: 'bg-blue',
+            },
+          } as any,
+        } as any)
+      ).not.toThrow();
+    });
+
+    it('should allow non-className collisions in generic helpers at runtime', () => {
+      expect(() =>
+        variants({
+          variants: {
+            ref: { primary: 'ring-2' },
+            render: { primary: 'bg-blue' },
+            onClick: { primary: 'cursor-pointer' },
+          } as any,
+        } as any)
+      ).not.toThrow();
     });
   });
 
@@ -613,7 +666,7 @@ describe('variants()', () => {
       expect(button({ color: 'primary' })).toBe('bg-blue');
     });
 
-    it('should fallback to default when explicit undefined is passed', () => {
+    it('should treat explicit undefined as omission and fallback to default', () => {
       const button = variants({
         variants: {
           color: { primary: 'bg-blue', secondary: 'bg-gray' },
@@ -624,6 +677,19 @@ describe('variants()', () => {
       });
 
       expect(button({ color: undefined })).toBe('bg-blue');
+    });
+
+    it('should treat explicit undefined as omission for boolean variants', () => {
+      const button = variants({
+        variants: {
+          disabled: {
+            true: 'opacity-50',
+            false: 'opacity-100',
+          },
+        },
+      });
+
+      expect(button({ disabled: undefined } as any)).toBe('opacity-100');
     });
 
     it('should work with empty defaultVariants object', () => {
@@ -1287,6 +1353,90 @@ describe('variantPropsResolver()', () => {
       expect(result.id).toBe('test');
     });
 
+    it('should treat explicit undefined as omission and apply default variants', () => {
+      const resolve = variantPropsResolver({
+        variants: {
+          color: { primary: 'bg-blue', secondary: 'bg-gray' },
+        },
+        defaultVariants: {
+          color: 'primary',
+        },
+      });
+
+      const result = resolve({ color: undefined, id: 'test' } as any);
+      expect(result.className).toBe('bg-blue');
+      expect(result.id).toBe('test');
+    });
+
+    it('should treat explicit undefined as omission and apply boolean fallback', () => {
+      const resolve = variantPropsResolver({
+        variants: {
+          disabled: {
+            true: 'opacity-50',
+            false: 'opacity-100',
+          },
+        },
+      });
+
+      expect(resolve({ disabled: undefined } as any).className).toBe(
+        'opacity-100'
+      );
+    });
+
+    it('should treat unsupported overlap values as variant props and remove them without forwardProps', () => {
+      const resolve = variantPropsResolver({
+        variants: {
+          type: {
+            primary: 'bg-blue',
+            secondary: 'bg-gray',
+          },
+        },
+      } as any);
+
+      const result = resolve({ type: 'submit', id: 'test' } as any);
+      expect(result.className).toBe('');
+      expect(result).toMatchObject({ id: 'test' });
+      expect(result).not.toHaveProperty('type');
+    });
+
+    it('should not apply default variants when an overlap key is present with an unsupported value', () => {
+      const resolve = variantPropsResolver({
+        variants: {
+          size: {
+            sm: 'text-sm',
+            lg: 'text-lg',
+          },
+        },
+        defaultVariants: {
+          size: 'sm',
+        },
+      });
+
+      const result = resolve({ size: 20, id: 'field' } as any);
+      expect(result.className).toBe('');
+      expect(result).toMatchObject({ id: 'field' });
+      expect(result).not.toHaveProperty('size');
+    });
+
+    it('should keep unsupported overlap values when forwardProps includes that key', () => {
+      const resolve = variantPropsResolver({
+        variants: {
+          size: {
+            sm: 'text-sm',
+            lg: 'text-lg',
+          },
+        },
+        forwardProps: ['size'],
+      });
+
+      const result = resolve({ size: 20, id: 'field' } as any);
+      expect(result.className).toBe('');
+      expect(result).toMatchObject({
+        id: 'field',
+        size: 20,
+      });
+    });
+
     it('should work with boolean variants', () => {
       const resolve = variantPropsResolver({
         variants: {
@@ -1317,6 +1467,33 @@ describe('variantPropsResolver()', () => {
         className: 'btn bg-blue',
         onClick,
       });
+    });
+
+    it('should not perform runtime validation for className collisions', () => {
+      expect(() =>
+        variantPropsResolver({
+          variants: {
+            className: {
+              primary: 'bg-blue',
+            },
+          } as any,
+        } as any)
+      ).not.toThrow();
+    });
+
+    it('should allow non-className collisions in generic resolvers at runtime', () => {
+      expect(() =>
+        variantPropsResolver({
+          variants: {
+            render: {
+              primary: 'bg-blue',
+            },
+            onClick: {
+              primary: 'cursor-pointer',
+            },
+          } as any,
+        } as any)
+      ).not.toThrow();
     });
 
     describe('with compound variants', () => {
