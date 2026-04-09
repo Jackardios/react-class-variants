@@ -1,4 +1,5 @@
 import {
+  createElement,
   createRef,
   type ComponentPropsWithoutRef,
   type RefCallback,
@@ -13,7 +14,7 @@ type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
 type Expect<T extends true> = T;
 
 const { defineConfig, mergeProps, mergeRefs } = rcv;
-const { variants, variantPropsResolver } = defineConfig();
+const { variants, variantComponent, variantPropsResolver } = defineConfig();
 
 const link = variants({
   variants: {
@@ -56,7 +57,7 @@ const resolveLinkProps = variantPropsResolver({
 const resolvedLinkProps = resolveLinkProps({
   intent: 'primary',
   size: 'lg',
-  className: 'inline-flex',
+  className: ['inline-flex', ['gap-2'], null, undefined],
 });
 
 type _ResolvedClassName = Expect<
@@ -65,6 +66,41 @@ type _ResolvedClassName = Expect<
 type _ResolvedForwardedSize = Expect<
   Equal<typeof resolvedLinkProps.size, 'lg'>
 >;
+
+const Button = variantComponent('button', {
+  variants: {
+    intent: {
+      primary: 'text-blue-600',
+      secondary: 'text-slate-700',
+    },
+    size: {
+      sm: 'text-sm',
+      lg: 'text-lg',
+    },
+  },
+  forwardProps: ['intent'],
+});
+
+Button({
+  intent: 'primary',
+  size: 'lg',
+  render: props => {
+    type _RenderClassName = Expect<Equal<typeof props.className, string>>;
+    type _RenderIntent = Expect<
+      Equal<typeof props.intent, 'primary' | 'secondary'>
+    >;
+
+    // @ts-expect-error non-forwarded variants stay out of render props
+    const leakedSize = props.size;
+    void leakedSize;
+
+    // @ts-expect-error base-element-specific props are intentionally not promised
+    const leakedType = props.type;
+    void leakedType;
+
+    return createElement('a', { ...props, href: '/' });
+  },
+});
 
 const baseButtonProps: ComponentPropsWithoutRef<'button'> = {
   className: 'base',
@@ -85,6 +121,9 @@ type _MergedType = Expect<
     'button' | 'submit' | 'reset' | undefined
   >
 >;
+
+const mergedConflictProps = mergeProps({ foo: 'base' }, { foo: 1 });
+type _MergedConflictFoo = Expect<Equal<typeof mergedConflictProps.foo, number>>;
 
 const buttonRefObject = createRef<HTMLButtonElement>();
 const buttonRefCallback: RefCallback<HTMLButtonElement> = () => {};

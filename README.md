@@ -414,6 +414,7 @@ import { Link } from 'react-router-dom';
 ```
 
 Props, refs, and event handlers are automatically merged!
+When `render` is a function, its argument is intentionally broad: it includes merged DOM props, a flattened `className`, an optional `ref`, and any variant props listed in `forwardProps`.
 
 > **Note:** The `render` prop pattern is a well-established composition pattern in the React ecosystem, used by libraries like [Base UI](https://base-ui.com/) and [Ariakit](https://ariakit.org/) for building accessible, composable components.
 
@@ -492,7 +493,7 @@ const Button = variantComponent(
 - All variant props (inferred from config)
 - Native element props (e.g., `onClick`, `disabled`)
 - `className` - Additional classes (merged with highest priority)
-- `render` - Polymorphic rendering (unless `withoutRenderProp` is true)
+- `render` - Polymorphic rendering (unless `withoutRenderProp` is true). Function renders receive broad DOM props, a flattened `className: string`, an optional `ref`, and any forwarded variant props.
 
 ---
 
@@ -506,11 +507,14 @@ const resolveButtonProps = variantPropsResolver(config);
 const { className, ...rest } = resolveButtonProps({
   color: 'primary',
   size: 'lg',
+  className: ['inline-flex', ['gap-2']],
   onClick: handleClick,
 });
-// className: resolved variant classes
+// className: resolved variant classes as a flattened string
 // rest: { onClick: handleClick }
 ```
+
+`variantPropsResolver()` accepts the same `ClassNameValue` shapes as `variants()` for its input `className`, but always returns a resolved `className: string`.
 
 ## TypeScript
 

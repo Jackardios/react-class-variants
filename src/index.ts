@@ -24,9 +24,9 @@ type OmitByValue<T, Value> = {
   [P in keyof T as T[P] extends Value ? never : P]: T[P];
 };
 type StringToBoolean<T> = T extends 'true' | 'false' ? boolean : T;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- render props need to support refs for arbitrary element types in the public API.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- function-form render intentionally exposes broad DOM props for ergonomic cross-element composition.
 type AnyRef = Ref<any>;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- render props need to stay compatible with arbitrary HTML element attributes in the public API.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- function-form render intentionally exposes broad DOM props for ergonomic cross-element composition.
 type AnyHtmlAttributes = HTMLAttributes<any>;
 
 /**
@@ -248,7 +248,9 @@ type VariantPropsResolverFn<
   C extends VariantComponentConfig<V>,
   V extends VariantsSchema
 > = (<
-  P extends Omit<VariantOptions<C, V>, 'className'> & { className?: string }
+  P extends Omit<VariantOptions<C, V>, 'className'> & {
+    className?: ClassNameValue;
+  }
 >(
   props: P
 ) => {
@@ -381,15 +383,33 @@ export type ExtractVariantOptions<T> = T extends {
  * Render prop type.
  * @template P Props
  * @example
- * const children: RenderPropFn = (props) => <div {...props} />;
+ * const children: RenderPropFn<{ className: string }> = props => <div {...props} />;
  */
-type RenderPropFn<P = AnyHtmlAttributes & { ref?: AnyRef }> = (
-  props: P
-) => ReactNode;
+type RenderPropFn<P> = (props: P) => ReactNode;
+
+type ForwardedVariantProps<
+  C extends VariantComponentConfig<V>,
+  V extends VariantsSchema
+> = C['forwardProps'] extends (keyof VariantOptions<C, V>)[]
+  ? Pick<VariantOptions<C, V>, C['forwardProps'][number]>
+  : {};
+
+type RenderResolvedProps<
+  C extends VariantComponentConfig<V>,
+  V extends VariantsSchema
+> = Simplify<
+  {
+    className: string;
+    ref?: AnyRef;
+  } & ForwardedVariantProps<C, V> &
+    Omit<AnyHtmlAttributes, 'render' | 'className' | keyof VariantOptions<C, V>>
+>;
 
 /**
  * Type for the render prop, which can be either a function or a React element.
- * When using a function, it receives resolved props including className and ref.
+ * When using a function, it intentionally receives broad DOM props including
+ * className, ref, and any forwarded variant props for ergonomic cross-element
+ * composition.
  * When using an element, it will be cloned with merged props.
  *
  * @template C - The variant component configuration type
@@ -405,22 +425,7 @@ type RenderPropFn<P = AnyHtmlAttributes & { ref?: AnyRef }> = (
 export type RenderPropType<
   C extends VariantComponentConfig<V>,
   V extends VariantsSchema
-> =
-  | RenderPropFn<
-      Simplify<
-        {
-          className: string;
-          ref?: AnyRef;
-        } & (C['forwardProps'] extends (keyof VariantOptions<C, V>)[]
-          ? Pick<VariantOptions<C, V>, C['forwardProps'][number]>
-          : {}) &
-          Omit<
-            AnyHtmlAttributes,
-            'render' | 'className' | keyof VariantOptions<C, V>
-          >
-      >
-    >
-  | ReactElement;
+> = RenderPropFn<RenderResolvedProps<C, V>> | ReactElement;
 
 /**
  * Component props with optional render prop.
@@ -731,7 +736,7 @@ export function defineConfig(options?: VariantFactoryOptions) {
     type VariantPropsWithClassName = (keyof V extends never
       ? {}
       : VariantOptions<typeof config, V>) & {
-      className?: string;
+      className?: ClassNameValue;
     };
 
     type ForwardPropKeys = NonNullable<C['forwardProps']>;
@@ -818,7 +823,9 @@ export function defineConfig(options?: VariantFactoryOptions) {
         : (elementType as { displayName?: string }).displayName ||
           (elementType as { name?: string }).name ||
           'Component');
-    type ResolvedPropsInput = VariantOptions<C, V> & { className?: string };
+    type ResolvedPropsInput = VariantOptions<C, V> & {
+      className?: ClassNameValue;
+    };
 
     // Simple component without render prop support
     if (typeof elementType !== 'string' || withoutRenderProp) {
@@ -845,12 +852,19 @@ export function defineConfig(options?: VariantFactoryOptions) {
 
       if (render) {
         if (isValidElement(render)) {
+          const renderElement = render as ReactElement<Record<string, unknown>>;
           return cloneElement(
-            render,
-            mergeProps(resolvedProps, { ...render.props, ref: mergedRef })
+            renderElement,
+            mergeProps(resolvedProps, {
+              ...renderElement.props,
+              ref: mergedRef,
+            })
           );
         }
-        return render(resolvedProps) as ReactElement;
+        return render({
+          ...resolvedProps,
+          ref: mergedRef,
+        }) as ReactElement;
       }
 
       return createElement(elementType, { ...resolvedProps, ref: mergedRef });

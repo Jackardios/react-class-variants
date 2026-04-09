@@ -1,5 +1,11 @@
 import { expectAssignable, expectError, expectType } from 'tsd';
-import { type ReactElement, type ReactNode, type Ref } from 'react';
+import {
+  type ComponentPropsWithoutRef,
+  type HTMLAttributes,
+  type ReactElement,
+  type ReactNode,
+  type Ref,
+} from 'react';
 import { defineConfig } from '../../../';
 
 const { variantComponent } = defineConfig();
@@ -85,9 +91,14 @@ expectType<ReactNode>(
     color: 'primary',
     render: props => {
       expectType<string>(props.className);
-      expectType<Ref<any> | undefined>(props.ref);
+      expectAssignable<Ref<unknown> | undefined>(props.ref);
+      expectAssignable<HTMLAttributes<HTMLElement>['onClick']>(props.onClick);
+      expectAssignable<string | undefined>(props.id);
       expectError(props.color);
-      return <a {...props} />;
+      expectError(props.type);
+      expectError(props.disabled);
+      expectError(props.form);
+      return <a {...props} href="/" />;
     },
     children: 'Link',
   })
@@ -109,8 +120,8 @@ expectType<ReactNode>(
       expectError(props.color);
       expectError(props.size);
       expectType<string>(props.className);
-      expectType<React.MouseEventHandler<any> | undefined>(props.onClick);
-      return <div {...props} />;
+      expectAssignable<HTMLAttributes<HTMLElement>['onClick']>(props.onClick);
+      return <a {...props} href="/multi" />;
     },
   })
 );
@@ -121,6 +132,9 @@ const RenderPropsButton = variantComponent('button', {
   },
 });
 
+const RouterLink = (props: ComponentPropsWithoutRef<'a'> & { to: string }) =>
+  null;
+
 expectType<ReactNode>(
   RenderPropsButton({
     color: 'primary',
@@ -129,7 +143,7 @@ expectType<ReactNode>(
       expectType<string>(props.className);
       expectAssignable<string | undefined>(props.id);
       expectError(props.color);
-      return <div {...props} />;
+      return <RouterLink {...props} to="/router" />;
     },
   })
 );
@@ -181,7 +195,7 @@ expectType<ReactNode>(
       expectType<string>(props.className);
       expectAssignable<string>(props.size);
       expectError(props.color);
-      return <div {...props} />;
+      return <a {...props} href="/size" />;
     },
   })
 );
@@ -202,7 +216,7 @@ expectType<ReactNode>(
       expectAssignable<string>(props.color);
       expectAssignable<string>(props.size);
       expectType<string>(props.className);
-      return <span {...props} />;
+      return <RouterLink {...props} to="/all" />;
     },
   })
 );
@@ -219,7 +233,32 @@ expectType<ReactNode>(
     color: 'primary',
     render: props => {
       expectError(props.color);
-      return <span {...props} />;
+      return <a {...props} href="/none" />;
+    },
+  })
+);
+
+const AnchorWithRender = variantComponent('a', {
+  variants: {
+    tone: {
+      primary: 'text-blue',
+    },
+  },
+  forwardProps: ['tone'],
+});
+
+expectType<ReactNode>(
+  AnchorWithRender({
+    tone: 'primary',
+    href: '/docs',
+    target: '_blank',
+    rel: 'noreferrer',
+    render: props => {
+      expectAssignable<Ref<unknown> | undefined>(props.ref);
+      expectAssignable<string>(props.tone);
+      expectError(props.href);
+      expectError(props.target);
+      return <a {...props} />;
     },
   })
 );

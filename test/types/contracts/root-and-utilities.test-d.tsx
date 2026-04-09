@@ -57,6 +57,9 @@ expectType<boolean | undefined>(mergedButtonProps.disabled);
 expectType<string | undefined>(mergedButtonProps.className);
 expectType<'button' | 'submit' | 'reset' | undefined>(mergedButtonProps.type);
 
+const mergedConflictingProps = mergeProps({ foo: 'base' }, { foo: 1 });
+expectType<number>(mergedConflictingProps.foo);
+
 const buttonRefObject = createRef<HTMLButtonElement>();
 const buttonRefCallback: RefCallback<HTMLButtonElement> = () => {};
 const mergedRefCallback = mergeRefs(buttonRefObject, buttonRefCallback);

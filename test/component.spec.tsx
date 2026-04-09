@@ -288,6 +288,62 @@ describe('variantComponent', () => {
       );
     });
 
+    it('should pass and forward ref through render function props', () => {
+      const Button = variantComponent('button', {
+        base: 'btn',
+      });
+
+      const ref = createRef<HTMLButtonElement>();
+      let seenRef = null as unknown;
+      const renderFn = vi.fn(props => {
+        seenRef = props.ref;
+        return <button {...props}>Ref target</button>;
+      });
+
+      render(
+        <Button ref={ref} render={renderFn}>
+          Ref target
+        </Button>
+      );
+
+      expect(renderFn).toHaveBeenCalledTimes(1);
+      expect(seenRef).toEqual(expect.any(Function));
+      expect(ref.current).toBeInstanceOf(HTMLButtonElement);
+      expect(ref.current?.textContent).toBe('Ref target');
+    });
+
+    it('should pass native base element props to render function', () => {
+      const Button = variantComponent('button', {
+        base: 'btn',
+      });
+
+      const onClick = vi.fn();
+      const renderFn = vi.fn(props => <button {...props} />);
+
+      render(
+        <Button
+          type="submit"
+          disabled
+          form="checkout-form"
+          onClick={onClick}
+          render={renderFn}
+        >
+          Submit
+        </Button>
+      );
+
+      expect(renderFn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          className: 'btn',
+          type: 'submit',
+          disabled: true,
+          form: 'checkout-form',
+          onClick,
+          children: 'Submit',
+        })
+      );
+    });
+
     it('should exclude variant props from render function args', () => {
       const Button = variantComponent('button', {
         variants: {

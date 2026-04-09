@@ -7,7 +7,7 @@ type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
   : false;
 type Expect<T extends true> = T;
 
-const { variantComponent } = defineConfig();
+const { variantComponent, variantPropsResolver } = defineConfig();
 
 const Button = variantComponent('button', {
   variants: {
@@ -44,10 +44,31 @@ Button({
     const leakedSize = props.size;
     void leakedSize;
 
+    // @ts-expect-error base-element-specific props are intentionally not promised
+    const leakedType = props.type;
+    void leakedType;
+
     return <a {...props} href="/" />;
   },
   children: 'Link button',
 });
+
+const resolveButtonProps = variantPropsResolver({
+  variants: {
+    tone: {
+      info: 'bg-sky-500',
+    },
+  },
+});
+
+const resolvedButtonProps = resolveButtonProps({
+  tone: 'info',
+  className: ['inline-flex', ['gap-2'], null, undefined],
+});
+
+type _ResolvedButtonClassName = Expect<
+  Equal<typeof resolvedButtonProps.className, string>
+>;
 
 const NoRenderButton = variantComponent('button', {
   variants: {

@@ -111,8 +111,13 @@ type MergeableProps = {
   style?: CSSProperties | undefined;
 };
 
-type MergedProps<TBase extends object, TOverrides extends object> = TBase &
-  TOverrides;
+type Simplify<T> = {
+  [K in keyof T]: T[K];
+} & {};
+
+type MergedProps<TBase extends object, TOverrides extends object> = Simplify<
+  Omit<TBase, keyof TOverrides> & TOverrides
+>;
 
 export function mergeProps<TBase extends object, TOverrides extends object>(
   base: TBase & MergeableProps,

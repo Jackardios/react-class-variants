@@ -304,6 +304,27 @@ expectAssignable<Function>(resolved.onClick);
 expectType<string>(resolved['data-testid']);
 expectError(resolved.color);
 
+const resolvedWithNestedClassName = resolveProps({
+  color: 'primary',
+  className: ['inline-flex', ['gap-2', null], undefined],
+});
+
+expectType<string>(resolvedWithNestedClassName.className);
+
+const resolvedWithNullableClassName = resolveProps({
+  color: 'primary',
+  className: null,
+});
+
+expectType<string>(resolvedWithNullableClassName.className);
+
+const resolvedWithUndefinedClassName = resolveProps({
+  color: 'primary',
+  className: undefined,
+});
+
+expectType<string>(resolvedWithUndefinedClassName.className);
+
 const resolveWithForward = variantPropsResolver({
   variants: {
     color: { primary: 'bg-blue' },

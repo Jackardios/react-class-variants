@@ -1,7 +1,9 @@
+import { createElement, type ComponentProps } from 'react';
 import {
   defineConfig,
   type ExtractVariantConfig,
   type ExtractVariantOptions,
+  mergeProps,
 } from 'react-class-variants';
 
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
@@ -11,7 +13,7 @@ type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
   : false;
 type Expect<T extends true> = T;
 
-const { variants } = defineConfig();
+const { variants, variantComponent, variantPropsResolver } = defineConfig();
 
 const badge = variants({
   base: 'badge',
@@ -97,3 +99,68 @@ variants({
     },
   ],
 });
+
+const Button = variantComponent('button', {
+  variants: {
+    tone: {
+      neutral: 'bg-slate-100',
+      accent: 'bg-sky-500',
+    },
+    size: {
+      sm: 'text-xs',
+      lg: 'text-lg',
+    },
+  },
+  forwardProps: ['tone'],
+});
+
+Button({
+  tone: 'neutral',
+  size: 'lg',
+  type: 'submit',
+  disabled: true,
+  form: 'checkout',
+  render: props => {
+    type _RenderClassName = Expect<Equal<typeof props.className, string>>;
+    type _RenderTone = Expect<Equal<typeof props.tone, 'neutral' | 'accent'>>;
+
+    // @ts-expect-error non-forwarded variants stay out of render props
+    const leakedSize = props.size;
+    void leakedSize;
+
+    // @ts-expect-error base-element-specific props are intentionally not promised
+    const leakedType = props.type;
+    void leakedType;
+
+    return null;
+  },
+});
+
+const RouterLink = (props: { to: string } & ComponentProps<'a'>) => null;
+
+Button({
+  tone: 'accent',
+  size: 'sm',
+  render: props => createElement(RouterLink, { ...props, to: '/router' }),
+});
+
+const resolveButtonProps = variantPropsResolver({
+  variants: {
+    tone: {
+      neutral: 'bg-slate-100',
+      accent: 'bg-sky-500',
+    },
+  },
+});
+
+const resolvedButtonProps = resolveButtonProps({
+  tone: 'neutral',
+  className: ['inline-flex', ['gap-2'], null, undefined],
+});
+
+type _ResolvedButtonClassName = Expect<
+  Equal<typeof resolvedButtonProps.className, string>
+>;
+
+const mergedConflictProps = mergeProps({ foo: 'base' }, { foo: 1 });
+type _MergedConflictFoo = Expect<Equal<typeof mergedConflictProps.foo, number>>;

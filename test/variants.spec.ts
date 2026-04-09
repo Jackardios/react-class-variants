@@ -1128,6 +1128,24 @@ describe('variantPropsResolver()', () => {
       const result = resolve({ color: 'primary', className: 'custom' });
       expect(result.className).toBe('btn bg-blue custom');
     });
+
+    it('should flatten nested className values like variants()', () => {
+      const resolve = variantPropsResolver({
+        base: 'btn',
+        variants: {
+          color: { primary: 'bg-blue' },
+        },
+      });
+
+      const result = resolve({
+        color: 'primary',
+        className: ['inline-flex', ['gap-2', null], undefined, 'items-center'],
+      });
+
+      expect(result.className).toBe(
+        'btn bg-blue inline-flex gap-2 items-center'
+      );
+    });
   });
 
   describe('forwardProps option', () => {
