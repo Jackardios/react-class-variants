@@ -6,9 +6,16 @@
   },
   "changesets": [
     "add-type-utilities",
+    "blue-buses-float",
+    "bright-schools-drum",
+    "few-points-wave",
     "five-moons-return",
     "fix-merge-props",
+    "fresh-paws-matter",
     "green-geckos-fix",
-    "major-v2-refactor"
+    "late-forks-relax",
+    "major-v2-refactor",
+    "quiet-cameras-smell",
+    "warm-coins-share"
   ]
 }
