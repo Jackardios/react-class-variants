@@ -45,8 +45,7 @@ When a change affects public types, exports, or package metadata, run `pnpm test
 
 - Alpha releases are published from `next`
 - Keep the release workflow `commit` and `title` inputs as plain `Version Packages`; `changesets/action` appends the prerelease tag automatically while prerelease mode is active
-- The release workflow verifies that the version is visible in npm immediately after publish and prints the current `dist-tags`
+- The release workflow publishes via trusted publishing and then pushes the release tags / GitHub releases without an extra npm registry gate
 - Until `react-class-variants` has its first stable release, Changesets publishes prereleases under `latest`; do not assume `react-class-variants@alpha` advances automatically
-- If the GitHub Actions secret `NPM_DIST_TAG_TOKEN` is configured, the release workflow also updates `react-class-variants@alpha` to the newest prerelease automatically
-- Without `NPM_DIST_TAG_TOKEN`, update the `alpha` dist-tag manually after publish if you want `react-class-variants@alpha` to resolve to the newest prerelease
+- Update the `alpha` dist-tag manually after publish if you want `react-class-variants@alpha` to resolve to the newest prerelease; trusted publishing only covers `npm publish`
 - Stable `2.0.0` should be published only after `changeset pre exit`

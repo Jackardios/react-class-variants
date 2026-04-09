@@ -22,9 +22,8 @@
 - Alpha releases publish from `next` through npm trusted publishing
 - Keep the release workflow `commit` and `title` inputs as plain `Version Packages`; `changesets/action` appends `(alpha)` automatically while pre mode is active
 - `npm publish` runs in GitHub Actions without a long-lived `NPM_TOKEN`
-- The release workflow verifies that the just-published version is visible on npm and prints the current `dist-tags`
+- The release workflow publishes via trusted publishing and then pushes the release tags / GitHub releases without an extra npm registry gate
 - Until `react-class-variants` has its first stable release, Changesets publishes prereleases under `latest`; do not assume the `alpha` dist-tag advances automatically
-- If the GitHub Actions secret `NPM_DIST_TAG_TOKEN` is configured, the workflow also runs `npm dist-tag add <pkg>@<version> alpha` after the publish becomes visible
 - `npm dist-tag` and `npm deprecate` remain manual npm-authenticated steps because trusted publishing only covers `npm publish`
 - This policy remains in place until stable `2.0.0` is cut
 - After the first alpha publish that changes the type-testing pipeline itself, do one manual VS Code / TS Server smoke-check against a consumer fixture to confirm completions still match the automated guarantees
@@ -45,7 +44,7 @@ These settings must be applied in GitHub and npm because they are outside the re
 - Protect `next` as the release branch for v2 alpha work
 - Restrict direct development on `main` until stable `2.0.0`
 - Configure npm trusted publishers for both `react-class-variants` and `react-tailwind-variants`
-- Deprecate `react-tailwind-variants` after the legacy `1.0.4` metadata release
+- Decide separately whether `react-tailwind-variants` should be deprecated; it is not part of the automated release flow
 
 ## One-time npm setup
 
@@ -57,8 +56,7 @@ These settings must be applied in GitHub and npm because they are outside the re
   - Environment name: blank unless you intentionally publish from a GitHub Environment
 - Configure the same trusted publisher settings for `react-tailwind-variants`
 - In npm package settings, `Require two-factor authentication and disallow tokens` is compatible with trusted publishing and is the preferred end state once publish succeeds
-- If you want the workflow to move the `alpha` dist-tag automatically before the first stable release, add a GitHub Actions secret named `NPM_DIST_TAG_TOKEN` with npm write access for `npm dist-tag`; without that secret, the workflow will only print the current tag state
-- Automatic `alpha` tag sync requires allowing that token to call `npm dist-tag`, so if you enforce `disallow tokens`, keep the sync step informational and move `alpha` manually instead
+- No GitHub Actions token is configured for `npm dist-tag`; if you want `react-class-variants@alpha` to keep following the newest prerelease before the first stable release, update that tag manually after publish
 
 ## Manual npm commands after publish
 
@@ -72,7 +70,7 @@ npm view react-class-variants version dist-tags --json
 # update the alpha dist-tag to the newly published version.
 npm dist-tag add react-class-variants@2.0.0-alpha.5 alpha
 
-# Deprecate the legacy package after publishing v1.0.4
+# Optional: deprecate the legacy package if you later decide to show a registry warning
 npm deprecate "react-tailwind-variants@<=1.0.4" "Package renamed to react-class-variants. The v2 line is currently published as react-class-variants@alpha. Migration guide: https://github.com/Jackardios/react-class-variants/blob/next/docs/migration-from-react-tailwind-variants.md"
 ```
 

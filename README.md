@@ -1421,7 +1421,7 @@ The alpha line is maintained from the `next` branch.
 - Use `pnpm run verify` for the reusable package gate
 - Use `pnpm run check:changeset` or `pnpm run ci` to validate release intent on the current branch
 - Alpha publishes are triggered from `next` via npm trusted publishing
-- After each alpha publish, run the manual npm `dist-tag` and legacy `deprecate` commands from the release process doc
+- After each alpha publish, check the npm `dist-tags`; update `react-class-variants@alpha` manually if you want it to follow the newest prerelease before the first stable release
 - When the package is ready for stable, run `changeset pre exit`, publish `2.0.0`, and then fast-forward `main` to the stable release commit
 
 ## License
