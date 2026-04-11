@@ -12,6 +12,12 @@ import type {
   SystemOptions,
   ValidateMode,
 } from './core-types';
+import {
+  appendClassName,
+  flattenClassName,
+  flattenUserClassName,
+  validateClassNameValue,
+} from './class-name';
 
 const compiledRecipeSymbol = Symbol('react-class-variants.compiled');
 const normalizedResolveOptionsSymbol = Symbol(
@@ -27,6 +33,7 @@ type CompiledExpected =
   | CompiledSelectionValue
   | readonly CompiledSelectionValue[];
 type ForwardPropEntry = readonly [key: string, index: number];
+type CompiledCompoundCondition = number | CompiledExpected;
 
 type CompiledVariant<TClassName> = {
   key: string;
@@ -40,17 +47,7 @@ type CompiledVariant<TClassName> = {
 type RootCompiledVariant = CompiledVariant<string>;
 type SlotCompiledVariant = CompiledVariant<SlotClasses>;
 
-type RootCompiledCompound = {
-  conditions: readonly (number | CompiledExpected)[];
-  className: string;
-};
-
-type SlotCompiledCompound = {
-  conditions: readonly (number | CompiledExpected)[];
-  className: SlotClasses;
-};
-
-type NormalizedResolveOptions = {
+export type NormalizedResolveOptions = {
   readonly [normalizedResolveOptionsSymbol]: true;
   readonly forwardPropEntries?: readonly ForwardPropEntry[];
   readonly nativeAliasEntries?: readonly [string, string][];
@@ -58,15 +55,20 @@ type NormalizedResolveOptions = {
 
 type SharedCompiledRecipe = {
   validate: boolean;
-  variantIndex: Readonly<VariantIndex>;
+  variantIndex?: VariantIndex;
   merge?: (className: string) => string;
+};
+
+type RuntimeSystemOptions = Omit<SystemOptions, 'validate'> & {
+  validate: boolean;
 };
 
 export type RootCompiledRecipe = SharedCompiledRecipe & {
   mode: 'root';
   base: string;
   variantTable: readonly RootCompiledVariant[];
-  compounds: readonly RootCompiledCompound[];
+  compoundConditions: readonly CompiledCompoundCondition[];
+  compoundClassNames: readonly string[];
 };
 
 export type SlotCompiledRecipe = SharedCompiledRecipe & {
@@ -74,7 +76,8 @@ export type SlotCompiledRecipe = SharedCompiledRecipe & {
   slotNames: readonly string[];
   base: SlotClasses;
   variantTable: readonly SlotCompiledVariant[];
-  compounds: readonly SlotCompiledCompound[];
+  compoundConditions: readonly CompiledCompoundCondition[];
+  compoundClassNames: readonly SlotClasses[];
 };
 
 export type CompiledRecipe = RootCompiledRecipe | SlotCompiledRecipe;
@@ -82,6 +85,11 @@ export type CompiledRecipe = RootCompiledRecipe | SlotCompiledRecipe;
 type RecipeWithCompiled = AnyRecipe & {
   [compiledRecipeSymbol]: CompiledRecipe;
 };
+
+const emptyVariantOptions: Record<string, never> = {};
+const emptyCompoundConditions: readonly CompiledCompoundCondition[] = [];
+const emptyCompoundClassNames: readonly never[] = [];
+const compoundBoundary = -1;
 
 function hasOwnKey(object: object, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(object, key);
@@ -108,45 +116,6 @@ function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
   }
 
   return Object.freeze(value);
-}
-
-function validateClassNameValue(context: string, value: unknown) {
-  if (value === null || typeof value === 'string') return;
-
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      if (typeof item !== 'string') {
-        throw new Error(
-          `react-class-variants: invalid ${context}; className arrays may only contain strings.`
-        );
-      }
-    }
-    return;
-  }
-
-  throw new Error(
-    `react-class-variants: invalid ${context}; className values must be strings, null, or arrays of strings.`
-  );
-}
-
-function flattenClassName(value: ClassNameValue | undefined): string {
-  if (!value) return '';
-  if (typeof value === 'string') return value;
-
-  let output = '';
-  for (const item of value) {
-    if (!item) continue;
-    output = output ? `${output} ${item}` : item;
-  }
-  return output;
-}
-
-function appendClassName(
-  current: string,
-  addition: string | undefined
-): string {
-  if (!addition) return current;
-  return current ? `${current} ${addition}` : addition;
 }
 
 function optionKeyForValue(value: unknown): string {
@@ -214,13 +183,24 @@ function compileSlotClassMap(
 
 function compileVariants<TClassName>(
   variants: RecipeConfig['variants'],
+  defaultVariants: RecipeConfig['defaultVariants'],
   validate: boolean,
   compileClassName: (context: string, value: unknown) => TClassName
 ) {
   const variantTable: Array<CompiledVariant<TClassName>> = [];
-  const variantIndex: VariantIndex = {};
+  const defaults = defaultVariants as Record<string, unknown> | undefined;
 
-  if (!variants) return { variantIndex, variantTable };
+  if (!variants) {
+    if (validate && defaults) {
+      for (const key in defaults) {
+        if (!hasOwnKey(defaults, key)) continue;
+        throw new Error(
+          `react-class-variants: defaultVariants key "${key}" is not declared in variants.`
+        );
+      }
+    }
+    return variantTable;
+  }
 
   for (const variantKey in variants) {
     if (!hasOwnKey(variants, variantKey)) continue;
@@ -232,8 +212,9 @@ function compileVariants<TClassName>(
     }
 
     const options = variants[variantKey] ?? {};
-    const compiledOptions: Record<string, TClassName> = {};
+    let compiledOptions: Record<string, TClassName> | undefined;
     let isBoolean = false;
+    let hasNamedOption = false;
     let trueClass: TClassName | undefined;
     let falseClass: TClassName | undefined;
 
@@ -242,7 +223,6 @@ function compileVariants<TClassName>(
 
       const context = validate ? `variants.${variantKey}.${optionKey}` : '';
       const compiledClassName = compileClassName(context, options[optionKey]);
-      compiledOptions[optionKey] = compiledClassName;
 
       if (optionKey === 'true') {
         isBoolean = true;
@@ -250,35 +230,94 @@ function compileVariants<TClassName>(
       } else if (optionKey === 'false') {
         isBoolean = true;
         falseClass = compiledClassName;
+      } else {
+        hasNamedOption = true;
+        compiledOptions ??= {};
+        compiledOptions[optionKey] = compiledClassName;
       }
     }
 
-    variantIndex[variantKey] = variantTable.length;
-    variantTable.push({
+    if (isBoolean && hasNamedOption) {
+      throw new Error(
+        `react-class-variants: variant "${variantKey}" cannot mix boolean options ("true"/"false") with named options.`
+      );
+    }
+
+    const variant: CompiledVariant<TClassName> = {
       defaultValue: undefined,
       falseClass,
       isBoolean,
       key: variantKey,
-      options: compiledOptions,
+      options:
+        compiledOptions ?? (emptyVariantOptions as Record<string, TClassName>),
       trueClass,
-    });
+    };
+
+    if (defaults && hasOwnKey(defaults, variantKey)) {
+      const value = defaults[variantKey];
+      if (
+        validate &&
+        value !== undefined &&
+        !isAllowedVariantValue(variant, value)
+      ) {
+        throw new Error(
+          `react-class-variants: invalid defaultVariants value "${String(
+            value
+          )}" for variant "${variantKey}".`
+        );
+      }
+
+      variant.defaultValue = normalizeSelectionValue(variant.isBoolean, value);
+    }
+
+    variantTable.push(variant);
   }
 
-  return { variantIndex, variantTable };
+  if (validate && defaults) {
+    for (const key in defaults) {
+      if (!hasOwnKey(defaults, key)) continue;
+      if (!hasOwnKey(variants, key)) {
+        throw new Error(
+          `react-class-variants: defaultVariants key "${key}" is not declared in variants.`
+        );
+      }
+    }
+  }
+
+  return variantTable;
 }
 
 function getVariantIndex(
-  variantIndex: Readonly<VariantIndex>,
+  variantIndex: Readonly<VariantIndex> | undefined,
   key: string
 ): number | undefined {
-  return hasOwnKey(variantIndex, key) ? variantIndex[key] : undefined;
+  return variantIndex && hasOwnKey(variantIndex, key)
+    ? variantIndex[key]
+    : undefined;
+}
+
+function createVariantIndex(variantTable: readonly { key: string }[]) {
+  const variantIndex: VariantIndex = {};
+
+  for (let index = 0; index < variantTable.length; index += 1) {
+    variantIndex[variantTable[index].key] = index;
+  }
+
+  return variantIndex;
+}
+
+function ensureVariantIndex(compiled: CompiledRecipe): Readonly<VariantIndex> {
+  if (!compiled.variantIndex) {
+    compiled.variantIndex = createVariantIndex(compiled.variantTable);
+  }
+  return compiled.variantIndex;
 }
 
 export function isDeclaredVariantKey(
   compiled: CompiledRecipe,
   key: string
 ): boolean {
-  return getVariantIndex(compiled.variantIndex, key) !== undefined;
+  return getVariantIndex(ensureVariantIndex(compiled), key) !== undefined;
 }
 
 function isNormalizedResolveOptions(
@@ -303,6 +342,7 @@ export function normalizeResolveOptions(
   let forwardPropEntries: ForwardPropEntry[] | undefined;
   let nativeAliasEntries: Array<[string, string]> | undefined;
   let nativeAliases: Record<string, string> | undefined;
+  let variantIndex: Readonly<VariantIndex> | undefined;
   const seenAliases: Record<string, true> = {};
 
   if (rawNativeAliases) {
@@ -325,7 +365,8 @@ export function normalizeResolveOptions(
           );
         }
 
-        if (getVariantIndex(compiled.variantIndex, aliasKey) !== undefined) {
+        variantIndex ??= ensureVariantIndex(compiled);
+        if (getVariantIndex(variantIndex, aliasKey) !== undefined) {
           throw new Error(
             `react-class-variants: native alias "${aliasKey}" conflicts with a declared variant key.`
           );
@@ -349,7 +390,8 @@ export function normalizeResolveOptions(
 
   if (compiled.validate) {
     for (const key of forwardProps ?? []) {
-      if (getVariantIndex(compiled.variantIndex, key) === undefined) {
+      variantIndex ??= ensureVariantIndex(compiled);
+      if (getVariantIndex(variantIndex, key) === undefined) {
         throw new Error(
           `react-class-variants: forwardProps key "${key}" is not declared in variants.`
         );
@@ -364,7 +406,8 @@ export function normalizeResolveOptions(
   }
 
   for (const key of forwardProps ?? []) {
-    const index = getVariantIndex(compiled.variantIndex, key);
+    variantIndex ??= ensureVariantIndex(compiled);
+    const index = getVariantIndex(variantIndex, key);
     if (index === undefined) continue;
     if (!forwardPropEntries) forwardPropEntries = [];
     forwardPropEntries.push([key, index]);
@@ -394,62 +437,24 @@ function isAllowedVariantValue<TClassName>(
   return hasOwnKey(variant.options, optionKeyForValue(value));
 }
 
-function compileDefaults(
-  defaultVariants: RecipeConfig['defaultVariants'],
-  variantTable: Array<CompiledVariant<unknown>>,
-  variantIndex: Readonly<VariantIndex>,
-  validate: boolean
-) {
-  if (!defaultVariants) return;
-
-  const defaults = defaultVariants as Record<string, unknown>;
-
-  for (const key in defaults) {
-    if (!hasOwnKey(defaults, key)) continue;
-
-    const index = getVariantIndex(variantIndex, key);
-    if (index === undefined) {
-      if (!validate) continue;
-      throw new Error(
-        `react-class-variants: defaultVariants key "${key}" is not declared in variants.`
-      );
-    }
-
-    const variant = variantTable[index];
-    const value = defaults[key];
-    if (
-      validate &&
-      value !== undefined &&
-      !isAllowedVariantValue(variant, value)
-    ) {
-      throw new Error(
-        `react-class-variants: invalid defaultVariants value "${String(
-          value
-        )}" for variant "${key}".`
-      );
-    }
-
-    variant.defaultValue = normalizeSelectionValue(variant.isBoolean, value);
-  }
-}
-
 function compileCompoundVariants<TClassName>(
   compounds: RecipeConfig['compoundVariants'],
   variantTable: readonly CompiledVariant<TClassName>[],
-  variantIndex: Readonly<VariantIndex>,
   validate: boolean,
   compileClassName: (context: string, value: unknown) => TClassName
 ) {
-  const output: Array<{
-    conditions: Array<number | CompiledExpected>;
-    className: TClassName;
-  }> = [];
+  if (!compounds || compounds.length === 0) {
+    return {
+      compoundClassNames: emptyCompoundClassNames as readonly TClassName[],
+      compoundConditions: emptyCompoundConditions,
+    };
+  }
 
-  if (!compounds) return output;
+  const compoundClassNames: TClassName[] = [];
+  const compoundConditions: CompiledCompoundCondition[] = [];
+  const variantIndex = createVariantIndex(variantTable);
 
   for (const compound of compounds) {
-    const conditions: Array<number | CompiledExpected> = [];
-
     for (const key in compound) {
       if (!hasOwnKey(compound, key)) continue;
       if (key === 'className') continue;
@@ -477,8 +482,8 @@ function compileCompoundVariants<TClassName>(
             }
           }
         }
-        conditions.push(index);
-        conditions.push(
+        compoundConditions.push(
+          index,
           value.map(candidate =>
             normalizeSelectionValue(variant.isBoolean, candidate)
           )
@@ -493,43 +498,39 @@ function compileCompoundVariants<TClassName>(
           )}" for variant "${key}".`
         );
       }
-      conditions.push(index);
-      conditions.push(normalizeSelectionValue(variant.isBoolean, value));
+      compoundConditions.push(
+        index,
+        normalizeSelectionValue(variant.isBoolean, value)
+      );
     }
 
-    output.push({
-      conditions,
-      className: compileClassName(
+    compoundConditions.push(compoundBoundary);
+    compoundClassNames.push(
+      compileClassName(
         validate ? 'compoundVariants.className' : '',
         (compound as { className?: unknown }).className
-      ),
-    });
+      )
+    );
   }
 
-  return output;
+  return { compoundClassNames, compoundConditions };
 }
 
 function compileRootRecipeConfig(
   config: RootRecipeConfig<any, any>,
-  options: SystemOptions
+  options: RuntimeSystemOptions
 ): RootCompiledRecipe {
-  const validate = isValidateEnabled(options.validate);
+  const validate = options.validate;
   const base = compileRootClassName('base', config.base, validate, true);
-  const { variantIndex, variantTable } = compileVariants(
+  const variantTable = compileVariants(
     config.variants,
+    config.defaultVariants,
     validate,
     (context, value) => compileRootClassName(context, value, validate)
   );
-  compileDefaults(
-    config.defaultVariants,
-    variantTable as Array<CompiledVariant<unknown>>,
-    variantIndex,
-    validate
-  );
-  const compounds = compileCompoundVariants(
+  const { compoundClassNames, compoundConditions } = compileCompoundVariants(
     config.compoundVariants,
     variantTable,
-    variantIndex,
     validate,
     (context, value) => compileRootClassName(context, value, validate)
   );
@@ -538,11 +539,11 @@ function compileRootRecipeConfig(
 
   return {
     base,
-    compounds,
+    compoundClassNames,
+    compoundConditions,
     merge: options.merge,
     mode: 'root',
     validate,
-    variantIndex,
     variantTable,
   };
 }
@@ -580,25 +581,19 @@ function compileSlotBase(
 
 function compileSlotRecipeConfig(
   config: SlotRecipeConfig<any, any, any>,
-  options: SystemOptions
+  options: RuntimeSystemOptions
 ): SlotCompiledRecipe {
-  const validate = isValidateEnabled(options.validate);
+  const validate = options.validate;
   const { base, slotNames } = compileSlotBase(config, validate);
-  const { variantIndex, variantTable } = compileVariants(
+  const variantTable = compileVariants(
     config.variants,
+    config.defaultVariants,
     validate,
     (context, value) => compileSlotClassMap(context, value, base, validate)
   );
-  compileDefaults(
-    config.defaultVariants,
-    variantTable as Array<CompiledVariant<unknown>>,
-    variantIndex,
-    validate
-  );
-  const compounds = compileCompoundVariants(
+  const { compoundClassNames, compoundConditions } = compileCompoundVariants(
     config.compoundVariants,
     variantTable,
-    variantIndex,
     validate,
     (context, value) => compileSlotClassMap(context, value, base, validate)
   );
@@ -607,12 +602,12 @@ function compileSlotRecipeConfig(
 
   return {
     base,
-    compounds,
+    compoundClassNames,
+    compoundConditions,
     merge: options.merge,
     mode: 'slot',
     slotNames,
     validate,
-    variantIndex,
     variantTable,
   };
 }
@@ -644,17 +639,7 @@ function buildSelection(
     compiled.variantTable.length
   );
 
-  if (compiled.validate && !allowUnknownProps) {
-    for (const key in source) {
-      if (!hasOwnKey(source, key)) continue;
-      if (key === 'className' && compiled.mode === 'root') continue;
-      if (getVariantIndex(compiled.variantIndex, key) === undefined) {
-        throw new Error(
-          `react-class-variants: unknown ${context} prop "${key}". Use resolve() for arbitrary component props.`
-        );
-      }
-    }
-  }
+  validateKnownRecipeProps(compiled, source, context, allowUnknownProps);
 
   for (let index = 0; index < compiled.variantTable.length; index += 1) {
     const variant = compiled.variantTable[index];
@@ -687,66 +672,80 @@ function buildSelection(
   return selection;
 }
 
-function matchesCompound(
-  compound: RootCompiledCompound | SlotCompiledCompound,
-  selection: readonly CompiledSelectionValue[]
+function validateKnownRecipeProps(
+  compiled: CompiledRecipe,
+  source: Record<string, unknown>,
+  context: string,
+  allowUnknownProps: boolean
 ) {
-  for (let index = 0; index < compound.conditions.length; index += 2) {
-    const value = selection[compound.conditions[index] as number];
-    const expected = compound.conditions[index + 1] as CompiledExpected;
+  if (!compiled.validate || allowUnknownProps) return;
 
-    if (Array.isArray(expected)) {
-      let matched = false;
-
-      for (const candidate of expected) {
-        if (candidate === value) {
-          matched = true;
-          break;
-        }
-      }
-
-      if (!matched) return false;
-      continue;
-    }
-
-    if (expected !== value) {
-      return false;
+  const variantIndex = ensureVariantIndex(compiled);
+  for (const key in source) {
+    if (!hasOwnKey(source, key)) continue;
+    if (key === 'className' && compiled.mode === 'root') continue;
+    if (getVariantIndex(variantIndex, key) === undefined) {
+      throw new Error(
+        `react-class-variants: unknown ${context} prop "${key}". Use resolve() for arbitrary component props.`
+      );
     }
   }
-
-  return true;
 }
 
-function resolveRootClassName(
-  compiled: RootCompiledRecipe,
+function appendMatchingCompounds(
+  compoundConditions: readonly CompiledCompoundCondition[],
+  compoundClassNames: readonly (string | SlotClasses)[],
   selection: readonly CompiledSelectionValue[],
-  className?: ClassNameValue
+  output: string,
+  slot?: string
 ) {
-  let output = compiled.base;
+  let offset = 0;
 
-  for (let index = 0; index < compiled.variantTable.length; index += 1) {
-    const variant = compiled.variantTable[index];
-    const value = selection[index];
-    if (value === undefined) continue;
+  for (
+    let compoundIndex = 0;
+    compoundIndex < compoundClassNames.length;
+    compoundIndex += 1
+  ) {
+    let matched = true;
 
-    output = appendClassName(
-      output,
-      variant.isBoolean
-        ? value === true
-          ? variant.trueClass
-          : variant.falseClass
-        : variant.options[value as string]
-    );
-  }
+    while (offset < compoundConditions.length) {
+      const variantIndex = compoundConditions[offset] as number;
+      offset += 1;
+      if (variantIndex === compoundBoundary) break;
 
-  for (const compound of compiled.compounds) {
-    if (matchesCompound(compound, selection)) {
-      output = appendClassName(output, compound.className);
+      const expected = compoundConditions[offset] as CompiledExpected;
+      offset += 1;
+
+      if (matched) {
+        const value = selection[variantIndex];
+
+        if (Array.isArray(expected)) {
+          let hasExpectedValue = false;
+
+          for (const candidate of expected) {
+            if (candidate === value) {
+              hasExpectedValue = true;
+              break;
+            }
+          }
+
+          if (!hasExpectedValue) matched = false;
+        } else if (expected !== value) {
+          matched = false;
+        }
+      }
+    }
+
+    if (matched) {
+      const className = compoundClassNames[compoundIndex];
+      output = appendClassName(
+        output,
+        slot ? (className as SlotClasses)[slot] : (className as string)
+      );
     }
   }
 
-  output = appendClassName(output, flattenClassName(className));
-  return compiled.merge ? compiled.merge(output) : output;
+  return output;
 }
 
 function resolveSlotClassName(
@@ -772,13 +771,18 @@ function resolveSlotClassName(
     );
   }
 
-  for (const compound of compiled.compounds) {
-    if (matchesCompound(compound, selection)) {
-      output = appendClassName(output, compound.className[slot]);
-    }
-  }
+  output = appendMatchingCompounds(
+    compiled.compoundConditions,
+    compiled.compoundClassNames,
+    selection,
+    output,
+    slot
+  );
 
-  output = appendClassName(output, flattenClassName(className));
+  output = appendClassName(
+    output,
+    flattenUserClassName('slot input.className', className, compiled.validate)
+  );
   return compiled.merge ? compiled.merge(output) : output;
 }
 
@@ -790,15 +794,18 @@ function createSlotRenderers(
 
   for (const slot of compiled.slotNames) {
     slots[slot] = (input?: Record<string, unknown>) => {
-      const selection = parentSelection.slice();
+      let selection = parentSelection;
 
       if (input) {
+        let variantIndex: Readonly<VariantIndex> | undefined;
+        let nextSelection: CompiledSelectionValue[] | undefined;
         for (const key in input) {
           if (!hasOwnKey(input, key)) continue;
           if (key === 'className') continue;
 
-          const variantIndex = getVariantIndex(compiled.variantIndex, key);
-          if (variantIndex === undefined) {
+          variantIndex ??= ensureVariantIndex(compiled);
+          const variantIndexValue = getVariantIndex(variantIndex, key);
+          if (variantIndexValue === undefined) {
             if (compiled.validate) {
               throw new Error(
                 `react-class-variants: unknown slot override prop "${key}".`
@@ -807,7 +814,7 @@ function createSlotRenderers(
             continue;
           }
 
-          const variant = compiled.variantTable[variantIndex];
+          const variant = compiled.variantTable[variantIndexValue];
 
           const value = input[key];
           if (value === undefined) continue;
@@ -816,11 +823,14 @@ function createSlotRenderers(
             validateVariantValue(variant, value, 'slot override');
           }
 
-          selection[variantIndex] = normalizeSelectionValue(
+          nextSelection ??= parentSelection.slice();
+          nextSelection[variantIndexValue] = normalizeSelectionValue(
             variant.isBoolean,
             value
           );
         }
+
+        selection = nextSelection ?? parentSelection;
       }
 
       return resolveSlotClassName(
@@ -839,19 +849,93 @@ function resolveRoot(
   compiled: RootCompiledRecipe,
   input: Record<string, unknown> | undefined,
   allowUnknownProps: boolean
+): { className: string; selection: CompiledSelectionValue[] };
+function resolveRoot(
+  compiled: RootCompiledRecipe,
+  input: Record<string, unknown> | undefined,
+  allowUnknownProps: boolean,
+  includeSelection: true
+): { className: string; selection: CompiledSelectionValue[] };
+function resolveRoot(
+  compiled: RootCompiledRecipe,
+  input: Record<string, unknown> | undefined,
+  allowUnknownProps: boolean,
+  includeSelection: false
+): { className: string; selection?: CompiledSelectionValue[] };
+function resolveRoot(
+  compiled: RootCompiledRecipe,
+  input: Record<string, unknown> | undefined,
+  allowUnknownProps: boolean,
+  includeSelection = true
 ) {
-  const selection = buildSelection(
-    compiled,
-    input,
-    'recipe',
-    allowUnknownProps
+  const source = input ?? {};
+  const needsSelection =
+    includeSelection || compiled.compoundClassNames.length > 0;
+  const selection = needsSelection
+    ? new Array<CompiledSelectionValue>(compiled.variantTable.length)
+    : undefined;
+  let output = compiled.base;
+
+  validateKnownRecipeProps(compiled, source, 'recipe', allowUnknownProps);
+
+  for (let index = 0; index < compiled.variantTable.length; index += 1) {
+    const variant = compiled.variantTable[index];
+    let value = source[variant.key];
+
+    if (value === undefined) {
+      value = variant.defaultValue;
+    }
+
+    if (value === undefined && variant.isBoolean) {
+      value = false;
+    }
+
+    if (value === undefined) {
+      if (compiled.validate) {
+        throw new Error(
+          `react-class-variants: missing required recipe variant "${variant.key}".`
+        );
+      }
+      continue;
+    }
+
+    if (compiled.validate) {
+      validateVariantValue(variant, value, 'recipe');
+    }
+
+    const selectionValue = normalizeSelectionValue(variant.isBoolean, value);
+    if (selection) selection[index] = selectionValue;
+    output = appendClassName(
+      output,
+      variant.isBoolean
+        ? selectionValue === true
+          ? variant.trueClass
+          : variant.falseClass
+        : variant.options[selectionValue as string]
+    );
+  }
+
+  if (selection && compiled.compoundClassNames.length > 0) {
+    output = appendMatchingCompounds(
+      compiled.compoundConditions,
+      compiled.compoundClassNames,
+      selection,
+      output
+    );
+  }
+  output = appendClassName(
+    output,
+    flattenUserClassName(
+      'input.className',
+      input?.className as ClassNameValue | undefined,
+      compiled.validate
+    )
   );
-  const className = resolveRootClassName(
-    compiled,
+
+  return {
+    className: compiled.merge ? compiled.merge(output) : output,
     selection,
-    input?.className as ClassNameValue | undefined
-  );
-  return { className, selection };
+  };
 }
 
 function materializeSelection(
@@ -875,10 +959,11 @@ function createResolvedProps(
 ) {
   const resolvedProps: Record<string, unknown> = {};
   const source = input ?? {};
+  const variantIndex = ensureVariantIndex(compiled);
 
   for (const key in source) {
     if (!hasOwnKey(source, key)) continue;
-    if (getVariantIndex(compiled.variantIndex, key) !== undefined) continue;
+    if (getVariantIndex(variantIndex, key) !== undefined) continue;
     resolvedProps[key] = source[key];
   }
 
@@ -907,22 +992,40 @@ function createResolvedProps(
   return resolvedProps;
 }
 
+export function resolveRootComponentProps(
+  compiled: RootCompiledRecipe,
+  input: Record<string, unknown> | undefined,
+  options: NormalizedResolveOptions | undefined
+) {
+  const { className, selection } = resolveRoot(compiled, input, true);
+  const resolvedProps = createResolvedProps(
+    compiled,
+    input,
+    options,
+    selection
+  );
+  resolvedProps.className = className;
+
+  return resolvedProps as Record<string, unknown> & {
+    className: string;
+  };
+}
+
 function attachCompiled<TRecipe extends AnyRecipe>(
   recipe: TRecipe,
   compiled: CompiledRecipe
 ) {
-  Object.defineProperty(recipe, compiledRecipeSymbol, {
-    value: compiled,
-  });
+  (recipe as RecipeWithCompiled)[compiledRecipeSymbol] = compiled;
   return recipe;
 }
 
-function createRootRecipe(
-  config: RootRecipeConfig<any, any>,
-  compiled: RootCompiledRecipe
-): AnyRecipe {
+function createRootRecipe(compiled: RootCompiledRecipe): AnyRecipe {
   const rootRecipe = ((input?: Record<string, unknown>) =>
-    resolveRoot(compiled, input, false).className) as RootRecipe<any, any, any>;
+    resolveRoot(compiled, input, false, false).className) as RootRecipe<
+    any,
+    any,
+    any
+  >;
 
   (rootRecipe as any).resolve = (
     input?: Record<string, unknown>,
@@ -946,18 +1049,10 @@ function createRootRecipe(
     };
   };
 
-  Object.defineProperty(rootRecipe, 'config', {
-    enumerable: true,
-    value: config,
-  });
-
   return attachCompiled(rootRecipe as AnyRecipe, compiled);
 }
 
-function createSlotRecipe(
-  config: SlotRecipeConfig<any, any, any>,
-  compiled: SlotCompiledRecipe
-): AnyRecipe {
+function createSlotRecipe(compiled: SlotCompiledRecipe): AnyRecipe {
   const slotRecipe = ((input?: Record<string, unknown>) => {
     if (compiled.validate && input && 'className' in input) {
       throw new Error(
@@ -987,27 +1082,27 @@ function createSlotRecipe(
     };
   };
 
-  Object.defineProperty(slotRecipe, 'config', {
-    enumerable: true,
-    value: config,
-  });
-
   return attachCompiled(slotRecipe as AnyRecipe, compiled);
 }
 
 export function createRecipeFactory(
   options: SystemOptions = {}
 ): RecipeFactory {
+  const runtimeOptions: RuntimeSystemOptions = {
+    merge: options.merge,
+    validate: isValidateEnabled(options.validate),
+  };
+
   return ((config: RecipeConfig) => {
     if (hasOwnKey(config, 'slots')) {
       const slotConfig = config as SlotRecipeConfig<any, any, any>;
-      const compiled = compileSlotRecipeConfig(slotConfig, options);
-      return createSlotRecipe(slotConfig, compiled);
+      const compiled = compileSlotRecipeConfig(slotConfig, runtimeOptions);
+      return createSlotRecipe(compiled);
     }
 
     const rootConfig = config as RootRecipeConfig<any, any>;
-    const compiled = compileRootRecipeConfig(rootConfig, options);
-    return createRootRecipe(rootConfig, compiled);
+    const compiled = compileRootRecipeConfig(rootConfig, runtimeOptions);
+    return createRootRecipe(compiled);
   }) as RecipeFactory;
 }
 

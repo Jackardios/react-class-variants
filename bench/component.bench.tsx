@@ -1,5 +1,8 @@
 import { bench, describe } from 'vitest';
 import { createElement } from 'react';
+import { flushSync } from 'react-dom';
+import { createRoot, type Root } from 'react-dom/client';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { recipe, styled } from '../src';
 
 const simpleButtonRecipe = recipe({
@@ -77,6 +80,9 @@ const SimpleButtonWithRender = styled('button', simpleButtonRecipe, {
 const ComplexButtonWithRender = styled('button', complexButtonRecipe, {
   withRender: true,
 });
+const linkElement = createElement('a', { href: '/' });
+const renderFn = (props: Record<string, unknown>) =>
+  createElement('a', { ...props, href: '/' });
 
 describe('styled()', () => {
   describe('element creation', () => {
@@ -98,10 +104,6 @@ describe('styled()', () => {
   });
 
   describe('render prop', () => {
-    const linkElement = createElement('a', { href: '/' });
-    const renderFn = (props: Record<string, unknown>) =>
-      createElement('a', { ...props, href: '/' });
-
     bench('render prop with element', () => {
       createElement(SimpleButtonWithRender, {
         render: linkElement,
@@ -128,6 +130,149 @@ describe('styled()', () => {
         render: renderFn,
         ...complexButtonProps,
       });
+    });
+  });
+
+  describe('server render', () => {
+    bench('simple component with defaults', () => {
+      renderToStaticMarkup(
+        createElement(SimpleButton, {
+          children: 'Click',
+        })
+      );
+    });
+
+    bench('simple component with props', () => {
+      renderToStaticMarkup(createElement(SimpleButton, simpleButtonProps));
+    });
+
+    bench('complex component with props', () => {
+      renderToStaticMarkup(createElement(ComplexButton, complexButtonProps));
+    });
+
+    bench('render prop element with simple props', () => {
+      renderToStaticMarkup(
+        createElement(SimpleButtonWithRender, {
+          render: linkElement,
+          ...simpleButtonProps,
+        })
+      );
+    });
+
+    bench('render prop function with simple props', () => {
+      renderToStaticMarkup(
+        createElement(SimpleButtonWithRender, {
+          render: renderFn,
+          ...simpleButtonProps,
+        })
+      );
+    });
+
+    bench('render prop element with complex props', () => {
+      renderToStaticMarkup(
+        createElement(ComplexButtonWithRender, {
+          render: linkElement,
+          ...complexButtonProps,
+        })
+      );
+    });
+
+    bench('render prop function with complex props', () => {
+      renderToStaticMarkup(
+        createElement(ComplexButtonWithRender, {
+          render: renderFn,
+          ...complexButtonProps,
+        })
+      );
+    });
+  });
+
+  describe('client rerender', () => {
+    function createClientRerenderBench(
+      createNode: (toggle: boolean) => ReturnType<typeof createElement>
+    ) {
+      let container: HTMLDivElement | undefined;
+      let root: Root | undefined;
+      let toggle = false;
+
+      return {
+        run() {
+          toggle = !toggle;
+          flushSync(() => {
+            root?.render(createNode(toggle));
+          });
+        },
+        setup() {
+          container = document.createElement('div');
+          document.body.appendChild(container);
+          root = createRoot(container);
+        },
+        teardown() {
+          if (root) {
+            flushSync(() => {
+              root?.unmount();
+            });
+          }
+          container?.remove();
+          container = undefined;
+          root = undefined;
+          toggle = false;
+        },
+      };
+    }
+
+    const simple = createClientRerenderBench(toggle =>
+      createElement(SimpleButton, {
+        children: 'Click',
+        color: toggle ? 'secondary' : 'primary',
+        size: 'lg',
+      })
+    );
+    const complex = createClientRerenderBench(toggle =>
+      createElement(ComplexButton, {
+        ...complexButtonProps,
+        color: toggle ? 'danger' : 'primary',
+      })
+    );
+    const renderElement = createClientRerenderBench(toggle =>
+      createElement(SimpleButtonWithRender, {
+        children: 'Link',
+        color: toggle ? 'secondary' : 'primary',
+        render: linkElement,
+        size: 'lg',
+      })
+    );
+    const renderFunction = createClientRerenderBench(toggle =>
+      createElement(SimpleButtonWithRender, {
+        children: 'Link',
+        color: toggle ? 'secondary' : 'primary',
+        render: renderFn,
+        size: 'lg',
+      })
+    );
+
+    bench('simple component rerender', simple.run, {
+      setup: simple.setup,
+      teardown: simple.teardown,
+      throws: true,
+    });
+
+    bench('complex component rerender', complex.run, {
+      setup: complex.setup,
+      teardown: complex.teardown,
+      throws: true,
+    });
+
+    bench('render prop element rerender', renderElement.run, {
+      setup: renderElement.setup,
+      teardown: renderElement.teardown,
+      throws: true,
+    });
+
+    bench('render prop function rerender', renderFunction.run, {
+      setup: renderFunction.setup,
+      teardown: renderFunction.teardown,
+      throws: true,
     });
   });
 });

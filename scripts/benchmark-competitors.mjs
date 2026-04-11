@@ -1,7 +1,22 @@
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import {
+  brotliCompressSync,
+  constants as zlibConstants,
+  gzipSync,
+} from 'node:zlib';
 import { cva } from 'class-variance-authority';
 import { variants as cnVariants } from 'classname-variants';
 import { twMerge } from 'tailwind-merge';
@@ -10,6 +25,7 @@ import { tv as tvLite } from 'tailwind-variants/lite';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDir, '..');
+const nodeModulesRoot = join(repoRoot, 'node_modules');
 const defaultJsonPath = join(repoRoot, 'bench', 'reports', 'competitors.json');
 const defaultMarkdownPath = join(
   repoRoot,
@@ -115,6 +131,19 @@ function measureRetainedBytes(createValue, count) {
     bytesPerInstance: retainedBytes / count,
     count,
     retainedBytes,
+  };
+}
+
+function measureFile(filePath) {
+  const buffer = readFileSync(filePath);
+  return {
+    brotliBytes: brotliCompressSync(buffer, {
+      params: {
+        [zlibConstants.BROTLI_PARAM_QUALITY]: 11,
+      },
+    }).byteLength,
+    gzipBytes: gzipSync(buffer).byteLength,
+    rawBytes: buffer.byteLength,
   };
 }
 
@@ -687,10 +716,12 @@ function benchmarkCreation(collection, createKey) {
   const results = {};
 
   for (const [libraryLabel, implementation] of Object.entries(collection)) {
+    heapUsed();
     results[libraryLabel] = benchmarkOps(() => implementation[createKey](), {
       batchSize: 50,
       durationMs: 250,
     });
+    heapUsed();
   }
 
   return results;
@@ -716,6 +747,232 @@ function benchmarkMemory(collection) {
   return results;
 }
 
+function packageLinkPath(nodeModulesDir, packageName) {
+  const parts = packageName.split('/');
+  if (packageName.startsWith('@')) {
+    const scopeDir = join(nodeModulesDir, parts[0]);
+    mkdirSync(scopeDir, { recursive: true });
+    return join(scopeDir, parts[1]);
+  }
+  return join(nodeModulesDir, packageName);
+}
+
+function linkPackage(nodeModulesDir, packageName, targetPath) {
+  if (!existsSync(targetPath)) {
+    throw new Error(
+      `Unable to prepare bundle fixture; missing package ${packageName} at ${targetPath}.`
+    );
+  }
+
+  const linkPath = packageLinkPath(nodeModulesDir, packageName);
+  if (existsSync(linkPath)) return;
+
+  symlinkSync(targetPath, linkPath, 'dir');
+}
+
+function prepareBundleFixture() {
+  const fixtureDir = mkdtempSync(
+    join(tmpdir(), 'react-class-variants-bundle-')
+  );
+  const fixtureNodeModules = join(fixtureDir, 'node_modules');
+  mkdirSync(fixtureNodeModules, { recursive: true });
+
+  linkPackage(fixtureNodeModules, 'react-class-variants', repoRoot);
+
+  for (const packageName of [
+    'class-variance-authority',
+    'classname-variants',
+    'tailwind-merge',
+    'tailwind-variants',
+  ]) {
+    linkPackage(
+      fixtureNodeModules,
+      packageName,
+      join(nodeModulesRoot, packageName)
+    );
+  }
+
+  writeFileSync(
+    join(fixtureDir, 'package.json'),
+    `${JSON.stringify(
+      {
+        private: true,
+        type: 'module',
+      },
+      null,
+      2
+    )}\n`
+  );
+
+  return {
+    cleanup() {
+      rmSync(fixtureDir, { force: true, recursive: true });
+    },
+    dir: fixtureDir,
+  };
+}
+
+function sanitizeBundleFileName(value) {
+  return value.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
+}
+
+function bundleSyntheticConsumer(fixtureDir, label, source) {
+  const esbuildBin = join(repoRoot, 'node_modules', '.bin', 'esbuild');
+  const fileName = sanitizeBundleFileName(label);
+  const entryFile = join(fixtureDir, `${fileName}.mjs`);
+  const outputFile = join(fixtureDir, `${fileName}.bundle.mjs`);
+
+  writeFileSync(entryFile, `${source}\n`);
+
+  try {
+    execFileSync(
+      esbuildBin,
+      [
+        entryFile,
+        '--bundle',
+        '--format=esm',
+        '--minify',
+        '--tree-shaking=true',
+        '--target=es2018',
+        '--platform=browser',
+        '--external:react',
+        `--outfile=${outputFile}`,
+      ],
+      {
+        cwd: fixtureDir,
+        env: {
+          ...process.env,
+          NODE_ENV: 'production',
+        },
+        stdio: 'pipe',
+      }
+    );
+  } catch (error) {
+    const stdout = error.stdout?.toString?.() ?? '';
+    const stderr = error.stderr?.toString?.() ?? '';
+    throw new Error(
+      [
+        `Failed to bundle synthetic consumer "${label}".`,
+        stdout && `stdout:\n${stdout}`,
+        stderr && `stderr:\n${stderr}`,
+      ]
+        .filter(Boolean)
+        .join('\n\n')
+    );
+  }
+
+  return measureFile(outputFile);
+}
+
+function createBundleScenarios() {
+  const recipeConfig = `{
+  base: 'inline-flex items-center rounded-md',
+  variants: {
+    tone: {
+      primary: 'bg-blue-600 text-white',
+      secondary: 'bg-slate-200 text-slate-950',
+    },
+    size: {
+      sm: 'h-8 px-3 text-sm',
+      md: 'h-10 px-4 text-base',
+    },
+  },
+  defaultVariants: {
+    tone: 'primary',
+    size: 'md',
+  },
+}`;
+
+  const cvaConfig = `{
+  variants: {
+    tone: {
+      primary: 'bg-blue-600 text-white',
+      secondary: 'bg-slate-200 text-slate-950',
+    },
+    size: {
+      sm: 'h-8 px-3 text-sm',
+      md: 'h-10 px-4 text-base',
+    },
+  },
+  defaultVariants: {
+    tone: 'primary',
+    size: 'md',
+  },
+}`;
+
+  return {
+    plainRecipe: {
+      'class-variance-authority': `import { cva } from 'class-variance-authority';
+const button = cva('inline-flex items-center rounded-md', ${cvaConfig});
+console.log(button({ tone: 'secondary' }));`,
+      'classname-variants': `import { variants } from 'classname-variants';
+const button = variants(${recipeConfig});
+console.log(button({ tone: 'secondary' }));`,
+      'react-class-variants': `import { recipe } from 'react-class-variants';
+const button = recipe(${recipeConfig});
+console.log(button({ tone: 'secondary' }));`,
+      'react-class-variants/core': `import { recipe } from 'react-class-variants/core';
+const button = recipe(${recipeConfig});
+console.log(button({ tone: 'secondary' }));`,
+      'tailwind-variants/lite': `import { tv } from 'tailwind-variants/lite';
+const button = tv(${recipeConfig});
+console.log(button({ tone: 'secondary' }));`,
+    },
+    reactStyled: {
+      'classname-variants/react': `import { styled } from 'classname-variants/react';
+const Button = styled('button', ${recipeConfig});
+console.log(Button);`,
+      'react-class-variants': `import { recipe, styled } from 'react-class-variants';
+const button = recipe(${recipeConfig});
+const Button = styled('button', button);
+console.log(Button);`,
+      'react-class-variants/react': `import { recipe, styled } from 'react-class-variants/react';
+const button = recipe(${recipeConfig});
+const Button = styled('button', button);
+console.log(Button);`,
+    },
+    tailwindAwareRecipe: {
+      'class-variance-authority + twMerge': `import { cva } from 'class-variance-authority';
+import { twMerge } from 'tailwind-merge';
+const button = cva('inline-flex items-center rounded-md', ${cvaConfig});
+console.log(twMerge(button({ tone: 'secondary' })));`,
+      'classname-variants + twMerge': `import { variants } from 'classname-variants';
+import { twMerge } from 'tailwind-merge';
+const button = variants(${recipeConfig});
+console.log(twMerge(button({ tone: 'secondary' })));`,
+      'react-class-variants/core + twMerge': `import { defineConfig } from 'react-class-variants/core';
+import { twMerge } from 'tailwind-merge';
+const { recipe } = defineConfig({ merge: twMerge });
+const button = recipe(${recipeConfig});
+console.log(button({ tone: 'secondary' }));`,
+      'tailwind-variants': `import { tv } from 'tailwind-variants';
+const button = tv(${recipeConfig});
+console.log(button({ tone: 'secondary' }));`,
+    },
+  };
+}
+
+function measureBundleScenarios() {
+  const fixture = prepareBundleFixture();
+  const scenarios = createBundleScenarios();
+
+  try {
+    return Object.fromEntries(
+      Object.entries(scenarios).map(([section, entries]) => [
+        section,
+        Object.fromEntries(
+          Object.entries(entries).map(([label, source]) => [
+            label,
+            bundleSyntheticConsumer(fixture.dir, `${section}-${label}`, source),
+          ])
+        ),
+      ])
+    );
+  } finally {
+    fixture.cleanup();
+  }
+}
+
 function renderMarkdown(report) {
   const sections = [
     '# Competitive Benchmarks',
@@ -726,8 +983,9 @@ function renderMarkdown(report) {
     '- `resolver-only` uses plain resolvers; `tailwind-variants/lite` is used there to isolate raw resolver cost from built-in merge work.',
     '- `tailwind-aware` compares `react-class-variants + twMerge`, wrapper-based `twMerge` integrations for CVA / classname-variants, and full `tailwind-variants`.',
     '- Primary creation throughput uses `fresh unique complex config` so it reflects first-time compile cost.',
-    '- `reused complex config` remains as a diagnostic appendix for config-identity reuse scenarios.',
+    '- `reused complex config` remains as a diagnostic appendix for same-object config reuse versus fresh config object setup cost.',
     '- Memory numbers are retained bytes per created resolver instance under forced GC with fresh unique config objects.',
+    '- Bundle size numbers are minified synthetic consumer bundles built with esbuild, reported primarily by gzip bytes with React marked external.',
     '',
     `Generated at: ${report.generatedAt}`,
     `Node: ${report.environment.node}`,
@@ -814,6 +1072,29 @@ function renderMarkdown(report) {
     )
   );
 
+  sections.push('## Bundle Size', '');
+  sections.push(
+    createBundleSizeTable(
+      'Bundle size: plain recipe',
+      report.bundles.plainRecipe,
+      'react-class-variants/core'
+    )
+  );
+  sections.push(
+    createBundleSizeTable(
+      'Bundle size: tailwind-aware recipe',
+      report.bundles.tailwindAwareRecipe,
+      'react-class-variants/core + twMerge'
+    )
+  );
+  sections.push(
+    createBundleSizeTable(
+      'Bundle size: React/styled',
+      report.bundles.reactStyled,
+      'react-class-variants/react'
+    )
+  );
+
   sections.push('## Retained Memory', '');
 
   for (const [scenario, results] of Object.entries(report.memory.plain)) {
@@ -853,6 +1134,31 @@ function renderMarkdown(report) {
   }
 
   return sections.join('\n');
+}
+
+function createBundleSizeTable(title, results, baselineLabel) {
+  const baselineValue = results[baselineLabel]?.gzipBytes;
+  const rows = Object.entries(results).sort(
+    (left, right) => left[1].gzipBytes - right[1].gzipBytes
+  );
+
+  return [
+    `### ${title}`,
+    '',
+    '| Package import | gzip | raw | brotli | Relative gzip |',
+    '| --- | ---: | ---: | ---: | ---: |',
+    ...rows.map(([label, metric]) => {
+      const relative =
+        !baselineValue || baselineValue === 0
+          ? 'n/a'
+          : `${formatNumber(metric.gzipBytes / baselineValue)}x`;
+
+      return `| ${label} | ${formatBytes(metric.gzipBytes)} | ${formatBytes(
+        metric.rawBytes
+      )} | ${formatBytes(metric.brotliBytes)} | ${relative} |`;
+    }),
+    '',
+  ].join('\n');
 }
 
 async function main() {
@@ -907,12 +1213,13 @@ async function main() {
       plain: benchmarkMemory(factories.plain),
       tailwindAware: benchmarkMemory(factories.merged),
     },
+    bundles: measureBundleScenarios(),
   };
 
   mkdirSync(dirname(options.json), { recursive: true });
   mkdirSync(dirname(options.markdown), { recursive: true });
   writeFileSync(options.json, `${JSON.stringify(report, null, 2)}\n`);
-  writeFileSync(options.markdown, `${renderMarkdown(report)}\n`);
+  writeFileSync(options.markdown, `${renderMarkdown(report).trimEnd()}\n`);
 
   console.log(`Wrote competitor benchmark JSON to ${options.json}`);
   console.log(`Wrote competitor benchmark Markdown to ${options.markdown}`);

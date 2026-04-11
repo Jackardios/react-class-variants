@@ -124,6 +124,64 @@ describe('styled()', () => {
     );
   });
 
+  it('calls render prop functions and elements once per React render', () => {
+    const linkRecipe = recipe({
+      base: 'inline-flex',
+      variants: {
+        tone: {
+          primary: 'text-blue-600',
+          secondary: 'text-slate-900',
+        },
+      },
+    });
+    const LinkButton = styled('button', linkRecipe, { withRender: true });
+    const renderFn = vi.fn((props: Record<string, unknown>) => (
+      <a {...props} href="/fn" />
+    ));
+
+    const functionResult = render(
+      <LinkButton tone="primary" render={renderFn}>
+        Fn
+      </LinkButton>
+    );
+
+    expect(renderFn).toHaveBeenCalledTimes(1);
+
+    functionResult.rerender(
+      <LinkButton tone="primary" render={renderFn}>
+        Fn
+      </LinkButton>
+    );
+    expect(renderFn).toHaveBeenCalledTimes(2);
+
+    functionResult.rerender(
+      <LinkButton tone="secondary" render={renderFn}>
+        Fn
+      </LinkButton>
+    );
+    expect(renderFn).toHaveBeenCalledTimes(3);
+    functionResult.unmount();
+
+    const elementProbe = vi.fn((props: Record<string, unknown>) => (
+      <a {...props} href="/element" />
+    ));
+    const ElementProbe = elementProbe;
+    const elementResult = render(
+      <LinkButton tone="primary" render={<ElementProbe />}>
+        Element
+      </LinkButton>
+    );
+
+    expect(elementProbe).toHaveBeenCalledTimes(1);
+
+    elementResult.rerender(
+      <LinkButton tone="secondary" render={<ElementProbe />}>
+        Element
+      </LinkButton>
+    );
+    expect(elementProbe).toHaveBeenCalledTimes(2);
+  });
+
   it('rejects render when withRender is disabled', () => {
     const buttonRecipe = recipe({
       base: 'inline-flex',

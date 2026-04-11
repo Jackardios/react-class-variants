@@ -1,12 +1,12 @@
-import { createRecipeFactory } from './internal/recipe';
-
 export {
   defineConfig,
+  defineRecipeConfig,
   mergeProps,
   mergeRefs,
   styled,
   useMergeRefs,
 } from './react';
+export { recipe } from './core';
 
 export type {
   AnyRecipe,
@@ -58,5 +58,4 @@ export type {
   StyledComponentProps,
 } from './internal/react-types';
 
-export const recipe = createRecipeFactory();
 export { hasOwnProperty } from './internal/core-utils';

@@ -1,11 +1,22 @@
 import { createElement, type ComponentProps } from 'react';
 import {
   defineConfig,
+  defineRecipeConfig,
   recipe,
   styled,
   type RecipeConfigOf,
   type RecipeInput,
 } from 'react-class-variants';
+import {
+  defineConfig as defineCoreConfig,
+  defineRecipeConfig as defineCoreRecipeConfig,
+  recipe as coreRecipe,
+} from 'react-class-variants/core';
+import {
+  defineRecipeConfig as defineReactRecipeConfig,
+  recipe as reactRecipe,
+  styled as reactStyled,
+} from 'react-class-variants/react';
 
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
   ? 1
@@ -15,8 +26,9 @@ type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
 type Expect<T extends true> = T;
 
 const { recipe: configuredRecipe } = defineConfig();
+const { recipe: configuredCoreRecipe } = defineCoreConfig();
 
-const badge = recipe({
+const badgeConfig = defineRecipeConfig({
   base: 'badge',
   variants: {
     tone: {
@@ -43,6 +55,8 @@ const badge = recipe({
   ],
 });
 
+const badge = recipe(badgeConfig);
+
 configuredRecipe({
   base: 'inline-flex',
   variants: {
@@ -51,6 +65,32 @@ configuredRecipe({
     },
   },
 });
+
+const coreOnlyBadge = configuredCoreRecipe({
+  base: 'inline-flex',
+  variants: {
+    tone: {
+      neutral: 'text-slate-700',
+    },
+  },
+});
+coreOnlyBadge({ tone: 'neutral' });
+coreRecipe({ base: 'inline-flex' });
+defineCoreRecipeConfig({ base: 'inline-flex' });
+
+const ReactSubpathButton = reactStyled(
+  'button',
+  reactRecipe(
+    defineReactRecipeConfig({
+      variants: {
+        tone: {
+          neutral: 'text-slate-700',
+        },
+      },
+    })
+  )
+);
+ReactSubpathButton({ tone: 'neutral', type: 'button' });
 
 type BadgeOptions = RecipeInput<typeof badge>;
 type BadgeConfig = RecipeConfigOf<typeof badge>;

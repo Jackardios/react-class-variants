@@ -1,5 +1,7 @@
 import { createElement } from 'react';
 import rcv = require('react-class-variants');
+import rcvCore = require('react-class-variants/core');
+import rcvReact = require('react-class-variants/react');
 
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
   ? 1
@@ -10,8 +12,8 @@ type Expect<T extends true> = T;
 
 const { recipe: configuredRecipe, styled: configuredStyled } =
   rcv.defineConfig();
-
-const link = rcv.recipe({
+const { recipe: configuredCoreRecipe } = rcvCore.defineConfig();
+const linkConfig = rcv.defineRecipeConfig({
   variants: {
     intent: {
       primary: 'text-blue-600',
@@ -22,6 +24,8 @@ const link = rcv.recipe({
     },
   },
 });
+
+const link = rcv.recipe(linkConfig);
 
 type LinkOptions = rcv.RecipeInput<typeof link>;
 const linkPrimary: LinkOptions = { intent: 'primary' };
@@ -37,6 +41,32 @@ configuredRecipe({
     },
   },
 });
+
+const coreOnlyLink = configuredCoreRecipe({
+  base: 'inline-flex',
+  variants: {
+    intent: {
+      primary: 'text-blue-600',
+    },
+  },
+});
+coreOnlyLink({ intent: 'primary' });
+rcvCore.recipe({ base: 'inline-flex' });
+rcvCore.defineRecipeConfig({ base: 'inline-flex' });
+
+const ReactSubpathButton = rcvReact.styled(
+  'button',
+  rcvReact.recipe(
+    rcvReact.defineRecipeConfig({
+      variants: {
+        intent: {
+          primary: 'text-blue-600',
+        },
+      },
+    })
+  )
+);
+ReactSubpathButton({ intent: 'primary', type: 'button' });
 
 const Button = rcv.styled(
   'button',

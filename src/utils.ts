@@ -188,6 +188,19 @@ function mergeRefsImpl<T>(
   };
 }
 
+export function mergeTwoRefs<T>(
+  refA: Ref<T> | undefined | null,
+  refB: Ref<T> | undefined | null
+): Ref<T> | RefCallback<T> | undefined {
+  if (!refA) return refB || undefined;
+  if (!refB) return refA || undefined;
+
+  return (value: T | null) => {
+    setRef(refA, value);
+    setRef(refB, value);
+  };
+}
+
 /**
  * Creates a merged ref callback from multiple refs.
  * Use this in event handlers or conditional branches where hooks cannot be used.

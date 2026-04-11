@@ -5,6 +5,7 @@ import {
   expectType,
 } from 'tsd';
 import {
+  defineRecipeConfig,
   hasOwnProperty,
   recipe,
   type AnyRecipe,
@@ -32,7 +33,7 @@ expectAssignable<RecipeConfig>({
   base: 'inline-flex',
 });
 
-const link = recipe({
+const linkConfig = defineRecipeConfig({
   base: 'inline-flex',
   variants: {
     tone: {
@@ -47,6 +48,8 @@ const link = recipe({
     disabled: false,
   },
 });
+
+const link = recipe(linkConfig);
 
 const { recipe: configuredRecipe, styled: configuredStyled } = defineConfig({
   merge: className => className,
@@ -68,7 +71,8 @@ type LinkVariants = VariantProps<typeof link>;
 type LinkResolvedVariants = ResolvedVariantProps<typeof link>;
 
 expectAssignable<AnyRecipe>(link);
-expectType<LinkConfig>(link.config);
+expectAssignable<LinkConfig>(linkConfig);
+expectType<typeof linkConfig>(defineRecipeConfig(linkConfig));
 expectAssignable<LinkConfig>({
   base: 'inline-flex',
   variants: {

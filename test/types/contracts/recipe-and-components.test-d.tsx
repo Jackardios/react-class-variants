@@ -60,6 +60,18 @@ expectError(
   })
 );
 
+expectError(
+  recipe({
+    base: 'inline-flex',
+    variants: {
+      state: {
+        true: 'is-true',
+        idle: 'is-idle',
+      },
+    },
+  })
+);
+
 type BadgeVariants = VariantProps<typeof badge>;
 type BadgeResolvedVariants = ResolvedVariantProps<typeof badge>;
 type BadgeResolved = RecipeResolved<typeof badge>;
@@ -153,6 +165,24 @@ expectError(
     variants: {
       tone: {
         primary: 'bg-blue text-white',
+      },
+    },
+  })
+);
+
+expectError(
+  recipe({
+    slots: {
+      root: 'inline-flex',
+    },
+    variants: {
+      state: {
+        true: {
+          root: 'is-true',
+        },
+        idle: {
+          root: 'is-idle',
+        },
       },
     },
   })

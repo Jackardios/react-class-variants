@@ -17,6 +17,10 @@
 - `useMergeRefs()`
 - `hasOwnProperty()`
 
+Recipe-only modules can import from `react-class-variants/core` to avoid React
+runtime imports. React-specific modules can import the same React surface from
+`react-class-variants/react`.
+
 ## Conceptual changes
 
 ### 1. One canonical primitive
@@ -67,6 +71,8 @@ variants: {
 ```
 
 Boolean variants accept `boolean` values. If only `"true"` is defined, `false` applies no class.
+Do not mix boolean option keys with named options in the same variant; use a
+separate named variant for states such as `"idle"` or `"active"`.
 
 ## Old to new mapping
 

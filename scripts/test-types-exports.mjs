@@ -11,7 +11,7 @@ const npmCacheDir = mkdtempSync(
 );
 
 try {
-  execFileSync('pnpm', ['exec', 'attw', '--pack', '.'], {
+  execFileSync('pnpm', ['exec', 'attw', '--pack', '.', '--profile', 'node16'], {
     cwd: repoRoot,
     env: {
       ...process.env,

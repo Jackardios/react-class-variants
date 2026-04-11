@@ -15,6 +15,41 @@ import type {
   StyledComponentProps,
 } from './internal/react-types';
 
+export { defineRecipeConfig, recipe } from './core';
+
+export type {
+  AnyRecipe,
+  AnyRootRecipe,
+  AnySlotRecipe,
+  ClassNameValue,
+  ClassValue,
+  Recipe,
+  RecipeConfig,
+  RecipeConfigOf,
+  RecipeFactory,
+  RecipeInput,
+  RecipeResolved,
+  ResolveOptions,
+  ResolvedVariantProps,
+  RootCompoundVariant,
+  RootRecipe,
+  RootRecipeConfig,
+  RootRecipeInput,
+  RootResolveResult,
+  SlotClassNameMap,
+  SlotCompoundVariant,
+  SlotNames,
+  SlotRecipe,
+  SlotRecipeConfig,
+  SlotRecipeInput,
+  SlotRenderFunction,
+  SlotRenderInput,
+  SlotResolveResult,
+  SystemOptions,
+  ValidateMode,
+  VariantProps,
+} from './internal/core-types';
+
 export type {
   AnyIntrinsicElement,
   NativeAliases,

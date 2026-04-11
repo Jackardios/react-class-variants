@@ -23,20 +23,14 @@ import {
   type SlotComponentOptions,
   type StyledComponentProps,
 } from './react-types';
-import { getCompiledRecipe, normalizeResolveOptions } from './recipe';
-import { getRefProperty, mergeProps, mergeRefs } from '../utils';
-
-function flattenClassName(value: ClassNameValue | undefined): string {
-  if (!value) return '';
-  if (typeof value === 'string') return value;
-
-  let output = '';
-  for (const item of value) {
-    if (!item) continue;
-    output = output ? `${output} ${item}` : item;
-  }
-  return output;
-}
+import {
+  getCompiledRecipe,
+  normalizeResolveOptions,
+  type RootCompiledRecipe,
+  resolveRootComponentProps,
+} from './recipe';
+import { flattenClassName } from './class-name';
+import { getRefProperty, mergeProps, mergeTwoRefs } from '../utils';
 
 function splitReactProps(props: Record<string, unknown>) {
   const {
@@ -71,7 +65,7 @@ function renderPolymorphic(
     return createElement(tag as any, { ...normalizedProps, ref: forwardedRef });
   }
 
-  const mergedRef = mergeRefs(forwardedRef, getRefProperty(render));
+  const mergedRef = mergeTwoRefs(forwardedRef, getRefProperty(render));
 
   if (isValidElement(render)) {
     const renderElement = render as ReactElement<Record<string, unknown>>;
@@ -101,7 +95,7 @@ function createRootHelper<Tag extends AnyIntrinsicElement>(
       ref: localRef,
       ...restProps
     } = props as RootHelperProps<Tag, true>;
-    const mergedRef = mergeRefs(ref, localRef);
+    const mergedRef = mergeTwoRefs(ref, localRef);
 
     return renderPolymorphic(
       tag,
@@ -124,7 +118,7 @@ export function createRootStyled<
 ): (
   props: StyledComponentProps<Tag, TRecipe, WithRender, Aliases>
 ) => ReactNode {
-  const compiled = getCompiledRecipe(recipe);
+  const compiled = getCompiledRecipe(recipe) as RootCompiledRecipe;
   const withRender = options?.withRender === true;
   const resolveOptions = normalizeResolveOptions(
     compiled,
@@ -142,10 +136,11 @@ export function createRootStyled<
         );
       }
 
-      const resolvedProps = recipe.resolve(
+      const resolvedProps = resolveRootComponentProps(
+        compiled,
         rawProps as Record<string, unknown>,
         resolveOptions
-      ).resolvedProps as Record<string, unknown> & {
+      ) as Record<string, unknown> & {
         className: string;
         ref?: unknown;
         render?: RenderProp;
@@ -170,19 +165,19 @@ export function createRootStyled<
       unknown,
       StyledComponentProps<Tag, TRecipe, WithRender, Aliases>
     >(function StyledRootComponent(rawProps, ref) {
-      const resolved = recipe.resolve(
+      const resolvedProps = resolveRootComponentProps(
+        compiled,
         rawProps as Record<string, unknown>,
         resolveOptions
       );
-      const { children, render, otherResolvedProps } = splitReactProps(
-        resolved.resolvedProps
-      );
+      const { children, render, otherResolvedProps } =
+        splitReactProps(resolvedProps);
 
       return renderPolymorphic(
         tag,
         {
           ...otherResolvedProps,
-          className: resolved.resolvedProps.className,
+          className: resolvedProps.className,
           children,
         },
         ref,

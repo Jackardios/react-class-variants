@@ -11,6 +11,7 @@ It provides:
 
 - one adaptive `recipe()` primitive for root-only and slotted recipes
 - one `styled()` builder for simple components and custom composition
+- `defineRecipeConfig()` for reusable, typed config objects kept outside the recipe instance
 - `defineConfig()` for shared merge behavior such as `tailwind-merge`
 - strict variant inference for required, defaulted, and boolean variants
 - opt-in render polymorphism through `withRender`
@@ -21,17 +22,28 @@ It provides:
 - Current release line: `2.0.0-alpha.x`
 - Recommended install: `react-class-variants@alpha`
 - Legacy v1 package name: `react-tailwind-variants`
+- Runtime requirements: Node.js 20.19+ and React 19
 
-The v2 alpha public API is exported from the package root:
+The v2 alpha React-oriented public API is exported from the package root:
 
 - `recipe()`
 - `styled()`
+- `defineRecipeConfig()`
 - `defineConfig()`
 - `mergeProps()`
 - `mergeRefs()`
 - `useMergeRefs()`
 - `hasOwnProperty()`
 - public recipe and React types such as `VariantProps`
+
+Dedicated subpaths are also available when you want a narrower import surface:
+
+- `react-class-variants/core` exports `recipe()`, a core-only `defineConfig()`,
+  `defineRecipeConfig()`, core utilities, and recipe types without importing
+  React runtime code
+- `react-class-variants/react` exports the React surface, including `recipe()`,
+  `styled()`, `defineRecipeConfig()`, React `defineConfig()`, utilities, and
+  public types
 
 ## Installation
 
@@ -48,9 +60,9 @@ pnpm add tailwind-merge
 ## Quick Start
 
 ```tsx
-import { recipe, styled } from 'react-class-variants';
+import { defineRecipeConfig, recipe, styled } from 'react-class-variants';
 
-const buttonRecipe = recipe({
+const buttonConfig = defineRecipeConfig({
   base: 'inline-flex items-center justify-center rounded-md font-medium transition',
   variants: {
     tone: {
@@ -67,6 +79,8 @@ const buttonRecipe = recipe({
     size: 'md',
   },
 });
+
+const buttonRecipe = recipe(buttonConfig);
 
 export const Button = styled('button', buttonRecipe);
 ```
@@ -93,6 +107,12 @@ export const { recipe, styled } = defineConfig({
 ```
 
 The merge hook runs after class resolution.
+
+For recipe-only modules that should not import React runtime code, use the core subpath:
+
+```ts
+import { recipe } from 'react-class-variants/core';
+```
 
 ## Root Recipes
 
@@ -127,6 +147,10 @@ const inputRecipe = recipe({
 
 inputRecipe({ variant: 'filled', className: 'text-black' });
 ```
+
+Boolean variants are boolean-only: if a variant declares `"true"` or `"false"`,
+do not mix those keys with named options such as `"idle"` or `"active"`. Model
+named state as a separate variant instead.
 
 Use `resolve()` when you want to pass a full component-like prop bag:
 
@@ -274,11 +298,12 @@ const Input = styled(
 
 ## Benchmarks
 
-The repository keeps two complementary benchmark tracks:
+The repository keeps three complementary benchmark layers:
 
 - `pnpm bench` runs the Vitest microbench suite in [`bench/`](./bench)
-- `pnpm bench:competitors` writes reproducible speed and retained-memory reports
-  to [`bench/reports/competitors.md`](./bench/reports/competitors.md) and
+- `pnpm bench:competitors` writes reproducible speed, retained-memory, and
+  synthetic bundle-size reports to
+  [`bench/reports/competitors.md`](./bench/reports/competitors.md) and
   [`bench/reports/competitors.json`](./bench/reports/competitors.json)
 - `pnpm bench:overhead` measures package-specific bundle, runtime, retained
   memory, and synthetic TypeScript overhead into
@@ -288,7 +313,9 @@ The competitor report compares `react-class-variants` against
 `class-variance-authority`, `classname-variants`, and `tailwind-variants`
 across root-only common-denominator scenarios. The primary creation metric uses
 fresh unique complex configs so it reflects first-time compile cost; reused
-config creation is reported separately as a diagnostic scenario.
+config creation is reported separately as a diagnostic scenario. Bundle-size
+comparisons use minified esbuild synthetic consumers and keep plain,
+Tailwind-aware, and React/styled imports in separate tables.
 
 ## Migration
 

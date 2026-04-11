@@ -1,7 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { defineConfig, recipe } from '../src';
+import { defineConfig, defineRecipeConfig, recipe } from '../src';
 
 describe('recipe()', () => {
+  it('returns the original config reference from defineRecipeConfig()', () => {
+    const config = {
+      base: 'inline-flex',
+      variants: {
+        tone: {
+          primary: 'text-blue-600',
+          secondary: 'text-slate-700',
+        },
+      },
+      defaultVariants: {
+        tone: 'primary',
+      },
+    } as const;
+
+    expect(defineRecipeConfig(config)).toBe(config);
+  });
+
   it('resolves root recipes with defaults, booleans, compounds, OR selectors, and className', () => {
     const input = recipe({
       base: ['w-full', 'rounded-md'],
@@ -455,6 +472,58 @@ describe('recipe()', () => {
         base: ['inline-flex', null],
       } as never)
     ).toThrow(/className arrays may only contain strings/);
+
+    expect(() =>
+      strictRecipe({
+        variants: {
+          state: {
+            true: 'is-true',
+            idle: 'is-idle',
+          },
+        },
+      } as never)
+    ).toThrow(/cannot mix boolean options/);
+
+    expect(() =>
+      strictRecipe({
+        base: 'inline-flex',
+        variants: {
+          tone: {
+            info: 'bg-sky-100',
+          },
+        },
+        defaultVariants: {
+          tone: 'missing',
+        },
+      } as never)
+    ).toThrow(/invalid defaultVariants value "missing" for variant "tone"/);
+
+    expect(() =>
+      strictRecipe({
+        base: 'inline-flex',
+        variants: {
+          tone: {
+            info: 'bg-sky-100',
+          },
+        },
+        defaultVariants: {
+          missing: 'info',
+        },
+      } as never)
+    ).toThrow(/defaultVariants key "missing" is not declared in variants/);
+
+    expect(() => root({ tone: 'info', className: [1] } as never)).toThrow(
+      /invalid input\.className/
+    );
+
+    expect(() => root.resolve({ tone: 'info', className: 1 })).toThrow(
+      /invalid input\.className/
+    );
+
+    const slotRenderers = slots({ tone: 'info' });
+    expect(() => slotRenderers.root({ className: [1] } as never)).toThrow(
+      /invalid slot input\.className/
+    );
   });
 
   it('treats config mutation after creation as unsupported', () => {
@@ -473,7 +542,7 @@ describe('recipe()', () => {
       config.base = 'mutated';
     }).toThrow();
     expect(badge({ tone: 'info' })).toBe('inline-flex bg-sky-100');
-    expect(badge.config).toBe(config);
+    expect('config' in badge).toBe(false);
   });
 
   it('keeps production-like recipes detached from config mutations', () => {
@@ -498,6 +567,6 @@ describe('recipe()', () => {
     mutableConfig.defaultVariants.tone = 'missing';
 
     expect(badge()).toBe('inline-flex bg-sky-100');
-    expect(badge.config).toBe(config);
+    expect('config' in badge).toBe(false);
   });
 });

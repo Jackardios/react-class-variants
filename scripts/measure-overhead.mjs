@@ -254,22 +254,37 @@ function buildTarget(targetDir) {
 
 function getEntryLayout(targetDir) {
   const distDir = join(targetDir, 'dist');
-  const coreRuntime = join(distDir, 'index.mjs');
-  const coreTypes = join(distDir, 'index.d.ts');
-  const reactRuntime = existsSync(join(distDir, 'react.mjs'))
-    ? join(distDir, 'react.mjs')
-    : coreRuntime;
-  const reactTypes = existsSync(join(distDir, 'react.d.ts'))
-    ? join(distDir, 'react.d.ts')
-    : coreTypes;
+  const rootRuntime = join(distDir, 'index.mjs');
+  const rootTypes = join(distDir, 'index.d.ts');
+  const dedicatedCoreRuntime = join(distDir, 'core.mjs');
+  const dedicatedCoreTypes = join(distDir, 'core.d.ts');
+  const dedicatedReactRuntime = join(distDir, 'react.mjs');
+  const dedicatedReactTypes = join(distDir, 'react.d.ts');
+  const hasDedicatedCoreEntry = existsSync(dedicatedCoreRuntime);
+  const hasDedicatedReactEntry = existsSync(dedicatedReactRuntime);
+  const coreRuntime = hasDedicatedCoreEntry
+    ? dedicatedCoreRuntime
+    : rootRuntime;
+  const coreTypes = existsSync(dedicatedCoreTypes)
+    ? dedicatedCoreTypes
+    : rootTypes;
+  const reactRuntime = hasDedicatedReactEntry
+    ? dedicatedReactRuntime
+    : rootRuntime;
+  const reactTypes = existsSync(dedicatedReactTypes)
+    ? dedicatedReactTypes
+    : rootTypes;
 
   return {
     coreRuntime,
     coreTypes,
     distDir,
-    hasDedicatedReactEntry: reactRuntime !== coreRuntime,
+    hasDedicatedCoreEntry,
+    hasDedicatedReactEntry,
     reactRuntime,
     reactTypes,
+    rootRuntime,
+    rootTypes,
   };
 }
 
@@ -618,12 +633,25 @@ async function measureRuntimeForEnv(targetDir, nodeEnv) {
 
     const simpleComponent = styled('button', simpleRecipe);
     const complexComponent = styled('button', complexRecipe);
+    const simpleRenderComponent = styled('button', simpleRecipe, {
+      withRender: true,
+    });
+    const complexRenderComponent = styled('button', complexRecipe, {
+      withRender: true,
+    });
+    const renderElement = createElement('a', { href: '/docs' });
+    const renderFunction = props =>
+      createElement('a', { ...props, href: '/docs' });
 
     return {
       complexComponent,
       complexRecipe,
+      complexRenderComponent,
+      renderElement,
+      renderFunction,
       simpleComponent,
       simpleRecipe,
+      simpleRenderComponent,
       styled,
     };
   }
@@ -658,6 +686,70 @@ async function measureRuntimeForEnv(targetDir, nodeEnv) {
         ),
       {
         batchSize: 10,
+        durationMs: 250,
+      }
+    ),
+    componentRenderPropElementComplex: benchmarkOps(
+      () =>
+        renderToStaticMarkup(
+          createElement(scenario.complexRenderComponent, {
+            children: 'Docs',
+            disabled: true,
+            render: scenario.renderElement,
+            size: 'lg',
+            tone: 'danger',
+            variant: 'outline',
+          })
+        ),
+      {
+        batchSize: 10,
+        durationMs: 250,
+      }
+    ),
+    componentRenderPropElementSimple: benchmarkOps(
+      () =>
+        renderToStaticMarkup(
+          createElement(scenario.simpleRenderComponent, {
+            children: 'Docs',
+            render: scenario.renderElement,
+            size: 'lg',
+            tone: 'secondary',
+          })
+        ),
+      {
+        batchSize: 25,
+        durationMs: 250,
+      }
+    ),
+    componentRenderPropFunctionComplex: benchmarkOps(
+      () =>
+        renderToStaticMarkup(
+          createElement(scenario.complexRenderComponent, {
+            children: 'Docs',
+            disabled: true,
+            render: scenario.renderFunction,
+            size: 'lg',
+            tone: 'danger',
+            variant: 'outline',
+          })
+        ),
+      {
+        batchSize: 10,
+        durationMs: 250,
+      }
+    ),
+    componentRenderPropFunctionSimple: benchmarkOps(
+      () =>
+        renderToStaticMarkup(
+          createElement(scenario.simpleRenderComponent, {
+            children: 'Docs',
+            render: scenario.renderFunction,
+            size: 'lg',
+            tone: 'secondary',
+          })
+        ),
+      {
+        batchSize: 25,
         durationMs: 250,
       }
     ),
@@ -764,6 +856,8 @@ function heapUsed() {
 }
 
 async function measureRetainedMemory(targetDir) {
+  process.env.NODE_ENV = 'production';
+
   const layout = getEntryLayout(targetDir);
   const coreModule = await importModule(layout.coreRuntime);
   const reactModule = layout.hasDedicatedReactEntry
@@ -775,10 +869,19 @@ async function measureRetainedMemory(targetDir) {
   const recipe = resolveAccess(coreModule, reactModule, surface.recipeAccess);
   const styled = resolveAccess(coreModule, reactModule, surface.styledAccess);
 
-  process.env.NODE_ENV = 'production';
-
   const simpleRecipeForComponent = recipe(simpleRootConfig);
   const complexRecipeForComponent = recipe(complexRootConfig);
+  const simpleComponent = styled('button', simpleRecipeForComponent);
+  const complexComponent = styled('button', complexRecipeForComponent);
+  const simpleRenderComponent = styled('button', simpleRecipeForComponent, {
+    withRender: true,
+  });
+  const complexRenderComponent = styled('button', complexRecipeForComponent, {
+    withRender: true,
+  });
+  const renderElement = createElement('a', { href: '/docs' });
+  const renderFunction = props =>
+    createElement('a', { ...props, href: '/docs' });
 
   function measureGroup(label, createValue, count) {
     const before = heapUsed();
@@ -810,6 +913,86 @@ async function measureRetainedMemory(targetDir) {
       'componentSimple',
       () => styled('button', simpleRecipeForComponent),
       20000
+    ),
+    componentWithRenderComplex: measureGroup(
+      'componentWithRenderComplex',
+      () => styled('button', complexRecipeForComponent, { withRender: true }),
+      15000
+    ),
+    componentWithRenderSimple: measureGroup(
+      'componentWithRenderSimple',
+      () => styled('button', simpleRecipeForComponent, { withRender: true }),
+      20000
+    ),
+    elementComplex: measureGroup(
+      'elementComplex',
+      () =>
+        createElement(complexComponent, {
+          children: 'Save',
+          disabled: true,
+          size: 'lg',
+          tone: 'danger',
+          variant: 'outline',
+        }),
+      25000
+    ),
+    elementRenderPropElementComplex: measureGroup(
+      'elementRenderPropElementComplex',
+      () =>
+        createElement(complexRenderComponent, {
+          children: 'Docs',
+          disabled: true,
+          render: renderElement,
+          size: 'lg',
+          tone: 'danger',
+          variant: 'outline',
+        }),
+      25000
+    ),
+    elementRenderPropElementSimple: measureGroup(
+      'elementRenderPropElementSimple',
+      () =>
+        createElement(simpleRenderComponent, {
+          children: 'Docs',
+          render: renderElement,
+          size: 'lg',
+          tone: 'secondary',
+        }),
+      30000
+    ),
+    elementRenderPropFunctionComplex: measureGroup(
+      'elementRenderPropFunctionComplex',
+      () =>
+        createElement(complexRenderComponent, {
+          children: 'Docs',
+          disabled: true,
+          render: renderFunction,
+          size: 'lg',
+          tone: 'danger',
+          variant: 'outline',
+        }),
+      25000
+    ),
+    elementRenderPropFunctionSimple: measureGroup(
+      'elementRenderPropFunctionSimple',
+      () =>
+        createElement(simpleRenderComponent, {
+          children: 'Docs',
+          render: renderFunction,
+          size: 'lg',
+          tone: 'secondary',
+        }),
+      30000
+    ),
+    elementSimple: measureGroup(
+      'elementSimple',
+      () =>
+        createElement(simpleComponent, {
+          children: 'Save',
+          size: 'lg',
+          tone: 'secondary',
+        }),
+      30000
     ),
     recipeComplex: measureGroup(
       'recipeComplex',
@@ -1065,14 +1248,19 @@ async function measureTarget(target, options) {
 
   const layout = getEntryLayout(target.dir);
   const surface = await detectSurface(target.dir);
-  const rootImportGraph = collectImportGraph(layout.coreRuntime);
+  const coreImportGraph = collectImportGraph(layout.coreRuntime);
+  const rootImportGraph = collectImportGraph(layout.rootRuntime);
 
   return {
     bundles: bundleConsumers(target.dir, surface),
     dist: {
+      coreDts: measureFile(layout.coreTypes),
+      coreImportGraph,
+      coreMjs: measureFile(layout.coreRuntime),
+      hasDedicatedCoreEntry: layout.hasDedicatedCoreEntry,
       hasDedicatedReactEntry: layout.hasDedicatedReactEntry,
-      indexDts: measureFile(layout.coreTypes),
-      indexMjs: measureFile(layout.coreRuntime),
+      indexDts: measureFile(layout.rootTypes),
+      indexMjs: measureFile(layout.rootRuntime),
       reactDts: measureFile(layout.reactTypes),
       reactMjs: measureFile(layout.reactRuntime),
       rootImportGraph,

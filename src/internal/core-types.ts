@@ -27,6 +27,27 @@ export type SlotVariantsSchema<Slots extends string> = Record<
 >;
 
 type AnyVariantsSchema = Record<string, Record<string, unknown>>;
+type BooleanOptionKey = 'true' | 'false';
+
+type IsMixedBooleanVariant<Options extends Record<string, unknown>> = Extract<
+  keyof Options & string,
+  BooleanOptionKey
+> extends never
+  ? false
+  : Exclude<keyof Options & string, BooleanOptionKey> extends never
+  ? false
+  : true;
+
+type RejectMixedBooleanVariants<Variants extends AnyVariantsSchema> = {
+  [Key in keyof Variants]: Variants[Key] extends infer Options extends Record<
+    string,
+    unknown
+  >
+    ? IsMixedBooleanVariant<Options> extends true
+      ? never
+      : Options
+    : Variants[Key];
+};
 
 export type VariantSelectionValues<Variants extends AnyVariantsSchema> = {
   [Key in keyof Variants]: Variants[Key] extends infer Options extends Record<
@@ -107,7 +128,7 @@ export type RootRecipeConfig<
 > = {
   base?: ClassNameValue;
   slots?: never;
-  variants?: Variants;
+  variants?: RejectMixedBooleanVariants<Variants>;
   compoundVariants?: readonly RootCompoundVariant<Variants>[];
   defaultVariants?: Defaults;
 };
@@ -122,7 +143,7 @@ export type SlotRecipeConfig<
 > = {
   base?: never;
   slots: SlotDefs;
-  variants?: Variants;
+  variants?: RejectMixedBooleanVariants<Variants>;
   compoundVariants?: readonly SlotCompoundVariant<
     keyof SlotDefs & string,
     Variants
@@ -160,12 +181,14 @@ export type RecipeTypeMetadata<
   Mode extends 'root' | 'slot',
   Slots extends string,
   Variants extends AnyVariantsSchema,
-  Defaults extends object
+  Defaults extends object,
+  Config = never
 > = {
   mode: Mode;
   slots: Slots;
   variants: Variants;
   defaults: Defaults;
+  config: Config;
 };
 
 export type RootResolveResult<TRecipe> = {
@@ -193,8 +216,13 @@ export type RootRecipe<
     input?: Record<string, unknown>,
     options?: ResolveOptions<Extract<keyof Variants, string>>
   ): RootResolveResult<RootRecipe<Variants, Defaults, Config>>;
-  readonly config: Config;
-  readonly __types?: RecipeTypeMetadata<'root', never, Variants, Defaults>;
+  readonly __types?: RecipeTypeMetadata<
+    'root',
+    never,
+    Variants,
+    Defaults,
+    Config
+  >;
 };
 
 export type SlotRecipe<
@@ -212,20 +240,23 @@ export type SlotRecipe<
     input?: Record<string, unknown>,
     options?: ResolveOptions<Extract<keyof Variants, string>>
   ): SlotResolveResult<SlotRecipe<Slots, Variants, Defaults, Config>>;
-  readonly config: Config;
-  readonly __types?: RecipeTypeMetadata<'slot', Slots, Variants, Defaults>;
+  readonly __types?: RecipeTypeMetadata<
+    'slot',
+    Slots,
+    Variants,
+    Defaults,
+    Config
+  >;
 };
 
 export type AnyRootRecipe = {
-  readonly config: any;
   readonly resolve: (...args: any[]) => RootResolveResult<any>;
-  readonly __types?: RecipeTypeMetadata<'root', any, any, any>;
+  readonly __types?: RecipeTypeMetadata<'root', any, any, any, any>;
 };
 
 export type AnySlotRecipe = {
-  readonly config: any;
   readonly resolve: (...args: any[]) => SlotResolveResult<any>;
-  readonly __types?: RecipeTypeMetadata<'slot', any, any, any>;
+  readonly __types?: RecipeTypeMetadata<'slot', any, any, any, any>;
 };
 export type AnyRecipe = AnyRootRecipe | AnySlotRecipe;
 export type Recipe = AnyRecipe;
@@ -257,7 +288,8 @@ export type VariantProps<TRecipe> = TRecipe extends {
     any,
     any,
     infer Variants extends AnyVariantsSchema,
-    infer Defaults extends object
+    infer Defaults extends object,
+    any
   >;
 }
   ? VariantInput<Variants, Defaults>
@@ -268,6 +300,7 @@ export type ResolvedVariantProps<TRecipe> = TRecipe extends {
     any,
     any,
     infer Variants extends AnyVariantsSchema,
+    any,
     any
   >;
 }
@@ -275,13 +308,13 @@ export type ResolvedVariantProps<TRecipe> = TRecipe extends {
   : never;
 
 export type SlotNames<TRecipe> = TRecipe extends {
-  readonly __types?: RecipeTypeMetadata<any, infer Slots, any, any>;
+  readonly __types?: RecipeTypeMetadata<any, infer Slots, any, any, any>;
 }
   ? Slots & string
   : never;
 
 export type RecipeConfigOf<TRecipe> = TRecipe extends {
-  readonly config: infer Config;
+  readonly __types?: RecipeTypeMetadata<any, any, any, any, infer Config>;
 }
   ? Config
   : never;

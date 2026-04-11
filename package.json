@@ -17,6 +17,26 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       }
+    },
+    "./core": {
+      "import": {
+        "types": "./dist/core.d.mts",
+        "default": "./dist/core.mjs"
+      },
+      "require": {
+        "types": "./dist/core.d.ts",
+        "default": "./dist/core.js"
+      }
+    },
+    "./react": {
+      "import": {
+        "types": "./dist/react.d.mts",
+        "default": "./dist/react.mjs"
+      },
+      "require": {
+        "types": "./dist/react.d.ts",
+        "default": "./dist/react.js"
+      }
     }
   },
   "files": [
@@ -37,7 +57,7 @@
     "test:types:consumers": "node scripts/test-types-consumers.mjs",
     "check:changeset": "node scripts/check-changeset.cjs",
     "check:overhead": "node --expose-gc scripts/check-overhead.mjs --baseline-ref 4fe016c",
-    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+    "build": "tsup src/index.ts src/core.ts src/react.ts --format cjs,esm --dts --clean",
     "lint": "tsc --project tsconfig.build.json",
     "lint:all": "tsc --project tsconfig.test.json",
     "lint:eslint": "eslint src test --max-warnings=0",
