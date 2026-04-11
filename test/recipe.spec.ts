@@ -526,6 +526,228 @@ describe('recipe()', () => {
     );
   });
 
+  it('keeps valid root recipe output identical across checked and production paths', () => {
+    const config = {
+      base: ['inline-flex', 'items-center', 'rounded-md'],
+      variants: {
+        tone: {
+          primary: 'bg-blue-600 text-white',
+          secondary: 'bg-slate-200 text-slate-950',
+          danger: 'bg-rose-600 text-white',
+        },
+        size: {
+          sm: 'h-8 px-3 text-sm',
+          md: 'h-10 px-4 text-base',
+        },
+        variant: {
+          solid: '',
+          outline: 'border bg-transparent',
+        },
+        disabled: {
+          true: 'opacity-50 pointer-events-none',
+          false: '',
+        },
+      },
+      defaultVariants: {
+        tone: 'primary',
+        size: 'md',
+        variant: 'solid',
+        disabled: false,
+      },
+      compoundVariants: [
+        {
+          tone: ['primary', 'secondary'],
+          variant: 'outline',
+          className: 'ring-1 ring-current',
+        },
+        {
+          tone: 'danger',
+          disabled: true,
+          className: 'cursor-not-allowed',
+        },
+      ],
+    } as const;
+    const { recipe: strictRecipe } = defineConfig({ validate: 'always' });
+    const { recipe: uncheckedRecipe } = defineConfig({ validate: 'never' });
+    const strict = strictRecipe(config);
+    const unchecked = uncheckedRecipe(config);
+
+    expect(unchecked()).toBe(strict());
+    expect(
+      unchecked({
+        tone: 'secondary',
+        variant: 'outline',
+        className: ['shadow-sm', 'ring-offset-2'],
+      })
+    ).toBe(
+      strict({
+        tone: 'secondary',
+        variant: 'outline',
+        className: ['shadow-sm', 'ring-offset-2'],
+      })
+    );
+    expect(
+      unchecked({
+        tone: 'danger',
+        disabled: true,
+      })
+    ).toBe(
+      strict({
+        tone: 'danger',
+        disabled: true,
+      })
+    );
+  });
+
+  it('keeps slotted recipe output identical across checked and production paths for string-only slot maps', () => {
+    const config = {
+      slots: {
+        root: 'inline-flex items-center gap-2',
+        label: 'font-medium',
+        icon: 'size-4',
+      },
+      variants: {
+        tone: {
+          primary: {
+            root: 'bg-blue-600 text-white',
+            label: 'text-white',
+            icon: 'text-blue-100',
+          },
+          ghost: {
+            root: 'bg-transparent text-slate-900',
+            label: 'text-slate-900',
+            icon: 'text-slate-500',
+          },
+        },
+        size: {
+          sm: {
+            root: 'h-8 px-3',
+            label: 'text-sm',
+            icon: 'size-3.5',
+          },
+          md: {
+            root: 'h-10 px-4',
+            label: 'text-base',
+            icon: 'size-4',
+          },
+        },
+      },
+      defaultVariants: {
+        tone: 'primary',
+        size: 'md',
+      },
+    } as const;
+    const { recipe: strictRecipe } = defineConfig({ validate: 'always' });
+    const { recipe: uncheckedRecipe } = defineConfig({ validate: 'never' });
+    const strict = strictRecipe(config);
+    const unchecked = uncheckedRecipe(config);
+
+    const strictSlots = strict({
+      tone: 'ghost',
+      size: 'sm',
+    });
+    const uncheckedSlots = unchecked({
+      tone: 'ghost',
+      size: 'sm',
+    });
+
+    expect(uncheckedSlots.root()).toBe(strictSlots.root());
+    expect(uncheckedSlots.label()).toBe(strictSlots.label());
+    expect(uncheckedSlots.icon()).toBe(strictSlots.icon());
+    expect(uncheckedSlots.root({ className: 'rounded-md' })).toBe(
+      strictSlots.root({ className: 'rounded-md' })
+    );
+  });
+
+  it('keeps slotted recipe output identical across checked and production paths for mixed slot maps and compounds', () => {
+    const config = {
+      slots: {
+        root: 'inline-flex items-center gap-2',
+        label: ['font-medium', 'leading-none'],
+        badge: null,
+      },
+      variants: {
+        tone: {
+          primary: {
+            root: 'bg-blue-600 text-white',
+            label: ['text-white', 'uppercase'],
+            badge: null,
+          },
+          secondary: {
+            root: ['bg-slate-200', 'text-slate-950'],
+            label: 'text-slate-900',
+            badge: 'text-slate-500',
+          },
+        },
+        emphasis: {
+          quiet: {
+            root: 'shadow-sm',
+            label: null,
+            badge: ['hidden'],
+          },
+          loud: {
+            root: 'ring-2',
+            label: ['tracking-wide'],
+            badge: 'block',
+          },
+        },
+      },
+      defaultVariants: {
+        tone: 'primary',
+        emphasis: 'quiet',
+      },
+      compoundVariants: [
+        {
+          tone: ['primary', 'secondary'],
+          emphasis: 'loud',
+          className: {
+            root: 'ring-offset-2',
+            label: 'underline',
+            badge: 'opacity-100',
+          },
+        },
+      ],
+    } as const;
+    const { recipe: strictRecipe } = defineConfig({ validate: 'always' });
+    const { recipe: uncheckedRecipe } = defineConfig({ validate: 'never' });
+    const strict = strictRecipe(config);
+    const unchecked = uncheckedRecipe(config);
+
+    const strictSlots = strict({
+      tone: 'secondary',
+      emphasis: 'loud',
+    });
+    const uncheckedSlots = unchecked({
+      tone: 'secondary',
+      emphasis: 'loud',
+    });
+
+    expect(uncheckedSlots.root()).toBe(strictSlots.root());
+    expect(uncheckedSlots.label()).toBe(strictSlots.label());
+    expect(uncheckedSlots.badge()).toBe(strictSlots.badge());
+    expect(uncheckedSlots.label({ className: ['italic', 'opacity-80'] })).toBe(
+      strictSlots.label({ className: ['italic', 'opacity-80'] })
+    );
+    expect(uncheckedSlots.badge({ className: 'rounded-full' })).toBe(
+      strictSlots.badge({ className: 'rounded-full' })
+    );
+  });
+
+  it('still rejects mixed boolean variants in production-like mode', () => {
+    const { recipe: uncheckedRecipe } = defineConfig({ validate: 'never' });
+
+    expect(() =>
+      uncheckedRecipe({
+        variants: {
+          state: {
+            true: 'is-true',
+            idle: 'is-idle',
+          },
+        },
+      } as never)
+    ).toThrow(/cannot mix boolean options/);
+  });
+
   it('treats config mutation after creation as unsupported', () => {
     const config = {
       base: 'inline-flex',

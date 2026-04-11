@@ -164,6 +164,22 @@ function compileSlotClassMap(
     return {};
   }
 
+  if (!validate) {
+    let allStrings = true;
+
+    for (const slot in value) {
+      if (!hasOwnKey(value, slot)) continue;
+      if (typeof value[slot] !== 'string') {
+        allStrings = false;
+        break;
+      }
+    }
+
+    if (allStrings) {
+      return { ...(value as Record<string, string>) };
+    }
+  }
+
   const output: SlotClasses = {};
   for (const slot in value) {
     if (!hasOwnKey(value, slot)) continue;
@@ -484,9 +500,7 @@ function compileCompoundVariants<TClassName>(
         }
         compoundConditions.push(
           index,
-          value.map(candidate =>
-            normalizeSelectionValue(variant.isBoolean, candidate)
-          )
+          compileCompoundSelection(variant, value)
         );
         continue;
       }
@@ -516,27 +530,76 @@ function compileCompoundVariants<TClassName>(
   return { compoundClassNames, compoundConditions };
 }
 
-function compileRootRecipeConfig(
-  config: RootRecipeConfig<any, any>,
-  options: RuntimeSystemOptions
+function compileCompoundSelection<TClassName>(
+  variant: CompiledVariant<TClassName>,
+  value: readonly unknown[]
+) {
+  const expected = new Array<CompiledSelectionValue>(value.length);
+
+  for (let index = 0; index < value.length; index += 1) {
+    expected[index] = normalizeSelectionValue(variant.isBoolean, value[index]);
+  }
+
+  return expected as readonly CompiledSelectionValue[];
+}
+
+function compileCompoundVariantsProd<TClassName>(
+  compounds: RecipeConfig['compoundVariants'],
+  variantTable: readonly CompiledVariant<TClassName>[],
+  compileClassName: (value: unknown) => TClassName
+) {
+  if (!compounds || compounds.length === 0) {
+    return {
+      compoundClassNames: emptyCompoundClassNames as readonly TClassName[],
+      compoundConditions: emptyCompoundConditions,
+    };
+  }
+
+  const compoundClassNames: TClassName[] = [];
+  const compoundConditions: CompiledCompoundCondition[] = [];
+  const variantIndex = createVariantIndex(variantTable);
+
+  for (const compound of compounds) {
+    for (const key in compound) {
+      if (!hasOwnKey(compound, key)) continue;
+      if (key === 'className') continue;
+
+      const index = getVariantIndex(variantIndex, key);
+      if (index === undefined) continue;
+
+      const variant = variantTable[index];
+      const value = (compound as Record<string, unknown>)[key];
+
+      if (Array.isArray(value)) {
+        compoundConditions.push(
+          index,
+          compileCompoundSelection(variant, value)
+        );
+      } else {
+        compoundConditions.push(
+          index,
+          normalizeSelectionValue(variant.isBoolean, value)
+        );
+      }
+    }
+
+    compoundConditions.push(compoundBoundary);
+    compoundClassNames.push(
+      compileClassName((compound as { className?: unknown }).className)
+    );
+  }
+
+  return { compoundClassNames, compoundConditions };
+}
+
+function createRootCompiledRecipe(
+  options: RuntimeSystemOptions,
+  validate: boolean,
+  base: string,
+  variantTable: readonly RootCompiledVariant[],
+  compoundConditions: readonly CompiledCompoundCondition[],
+  compoundClassNames: readonly string[]
 ): RootCompiledRecipe {
-  const validate = options.validate;
-  const base = compileRootClassName('base', config.base, validate, true);
-  const variantTable = compileVariants(
-    config.variants,
-    config.defaultVariants,
-    validate,
-    (context, value) => compileRootClassName(context, value, validate)
-  );
-  const { compoundClassNames, compoundConditions } = compileCompoundVariants(
-    config.compoundVariants,
-    variantTable,
-    validate,
-    (context, value) => compileRootClassName(context, value, validate)
-  );
-
-  if (validate) deepFreeze(config);
-
   return {
     base,
     compoundClassNames,
@@ -546,6 +609,71 @@ function compileRootRecipeConfig(
     validate,
     variantTable,
   };
+}
+
+function createSlotCompiledRecipe(
+  options: RuntimeSystemOptions,
+  validate: boolean,
+  slotNames: readonly string[],
+  base: SlotClasses,
+  variantTable: readonly SlotCompiledVariant[],
+  compoundConditions: readonly CompiledCompoundCondition[],
+  compoundClassNames: readonly SlotClasses[]
+): SlotCompiledRecipe {
+  return {
+    base,
+    compoundClassNames,
+    compoundConditions,
+    merge: options.merge,
+    mode: 'slot',
+    slotNames,
+    validate,
+    variantTable,
+  };
+}
+
+function compileRootRecipeConfig(
+  config: RootRecipeConfig<any, any>,
+  options: RuntimeSystemOptions
+): RootCompiledRecipe {
+  const validate = options.validate;
+  const base = validate
+    ? compileRootClassName('base', config.base, true, true)
+    : flattenClassName(config.base as ClassNameValue | undefined);
+  const compileClassName = validate
+    ? (context: string, value: unknown) =>
+        compileRootClassName(context, value, true)
+    : (_: string, value: unknown) =>
+        flattenClassName(value as ClassNameValue | undefined);
+  const variantTable = compileVariants(
+    config.variants,
+    config.defaultVariants,
+    validate,
+    compileClassName
+  );
+  const { compoundClassNames, compoundConditions } = validate
+    ? compileCompoundVariants(
+        config.compoundVariants,
+        variantTable,
+        true,
+        compileClassName
+      )
+    : compileCompoundVariantsProd(
+        config.compoundVariants,
+        variantTable,
+        value => flattenClassName(value as ClassNameValue | undefined)
+      );
+
+  if (validate) deepFreeze(config);
+
+  return createRootCompiledRecipe(
+    options,
+    validate,
+    base,
+    variantTable,
+    compoundConditions,
+    compoundClassNames
+  );
 }
 
 function compileSlotBase(
@@ -564,16 +692,38 @@ function compileSlotBase(
     );
   }
 
+  const rawSlots = config.slots as Record<string, unknown>;
   const slotNames: string[] = [];
-  const base: SlotClasses = {};
 
-  for (const slot in config.slots) {
-    if (!hasOwnKey(config.slots, slot)) continue;
-
+  for (const slot in rawSlots) {
+    if (!hasOwnKey(rawSlots, slot)) continue;
     slotNames.push(slot);
-    const className = config.slots[slot];
+  }
+
+  if (!validate) {
+    let allStrings = true;
+
+    for (let index = 0; index < slotNames.length; index += 1) {
+      if (typeof rawSlots[slotNames[index]] !== 'string') {
+        allStrings = false;
+        break;
+      }
+    }
+
+    if (allStrings) {
+      return {
+        base: { ...(rawSlots as Record<string, string>) },
+        slotNames,
+      };
+    }
+  }
+
+  const base: SlotClasses = {};
+  for (let index = 0; index < slotNames.length; index += 1) {
+    const slot = slotNames[index];
+    const className = rawSlots[slot];
     if (validate) validateClassNameValue(`slots.${slot}`, className);
-    base[slot] = flattenClassName(className);
+    base[slot] = flattenClassName(className as ClassNameValue | undefined);
   }
 
   return { base, slotNames };
@@ -585,31 +735,38 @@ function compileSlotRecipeConfig(
 ): SlotCompiledRecipe {
   const validate = options.validate;
   const { base, slotNames } = compileSlotBase(config, validate);
+  const compileClassName = (context: string, value: unknown) =>
+    compileSlotClassMap(context, value, base, validate);
   const variantTable = compileVariants(
     config.variants,
     config.defaultVariants,
     validate,
-    (context, value) => compileSlotClassMap(context, value, base, validate)
+    compileClassName
   );
-  const { compoundClassNames, compoundConditions } = compileCompoundVariants(
-    config.compoundVariants,
-    variantTable,
-    validate,
-    (context, value) => compileSlotClassMap(context, value, base, validate)
-  );
+  const { compoundClassNames, compoundConditions } = validate
+    ? compileCompoundVariants(
+        config.compoundVariants,
+        variantTable,
+        true,
+        compileClassName
+      )
+    : compileCompoundVariantsProd(
+        config.compoundVariants,
+        variantTable,
+        value => compileSlotClassMap('', value, base, false)
+      );
 
   if (validate) deepFreeze(config);
 
-  return {
-    base,
-    compoundClassNames,
-    compoundConditions,
-    merge: options.merge,
-    mode: 'slot',
-    slotNames,
+  return createSlotCompiledRecipe(
+    options,
     validate,
+    slotNames,
+    base,
     variantTable,
-  };
+    compoundConditions,
+    compoundClassNames
+  );
 }
 
 function validateVariantValue(

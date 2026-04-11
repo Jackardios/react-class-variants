@@ -112,6 +112,12 @@ const complexRootConfig = {
   ],
 };
 
+const complexRootNoCompoundsConfig = {
+  base: complexRootConfig.base,
+  variants: complexRootConfig.variants,
+  defaultVariants: complexRootConfig.defaultVariants,
+};
+
 function makeComplexRootConfig() {
   return {
     base: complexRootConfig.base,
@@ -127,6 +133,219 @@ function makeComplexRootConfig() {
     compoundVariants: complexRootConfig.compoundVariants.map(compound => ({
       ...compound,
     })),
+  };
+}
+
+function makeComplexRootNoCompoundsConfig() {
+  return {
+    base: complexRootNoCompoundsConfig.base,
+    variants: {
+      tone: { ...complexRootNoCompoundsConfig.variants.tone },
+      size: { ...complexRootNoCompoundsConfig.variants.size },
+      variant: { ...complexRootNoCompoundsConfig.variants.variant },
+      disabled: { ...complexRootNoCompoundsConfig.variants.disabled },
+    },
+    defaultVariants: {
+      ...complexRootNoCompoundsConfig.defaultVariants,
+    },
+  };
+}
+
+const simpleSlotConfig = {
+  slots: {
+    root: 'inline-flex items-center gap-2 rounded-md',
+    label: 'font-medium',
+    icon: 'size-4',
+  },
+  variants: {
+    tone: {
+      primary: {
+        root: 'bg-blue-600 text-white',
+        label: 'text-white',
+        icon: 'text-blue-100',
+      },
+      secondary: {
+        root: 'bg-slate-200 text-slate-950',
+        label: 'text-slate-950',
+        icon: 'text-slate-500',
+      },
+    },
+    size: {
+      sm: {
+        root: 'h-8 px-3',
+        label: 'text-sm',
+        icon: 'size-3.5',
+      },
+      md: {
+        root: 'h-10 px-4',
+        label: 'text-base',
+        icon: 'size-4',
+      },
+    },
+  },
+  defaultVariants: {
+    tone: 'primary',
+    size: 'md',
+  },
+};
+
+function makeSimpleSlotConfig() {
+  return {
+    slots: {
+      ...simpleSlotConfig.slots,
+    },
+    variants: {
+      tone: {
+        primary: { ...simpleSlotConfig.variants.tone.primary },
+        secondary: { ...simpleSlotConfig.variants.tone.secondary },
+      },
+      size: {
+        sm: { ...simpleSlotConfig.variants.size.sm },
+        md: { ...simpleSlotConfig.variants.size.md },
+      },
+    },
+    defaultVariants: {
+      ...simpleSlotConfig.defaultVariants,
+    },
+  };
+}
+
+const complexSlotConfig = {
+  slots: {
+    root: 'inline-flex items-center justify-center gap-2 rounded-md',
+    label: ['font-medium', 'leading-none'],
+    icon: 'shrink-0',
+    badge: null,
+  },
+  variants: {
+    tone: {
+      primary: {
+        root: 'bg-blue-600 text-white',
+        label: ['text-white', 'uppercase'],
+        icon: 'text-blue-100',
+        badge: null,
+      },
+      secondary: {
+        root: ['bg-slate-200', 'text-slate-950'],
+        label: 'text-slate-900',
+        icon: 'text-slate-500',
+        badge: 'bg-slate-50 text-slate-700',
+      },
+      danger: {
+        root: 'bg-rose-600 text-white',
+        label: 'text-white',
+        icon: 'text-rose-100',
+        badge: 'bg-rose-100 text-rose-700',
+      },
+    },
+    size: {
+      sm: {
+        root: 'h-8 px-3',
+        label: 'text-sm',
+        icon: 'size-3.5',
+        badge: 'text-[10px]',
+      },
+      md: {
+        root: 'h-10 px-4',
+        label: 'text-base',
+        icon: 'size-4',
+        badge: 'text-xs',
+      },
+      lg: {
+        root: 'h-12 px-5',
+        label: 'text-lg',
+        icon: 'size-5',
+        badge: 'text-sm',
+      },
+    },
+    emphasis: {
+      quiet: {
+        root: 'shadow-sm',
+        label: null,
+        icon: 'opacity-80',
+        badge: ['hidden'],
+      },
+      loud: {
+        root: 'ring-2 ring-offset-2',
+        label: ['tracking-wide'],
+        icon: 'opacity-100',
+        badge: 'inline-flex',
+      },
+    },
+    disabled: {
+      true: {
+        root: 'opacity-50 pointer-events-none',
+        label: '',
+        icon: '',
+        badge: 'opacity-50',
+      },
+      false: {
+        root: '',
+        label: '',
+        icon: '',
+        badge: '',
+      },
+    },
+  },
+  defaultVariants: {
+    tone: 'primary',
+    size: 'md',
+    emphasis: 'quiet',
+    disabled: false,
+  },
+};
+
+function makeComplexSlotConfig() {
+  return {
+    slots: {
+      root: complexSlotConfig.slots.root,
+      label: [...complexSlotConfig.slots.label],
+      icon: complexSlotConfig.slots.icon,
+      badge: complexSlotConfig.slots.badge,
+    },
+    variants: {
+      tone: {
+        primary: {
+          root: complexSlotConfig.variants.tone.primary.root,
+          label: [...complexSlotConfig.variants.tone.primary.label],
+          icon: complexSlotConfig.variants.tone.primary.icon,
+          badge: complexSlotConfig.variants.tone.primary.badge,
+        },
+        secondary: {
+          root: [...complexSlotConfig.variants.tone.secondary.root],
+          label: complexSlotConfig.variants.tone.secondary.label,
+          icon: complexSlotConfig.variants.tone.secondary.icon,
+          badge: complexSlotConfig.variants.tone.secondary.badge,
+        },
+        danger: { ...complexSlotConfig.variants.tone.danger },
+      },
+      size: {
+        sm: { ...complexSlotConfig.variants.size.sm },
+        md: { ...complexSlotConfig.variants.size.md },
+        lg: { ...complexSlotConfig.variants.size.lg },
+      },
+      emphasis: {
+        quiet: {
+          root: complexSlotConfig.variants.emphasis.quiet.root,
+          label: complexSlotConfig.variants.emphasis.quiet.label,
+          icon: complexSlotConfig.variants.emphasis.quiet.icon,
+          badge: [...complexSlotConfig.variants.emphasis.quiet.badge],
+        },
+        loud: {
+          root: complexSlotConfig.variants.emphasis.loud.root,
+          label: [...complexSlotConfig.variants.emphasis.loud.label],
+          icon: complexSlotConfig.variants.emphasis.loud.icon,
+          badge: complexSlotConfig.variants.emphasis.loud.badge,
+        },
+      },
+      disabled: {
+        true: { ...complexSlotConfig.variants.disabled.true },
+        false: { ...complexSlotConfig.variants.disabled.false },
+      },
+    },
+    defaultVariants: {
+      ...complexSlotConfig.defaultVariants,
+    },
   };
 }
 
@@ -771,10 +990,31 @@ async function measureRuntimeForEnv(targetDir, nodeEnv) {
       batchSize: 50,
       durationMs: 250,
     }),
+    recipeCreationComplexNoCompounds: benchmarkOps(
+      () => recipe(makeComplexRootNoCompoundsConfig()),
+      {
+        batchSize: 50,
+        durationMs: 250,
+      }
+    ),
     recipeCreationSimple: benchmarkOps(() => recipe(makeSimpleRootConfig()), {
       batchSize: 100,
       durationMs: 250,
     }),
+    recipeCreationSlotComplex: benchmarkOps(
+      () => recipe(makeComplexSlotConfig()),
+      {
+        batchSize: 25,
+        durationMs: 250,
+      }
+    ),
+    recipeCreationSlotSimple: benchmarkOps(
+      () => recipe(makeSimpleSlotConfig()),
+      {
+        batchSize: 50,
+        durationMs: 250,
+      }
+    ),
     resolveComplex: benchmarkOps(
       () =>
         scenario.complexRecipe({

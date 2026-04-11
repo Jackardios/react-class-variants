@@ -4,96 +4,96 @@
     "node": "v22.17.0",
     "platform": "darwin arm64"
   },
-  "generatedAt": "2026-04-11T12:57:31.332Z",
+  "generatedAt": "2026-04-11T14:48:34.649Z",
   "runtime": {
     "plain": {
       "simpleDefaults": {
         "react-class-variants": {
-          "opsPerSec": 14047232.122103272,
+          "opsPerSec": 17416820.049415253,
           "samples": 5
         },
         "class-variance-authority": {
-          "opsPerSec": 6097249.038419434,
+          "opsPerSec": 7187423.827356298,
           "samples": 5
         },
         "classname-variants": {
-          "opsPerSec": 5112826.163910429,
+          "opsPerSec": 5587934.7999767475,
           "samples": 5
         },
         "tailwind-variants/lite": {
-          "opsPerSec": 1731756.9790796072,
+          "opsPerSec": 1824685.2417957892,
           "samples": 5
         }
       },
       "simpleExplicit": {
         "react-class-variants": {
-          "opsPerSec": 13574624.471588602,
+          "opsPerSec": 16610767.449255722,
           "samples": 5
         },
         "class-variance-authority": {
-          "opsPerSec": 5530394.421810819,
+          "opsPerSec": 6063606.859985596,
           "samples": 5
         },
         "classname-variants": {
-          "opsPerSec": 5738348.697422846,
+          "opsPerSec": 5913410.622190135,
           "samples": 5
         },
         "tailwind-variants/lite": {
-          "opsPerSec": 1692975.1742120543,
+          "opsPerSec": 1734212.383167207,
           "samples": 5
         }
       },
       "complexWithCompound": {
         "react-class-variants": {
-          "opsPerSec": 5069237.784390904,
+          "opsPerSec": 5900326.245921943,
           "samples": 5
         },
         "class-variance-authority": {
-          "opsPerSec": 819357.3325775246,
+          "opsPerSec": 854535.5599231819,
           "samples": 5
         },
         "classname-variants": {
-          "opsPerSec": 2378657.4733238234,
+          "opsPerSec": 2543838.8834204813,
           "samples": 5
         },
         "tailwind-variants/lite": {
-          "opsPerSec": 629068.6896513641,
+          "opsPerSec": 662035.1074339023,
           "samples": 5
         }
       },
       "complexNoCompound": {
         "react-class-variants": {
-          "opsPerSec": 6078463.234577183,
+          "opsPerSec": 7075084.4497206705,
           "samples": 5
         },
         "class-variance-authority": {
-          "opsPerSec": 1173591.592389838,
+          "opsPerSec": 1292686.9577555486,
           "samples": 5
         },
         "classname-variants": {
-          "opsPerSec": 2591509.769279972,
+          "opsPerSec": 2834035.350339529,
           "samples": 5
         },
         "tailwind-variants/lite": {
-          "opsPerSec": 756390.9819416066,
+          "opsPerSec": 806326.6242771905,
           "samples": 5
         }
       },
       "complexExplicit": {
         "react-class-variants": {
-          "opsPerSec": 4541329.790877429,
+          "opsPerSec": 5548799.6170812575,
           "samples": 5
         },
         "class-variance-authority": {
-          "opsPerSec": 873860.7625215455,
+          "opsPerSec": 928169.8138861498,
           "samples": 5
         },
         "classname-variants": {
-          "opsPerSec": 2335559.127715295,
+          "opsPerSec": 2398984.89741816,
           "samples": 5
         },
         "tailwind-variants/lite": {
-          "opsPerSec": 539026.6123876522,
+          "opsPerSec": 566547.981328365,
           "samples": 5
         }
       }
@@ -101,91 +101,91 @@
     "tailwindAware": {
       "simpleDefaults": {
         "react-class-variants + twMerge": {
-          "opsPerSec": 4941623.606413148,
+          "opsPerSec": 5513271.32195594,
           "samples": 5
         },
         "class-variance-authority + twMerge": {
-          "opsPerSec": 3584868.3861057367,
+          "opsPerSec": 3903321.477820866,
           "samples": 5
         },
         "classname-variants + twMerge": {
-          "opsPerSec": 3605227.889974155,
+          "opsPerSec": 3777413.246845451,
           "samples": 5
         },
         "tailwind-variants": {
-          "opsPerSec": 1416799.998844962,
+          "opsPerSec": 1493433.988518372,
           "samples": 5
         }
       },
       "simpleExplicit": {
         "react-class-variants + twMerge": {
-          "opsPerSec": 5254578.75093077,
+          "opsPerSec": 5802283.417997953,
           "samples": 5
         },
         "class-variance-authority + twMerge": {
-          "opsPerSec": 3357815.8708089227,
+          "opsPerSec": 3542374.1900061015,
           "samples": 5
         },
         "classname-variants + twMerge": {
-          "opsPerSec": 3818467.949949753,
+          "opsPerSec": 4001453.801556114,
           "samples": 5
         },
         "tailwind-variants": {
-          "opsPerSec": 1383045.4662766294,
+          "opsPerSec": 1452211.2053440101,
           "samples": 5
         }
       },
       "complexWithCompound": {
         "react-class-variants + twMerge": {
-          "opsPerSec": 2255173.3550778134,
+          "opsPerSec": 2459922.1090263175,
           "samples": 5
         },
         "class-variance-authority + twMerge": {
-          "opsPerSec": 872995.0553560094,
+          "opsPerSec": 923824.628523115,
           "samples": 5
         },
         "classname-variants + twMerge": {
-          "opsPerSec": 1649072.6590771754,
+          "opsPerSec": 1719043.8893018132,
           "samples": 5
         },
         "tailwind-variants": {
-          "opsPerSec": 555593.7538747805,
+          "opsPerSec": 590220.9084009066,
           "samples": 5
         }
       },
       "complexNoCompound": {
         "react-class-variants + twMerge": {
-          "opsPerSec": 3229689.118313251,
+          "opsPerSec": 3537227.416761715,
           "samples": 5
         },
         "class-variance-authority + twMerge": {
-          "opsPerSec": 1011501.8843172123,
+          "opsPerSec": 1076999.2805644877,
           "samples": 5
         },
         "classname-variants + twMerge": {
-          "opsPerSec": 2065741.4734125417,
+          "opsPerSec": 2184595.2725358196,
           "samples": 5
         },
         "tailwind-variants": {
-          "opsPerSec": 681549.56533217,
+          "opsPerSec": 729723.2484506315,
           "samples": 5
         }
       },
       "complexExplicit": {
         "react-class-variants + twMerge": {
-          "opsPerSec": 1812880.3311854363,
+          "opsPerSec": 1986264.9339844906,
           "samples": 5
         },
         "class-variance-authority + twMerge": {
-          "opsPerSec": 668054.8374432501,
+          "opsPerSec": 704914.2728682953,
           "samples": 5
         },
         "classname-variants + twMerge": {
-          "opsPerSec": 1432256.0582661435,
+          "opsPerSec": 1452594.6960760343,
           "samples": 5
         },
         "tailwind-variants": {
-          "opsPerSec": 456949.59162378573,
+          "opsPerSec": 482681.01912878064,
           "samples": 5
         }
       }
@@ -195,37 +195,37 @@
     "plain": {
       "freshComplexConfig": {
         "react-class-variants": {
-          "opsPerSec": 1308389.3183096068,
+          "opsPerSec": 900893.6945440287,
           "samples": 5
         },
         "class-variance-authority": {
-          "opsPerSec": 13797372.405255085,
+          "opsPerSec": 14981297.6477747,
           "samples": 5
         },
         "classname-variants": {
-          "opsPerSec": 12657740.913665673,
+          "opsPerSec": 13724488.055497682,
           "samples": 5
         },
         "tailwind-variants/lite": {
-          "opsPerSec": 7618753.0380061185,
+          "opsPerSec": 8156712.9841861,
           "samples": 5
         }
       },
       "reusedComplexConfig": {
         "react-class-variants": {
-          "opsPerSec": 1520879.0901123476,
+          "opsPerSec": 1074347.356979509,
           "samples": 5
         },
         "class-variance-authority": {
-          "opsPerSec": 46746545.40003553,
+          "opsPerSec": 45345984.76374924,
           "samples": 5
         },
         "classname-variants": {
-          "opsPerSec": 43641985.51086225,
+          "opsPerSec": 43272470.18258832,
           "samples": 5
         },
         "tailwind-variants/lite": {
-          "opsPerSec": 12811452.66829403,
+          "opsPerSec": 12772036.109232176,
           "samples": 5
         }
       }
@@ -233,37 +233,37 @@
     "tailwindAware": {
       "freshComplexConfig": {
         "react-class-variants + twMerge": {
-          "opsPerSec": 1301135.1566283081,
+          "opsPerSec": 930446.4763314248,
           "samples": 5
         },
         "class-variance-authority + twMerge": {
-          "opsPerSec": 12130749.439036168,
+          "opsPerSec": 12656345.172712935,
           "samples": 5
         },
         "classname-variants + twMerge": {
-          "opsPerSec": 11196897.391632436,
+          "opsPerSec": 11542934.574646518,
           "samples": 5
         },
         "tailwind-variants": {
-          "opsPerSec": 7311758.586199393,
+          "opsPerSec": 7765970.209738361,
           "samples": 5
         }
       },
       "reusedComplexConfig": {
         "react-class-variants + twMerge": {
-          "opsPerSec": 1518575.9579054276,
+          "opsPerSec": 1075297.431201021,
           "samples": 5
         },
         "class-variance-authority + twMerge": {
-          "opsPerSec": 39169754.2497275,
+          "opsPerSec": 40842338.73649136,
           "samples": 5
         },
         "classname-variants + twMerge": {
-          "opsPerSec": 36787452.85018803,
+          "opsPerSec": 38485729.4941421,
           "samples": 5
         },
         "tailwind-variants": {
-          "opsPerSec": 12835348.658605915,
+          "opsPerSec": 12802556.751422092,
           "samples": 5
         }
       }
@@ -273,14 +273,14 @@
     "plain": {
       "freshComplexConfig": {
         "react-class-variants": {
-          "bytesPerInstance": 1521.368,
+          "bytesPerInstance": 1519.7088,
           "count": 10000,
-          "retainedBytes": 15213680
+          "retainedBytes": 15197088
         },
         "class-variance-authority": {
-          "bytesPerInstance": 727.9464,
+          "bytesPerInstance": 726.8912,
           "count": 10000,
-          "retainedBytes": 7279464
+          "retainedBytes": 7268912
         },
         "classname-variants": {
           "bytesPerInstance": 888.1264,
@@ -295,24 +295,24 @@
       },
       "freshSimpleConfig": {
         "react-class-variants": {
-          "bytesPerInstance": 722.5176,
+          "bytesPerInstance": 719.1224,
           "count": 10000,
-          "retainedBytes": 7225176
+          "retainedBytes": 7191224
         },
         "class-variance-authority": {
-          "bytesPerInstance": 319.7,
+          "bytesPerInstance": 320.28,
           "count": 10000,
-          "retainedBytes": 3197000
+          "retainedBytes": 3202800
         },
         "classname-variants": {
-          "bytesPerInstance": 360.7864,
+          "bytesPerInstance": 360.5064,
           "count": 10000,
-          "retainedBytes": 3607864
+          "retainedBytes": 3605064
         },
         "tailwind-variants/lite": {
-          "bytesPerInstance": 705.4384,
+          "bytesPerInstance": 704.4536,
           "count": 10000,
-          "retainedBytes": 7054384
+          "retainedBytes": 7044536
         }
       }
     },
@@ -334,16 +334,16 @@
           "retainedBytes": 9841248
         },
         "tailwind-variants": {
-          "bytesPerInstance": 1087.1608,
+          "bytesPerInstance": 1087.1592,
           "count": 10000,
-          "retainedBytes": 10871608
+          "retainedBytes": 10871592
         }
       },
       "freshSimpleConfig": {
         "react-class-variants + twMerge": {
-          "bytesPerInstance": 720.1824,
+          "bytesPerInstance": 719.9352,
           "count": 10000,
-          "retainedBytes": 7201824
+          "retainedBytes": 7199352
         },
         "class-variance-authority + twMerge": {
           "bytesPerInstance": 416.4792,
@@ -351,9 +351,9 @@
           "retainedBytes": 4164792
         },
         "classname-variants + twMerge": {
-          "bytesPerInstance": 456.716,
+          "bytesPerInstance": 456.7584,
           "count": 10000,
-          "retainedBytes": 4567160
+          "retainedBytes": 4567584
         },
         "tailwind-variants": {
           "bytesPerInstance": 704.4264,
@@ -376,14 +376,14 @@
         "rawBytes": 850
       },
       "react-class-variants": {
-        "brotliBytes": 3118,
-        "gzipBytes": 3482,
-        "rawBytes": 10513
+        "brotliBytes": 3455,
+        "gzipBytes": 3868,
+        "rawBytes": 11746
       },
       "react-class-variants/core": {
-        "brotliBytes": 3118,
-        "gzipBytes": 3482,
-        "rawBytes": 10513
+        "brotliBytes": 3453,
+        "gzipBytes": 3867,
+        "rawBytes": 11746
       },
       "tailwind-variants/lite": {
         "brotliBytes": 2019,
@@ -398,14 +398,14 @@
         "rawBytes": 1647
       },
       "react-class-variants": {
-        "brotliBytes": 4315,
-        "gzipBytes": 4808,
-        "rawBytes": 14828
+        "brotliBytes": 4529,
+        "gzipBytes": 5073,
+        "rawBytes": 15715
       },
       "react-class-variants/react": {
-        "brotliBytes": 4320,
-        "gzipBytes": 4808,
-        "rawBytes": 14827
+        "brotliBytes": 4525,
+        "gzipBytes": 5071,
+        "rawBytes": 15714
       }
     },
     "tailwindAwareRecipe": {
@@ -420,9 +420,9 @@
         "rawBytes": 26995
       },
       "react-class-variants/core + twMerge": {
-        "brotliBytes": 10164,
-        "gzipBytes": 11547,
-        "rawBytes": 36831
+        "brotliBytes": 10513,
+        "gzipBytes": 11923,
+        "rawBytes": 38071
       },
       "tailwind-variants": {
         "brotliBytes": 9341,
