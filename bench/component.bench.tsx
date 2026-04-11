@@ -1,10 +1,8 @@
 import { bench, describe } from 'vitest';
-import { createElement, ReactElement } from 'react';
-import { defineConfig } from '../src';
+import { createElement } from 'react';
+import { recipe, styled } from '../src';
 
-const { variantComponent, variantPropsResolver } = defineConfig();
-
-const SimpleButton = variantComponent('button', {
+const simpleButtonRecipe = recipe({
   base: 'btn px-4 py-2 rounded',
   variants: {
     color: { primary: 'bg-blue-500', secondary: 'bg-gray-500' },
@@ -16,7 +14,7 @@ const SimpleButton = variantComponent('button', {
   },
 });
 
-const ComplexButton = variantComponent('button', {
+const complexButtonRecipe = recipe({
   base: 'btn px-4 py-2 rounded font-medium transition-colors',
   variants: {
     color: {
@@ -40,61 +38,54 @@ const ComplexButton = variantComponent('button', {
   },
   compoundVariants: [
     {
-      variants: { color: 'primary', variant: 'outline' },
+      color: 'primary',
+      variant: 'outline',
       className: 'border-blue-500 text-blue-500',
     },
     {
-      variants: { color: 'secondary', variant: 'outline' },
+      color: 'secondary',
+      variant: 'outline',
       className: 'border-gray-500 text-gray-500',
     },
     {
-      variants: { color: 'danger', variant: 'outline' },
+      color: 'danger',
+      variant: 'outline',
       className: 'border-red-500 text-red-500',
     },
   ],
 });
 
-const NoRenderPropButton = variantComponent('button', {
-  base: 'btn',
-  variants: {
-    color: { primary: 'bg-blue', secondary: 'bg-gray' },
-  },
-  withoutRenderProp: true,
+const simpleButtonProps = {
+  color: 'secondary' as const,
+  size: 'lg' as const,
+  children: 'Click',
+};
+
+const complexButtonProps = {
+  color: 'danger' as const,
+  size: 'lg' as const,
+  variant: 'outline' as const,
+  disabled: true,
+  children: 'Click',
+};
+
+const SimpleButton = styled('button', simpleButtonRecipe);
+const ComplexButton = styled('button', complexButtonRecipe);
+const SimpleButtonWithRender = styled('button', simpleButtonRecipe, {
+  withRender: true,
+});
+const ComplexButtonWithRender = styled('button', complexButtonRecipe, {
+  withRender: true,
 });
 
-const resolveButtonProps = variantPropsResolver({
-  base: 'btn px-4 py-2',
-  variants: {
-    color: { primary: 'bg-blue-500', secondary: 'bg-gray-500' },
-    size: { sm: 'text-sm', md: 'text-base', lg: 'text-lg' },
-  },
-  defaultVariants: {
-    color: 'primary',
-    size: 'md',
-  },
-});
-
-const resolveWithForwardProps = variantPropsResolver({
-  base: 'btn',
-  variants: {
-    color: { primary: 'bg-blue', secondary: 'bg-gray' },
-    size: { sm: 'text-sm', lg: 'text-lg' },
-  },
-  forwardProps: ['size'],
-});
-
-describe('variantComponent()', () => {
+describe('styled()', () => {
   describe('element creation', () => {
     bench('simple component with defaults', () => {
       createElement(SimpleButton, { children: 'Click' });
     });
 
     bench('simple component with props', () => {
-      createElement(SimpleButton, {
-        color: 'secondary',
-        size: 'lg',
-        children: 'Click',
-      });
+      createElement(SimpleButton, simpleButtonProps);
     });
 
     bench('complex component with defaults', () => {
@@ -102,130 +93,120 @@ describe('variantComponent()', () => {
     });
 
     bench('complex component with props', () => {
-      createElement(ComplexButton, {
-        color: 'danger',
-        size: 'lg',
-        variant: 'outline',
-        children: 'Click',
-      });
-    });
-
-    bench('component without render prop', () => {
-      createElement(NoRenderPropButton, {
-        color: 'primary',
-        children: 'Click',
-      });
+      createElement(ComplexButton, complexButtonProps);
     });
   });
 
   describe('render prop', () => {
-    // Pre-create elements to avoid measuring element creation overhead
     const linkElement = createElement('a', { href: '/' });
     const renderFn = (props: Record<string, unknown>) =>
       createElement('a', { ...props, href: '/' });
 
     bench('render prop with element', () => {
-      createElement(SimpleButton, {
+      createElement(SimpleButtonWithRender, {
         render: linkElement,
         children: 'Link',
       });
     });
 
     bench('render prop with function', () => {
-      createElement(SimpleButton, {
-        render: renderFn as unknown as ReactElement,
+      createElement(SimpleButtonWithRender, {
+        render: renderFn,
         children: 'Link',
       });
     });
 
     bench('render prop element with variant props', () => {
-      createElement(ComplexButton, {
+      createElement(ComplexButtonWithRender, {
         render: linkElement,
-        color: 'danger',
-        size: 'lg',
-        variant: 'outline',
-        children: 'Link',
+        ...complexButtonProps,
       });
     });
 
     bench('render prop function with variant props', () => {
-      createElement(ComplexButton, {
-        render: renderFn as unknown as ReactElement,
-        color: 'danger',
-        size: 'lg',
-        variant: 'outline',
-        children: 'Link',
+      createElement(ComplexButtonWithRender, {
+        render: renderFn,
+        ...complexButtonProps,
       });
     });
   });
 });
 
-describe('variantPropsResolver()', () => {
-  bench('resolve with defaults', () => {
-    resolveButtonProps({});
+describe('recipe.resolve()', () => {
+  bench('resolve simple with defaults', () => {
+    simpleButtonRecipe.resolve({});
   });
 
-  bench('resolve with props', () => {
-    resolveButtonProps({ color: 'secondary', size: 'lg' });
+  bench('resolve simple with props', () => {
+    simpleButtonRecipe.resolve({ color: 'secondary', size: 'lg' });
   });
 
-  bench('resolve with className', () => {
-    resolveButtonProps({ color: 'primary', className: 'extra-class' });
+  bench('resolve simple with className', () => {
+    simpleButtonRecipe.resolve({ color: 'primary', className: 'extra-class' });
   });
 
-  bench('resolve with extra props', () => {
-    resolveButtonProps({
+  bench('resolve complex with extra props', () => {
+    complexButtonRecipe.resolve({
       color: 'secondary',
       size: 'sm',
-      onClick: () => {},
-      'aria-label': 'Button',
+      variant: 'ghost',
+      disabled: true,
+      className: 'shadow-lg',
     });
-  });
-
-  bench('resolve with forwardProps', () => {
-    resolveWithForwardProps({ color: 'primary', size: 'lg' });
   });
 });
 
-describe('variantComponent() creation', () => {
+describe('styled() creation', () => {
   bench('create simple component', () => {
-    variantComponent('button', {
-      base: 'btn',
-      variants: {
-        color: { primary: 'bg-blue', secondary: 'bg-gray' },
-      },
-    });
+    styled(
+      'button',
+      recipe({
+        base: 'btn',
+        variants: {
+          color: { primary: 'bg-blue', secondary: 'bg-gray' },
+        },
+      })
+    );
   });
 
   bench('create complex component', () => {
-    variantComponent('button', {
-      base: 'btn px-4 py-2',
-      variants: {
-        color: { primary: 'bg-blue', secondary: 'bg-gray', danger: 'bg-red' },
-        size: { sm: 'text-sm', md: 'text-md', lg: 'text-lg' },
-        variant: { solid: '', outline: 'border' },
-      },
-      defaultVariants: {
-        color: 'primary',
-        size: 'md',
-        variant: 'solid',
-      },
-      compoundVariants: [
-        {
-          variants: { color: 'primary', variant: 'outline' },
-          className: 'border-blue',
+    styled(
+      'button',
+      recipe({
+        base: 'btn px-4 py-2',
+        variants: {
+          color: { primary: 'bg-blue', secondary: 'bg-gray', danger: 'bg-red' },
+          size: { sm: 'text-sm', md: 'text-md', lg: 'text-lg' },
+          variant: { solid: '', outline: 'border' },
         },
-      ],
-    });
+        defaultVariants: {
+          color: 'primary',
+          size: 'md',
+          variant: 'solid',
+        },
+        compoundVariants: [
+          {
+            color: 'primary',
+            variant: 'outline',
+            className: 'border-blue',
+          },
+        ],
+      })
+    );
   });
 
   bench('create component with displayName', () => {
-    variantComponent('button', {
-      base: 'btn',
-      variants: {
-        color: { primary: 'bg-blue' },
-      },
-      displayName: 'MyButton',
-    });
+    styled(
+      'button',
+      recipe({
+        base: 'btn',
+        variants: {
+          color: { primary: 'bg-blue' },
+        },
+      }),
+      {
+        displayName: 'MyButton',
+      }
+    );
   });
 });

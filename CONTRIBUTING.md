@@ -20,6 +20,9 @@ pnpm lint
 pnpm lint:all
 pnpm test
 pnpm build
+pnpm bench:competitors
+pnpm bench:overhead
+pnpm check:overhead
 pnpm test:types:contracts
 pnpm test:types:exports
 pnpm test:types:consumers
@@ -34,6 +37,9 @@ pnpm run ci
 - `pnpm test:types:contracts` runs `tsd` against the built package root instead of importing `src/` directly
 - `pnpm test:types:exports` validates packed `types`, `main`, `module`, and `exports` wiring with `attw`
 - `pnpm test:types:consumers` compiles packed ESM, CJS, and Bundler fixtures to catch consumer-facing DX regressions
+- `pnpm bench:overhead` records bundle, runtime, retained-memory, and synthetic TypeScript overhead into `bench/overhead/reports/current.json`
+- `pnpm bench:competitors` rebuilds the package and writes runtime + retained-memory comparisons against CVA, classname-variants, and tailwind-variants into `bench/reports/competitors.{md,json}`
+- `pnpm check:overhead` re-measures the current tree and compares deterministic size checks against the baseline ref
 - `pnpm lint:pkg` runs `publint` against the packed package metadata and publish surface
 - `pnpm run verify` is the reusable package gate: lint + tests + type checks + package linting
 - `pnpm test:types` runs the full type gate: build + contracts + packed export validation + packed consumer fixtures

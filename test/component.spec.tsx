@@ -1,1550 +1,310 @@
+import { fireEvent, render, screen } from '@testing-library/react';
+import { createRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { createRef, forwardRef, type ComponentPropsWithRef } from 'react';
-import { render, screen } from '@testing-library/react';
-import { defineConfig } from '../src/index';
+import { defineConfig, recipe, styled } from '../src';
 
-describe('variantComponent', () => {
-  const { variantComponent } = defineConfig();
+describe('styled()', () => {
+  it('renders root recipes through the simple fast path', () => {
+    const buttonRecipe = recipe({
+      base: 'inline-flex items-center',
+      variants: {
+        tone: {
+          primary: 'bg-blue text-white',
+          ghost: 'bg-transparent text-slate-900',
+        },
+      },
+    });
+    const Button = styled('button', buttonRecipe);
 
-  describe('basic rendering', () => {
-    it('should render a basic button component', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-      });
+    render(
+      <Button tone="primary" type="button">
+        Press
+      </Button>
+    );
 
-      render(<Button>Click me</Button>);
-      const button = screen.getByText('Click me');
+    const button = screen.getByRole('button', { name: 'Press' });
+    expect(button).toHaveAttribute('type', 'button');
+    expect(button.className).toBe(
+      'inline-flex items-center bg-blue text-white'
+    );
+  });
 
-      expect(button).toBeInTheDocument();
-      expect(button.tagName).toBe('BUTTON');
-      expect(button).toHaveClass('btn');
+  it('supports root custom compose as an advanced path', () => {
+    const badgeRecipe = recipe({
+      base: 'inline-flex',
+      variants: {
+        tone: {
+          info: 'bg-sky-100',
+        },
+      },
+    });
+    const Badge = styled('span', badgeRecipe, {
+      compose: ({ Root, variants }, { children, ...props }) => (
+        <Root {...props} data-tone={variants.tone}>
+          {children}
+        </Root>
+      ),
     });
 
-    it('should render with variants', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-        variants: {
-          color: {
-            primary: 'bg-blue text-white',
-            secondary: 'bg-gray text-black',
-          },
-          size: {
-            small: 'text-sm px-2',
-            large: 'text-lg px-6',
-          },
-        },
-      });
+    render(<Badge tone="info">Info</Badge>);
 
+    const badge = screen.getByText('Info');
+    expect(badge).toHaveAttribute('data-tone', 'info');
+    expect(badge.className).toBe('inline-flex bg-sky-100');
+  });
+
+  it('keeps render polymorphism opt-in and supports element/function render', () => {
+    const linkRecipe = recipe({
+      base: 'inline-flex',
+      variants: {
+        tone: {
+          primary: 'text-blue-600',
+        },
+      },
+    });
+    const LinkButton = styled('button', linkRecipe, { withRender: true });
+    const userClick = vi.fn();
+    const renderClick = vi.fn(event => event.preventDefault());
+    const innerRef = createRef<HTMLAnchorElement>();
+    let outerNode: HTMLButtonElement | null = null;
+
+    render(
+      <LinkButton
+        ref={node => {
+          outerNode = node;
+        }}
+        tone="primary"
+        className="w-full"
+        onClick={userClick}
+        render={
+          <a
+            ref={innerRef}
+            href="/docs"
+            className="underline"
+            onClick={renderClick}
+          />
+        }
+      >
+        Docs
+      </LinkButton>
+    );
+
+    const link = screen.getByRole('link', { name: 'Docs' });
+    fireEvent.click(link);
+
+    expect(link.className).toBe('inline-flex text-blue-600 w-full underline');
+    expect(renderClick).toHaveBeenCalledTimes(1);
+    expect(userClick).toHaveBeenCalledTimes(1);
+    expect(outerNode).toBe(link);
+    expect(innerRef.current).toBe(link);
+
+    const FunctionLink = styled('button', linkRecipe, { withRender: true });
+    const spy = vi.fn();
+
+    render(
+      <FunctionLink
+        tone="primary"
+        render={props => {
+          spy(props);
+          return <a {...props} href="/fn" />;
+        }}
+      >
+        Fn
+      </FunctionLink>
+    );
+
+    expect(spy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        className: 'inline-flex text-blue-600',
+      })
+    );
+    expect(screen.getByRole('link', { name: 'Fn' })).toHaveAttribute(
+      'href',
+      '/fn'
+    );
+  });
+
+  it('rejects render when withRender is disabled', () => {
+    const buttonRecipe = recipe({
+      base: 'inline-flex',
+      variants: {
+        tone: {
+          primary: 'bg-blue',
+        },
+      },
+    });
+    const Button = styled('button', buttonRecipe);
+    const unsupportedRenderProp = { render: <a href="/docs" /> } as object;
+
+    expect(() =>
       render(
-        <Button color="primary" size="large">
-          Click me
+        <Button tone="primary" {...unsupportedRenderProp}>
+          Docs
         </Button>
-      );
-      const button = screen.getByText('Click me');
+      )
+    ).toThrow(/withRender: true/);
+  });
 
-      expect(button).toHaveClass(
-        'btn',
-        'bg-blue',
-        'text-white',
-        'text-lg',
-        'px-6'
-      );
+  it('supports nativeAliases and forwardProps', () => {
+    const inputRecipe = recipe({
+      base: 'block rounded-md',
+      variants: {
+        size: {
+          sm: 'text-sm',
+          md: 'text-base',
+        },
+        disabled: {
+          true: 'opacity-50',
+        },
+      },
+    });
+    const Input = styled('input', inputRecipe, {
+      forwardProps: ['disabled'],
+      nativeAliases: {
+        size: 'htmlSize',
+      },
     });
 
-    it('should apply defaultVariants', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-        variants: {
-          color: {
-            primary: 'bg-blue',
-            secondary: 'bg-gray',
+    render(<Input size="sm" htmlSize={8} disabled value="Hello" readOnly />);
+
+    const input = screen.getByDisplayValue('Hello');
+    expect(input).toHaveAttribute('size', '8');
+    expect(input).toBeDisabled();
+    expect(input.className).toBe('block rounded-md text-sm opacity-50');
+  });
+
+  it('rejects reserved native alias targets on the React surface', () => {
+    const strict = defineConfig({ validate: 'always' });
+    const inputRecipe = strict.recipe({
+      variants: {
+        size: {
+          sm: 'text-sm',
+        },
+      },
+    });
+
+    expect(() =>
+      strict.styled('input', inputRecipe, {
+        nativeAliases: {
+          className: 'htmlClass',
+        },
+      } as never)
+    ).toThrow(/native alias target "className" conflicts with a reserved/);
+  });
+
+  it('requires compose for slotted recipes and lets compose own className routing', () => {
+    const buttonRecipe = recipe({
+      slots: {
+        root: 'inline-flex items-center gap-2',
+        label: 'transition-opacity',
+        spinner: 'hidden size-4',
+      },
+      variants: {
+        tone: {
+          primary: {
+            root: 'bg-blue text-white',
+            spinner: 'text-blue-100',
           },
         },
-        defaultVariants: {
-          color: 'primary',
-        },
-      });
-
-      render(<Button>Default</Button>);
-      const button = screen.getByText('Default');
-
-      expect(button).toHaveClass('btn', 'bg-blue');
-    });
-
-    it('should treat explicit undefined as omission and still apply defaultVariants', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-        variants: {
-          color: {
-            primary: 'bg-blue',
-            secondary: 'bg-gray',
+        loading: {
+          true: {
+            label: 'opacity-0',
+            spinner: 'inline-block animate-spin',
           },
         },
-        defaultVariants: {
-          color: 'primary',
-        },
-      });
-
-      render(<Button {...({ color: undefined } as any)}>Default</Button>);
-      const button = screen.getByText('Default');
-
-      expect(button).toHaveClass('btn', 'bg-blue');
-    });
-
-    it('should handle boolean variants', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-        variants: {
-          disabled: {
-            true: 'opacity-50 cursor-not-allowed',
-            false: 'opacity-100 cursor-pointer',
+        disabled: {
+          true: {
+            root: 'opacity-50',
           },
         },
-      });
-
-      const { rerender } = render(<Button disabled={true}>Disabled</Button>);
-      let button = screen.getByText('Disabled');
-      expect(button).toHaveClass('opacity-50', 'cursor-not-allowed');
-
-      rerender(<Button disabled={false}>Enabled</Button>);
-      button = screen.getByText('Enabled');
-      expect(button).toHaveClass('opacity-100', 'cursor-pointer');
+      },
+      defaultVariants: {
+        tone: 'primary',
+        loading: false,
+      },
     });
 
-    it('should merge className prop', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-        variants: {
-          color: {
-            primary: 'bg-blue',
-          },
-        },
-      });
+    expect(() => styled('button', buttonRecipe as never)).toThrow(
+      /slotted recipes require a compose callback/
+    );
 
-      render(
-        <Button color="primary" className="custom-class">
-          Click me
-        </Button>
-      );
-      const button = screen.getByText('Click me');
-
-      expect(button).toHaveClass('btn', 'bg-blue', 'custom-class');
-    });
-
-    it('should pass through non-variant props', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-        variants: {
-          color: { primary: 'bg-blue' },
-        },
-      });
-
-      const handleClick = vi.fn();
-      render(
-        <Button
-          color="primary"
-          onClick={handleClick}
-          data-testid="my-button"
-          aria-label="Click me"
+    const Button = styled('button', buttonRecipe, {
+      forwardProps: ['disabled'],
+      compose: (
+        { Root, variants, slots },
+        { className, children, ...resolvedProps }
+      ) => (
+        <Root
+          {...resolvedProps}
+          className={slots.root({ className })}
+          aria-busy={variants.loading || undefined}
+          disabled={variants.disabled || variants.loading}
         >
-          Click
-        </Button>
-      );
-
-      const button = screen.getByTestId('my-button');
-      expect(button).toHaveAttribute('aria-label', 'Click me');
-
-      button.click();
-      expect(handleClick).toHaveBeenCalledTimes(1);
+          {variants.loading ? (
+            <span data-testid="spinner" className={slots.spinner()} />
+          ) : null}
+          <span data-testid="label" className={slots.label()}>
+            {children}
+          </span>
+        </Root>
+      ),
     });
 
-    it('should render different HTML elements', () => {
-      const Link = variantComponent('a', {
-        base: 'link',
-      });
+    render(
+      <Button loading disabled className="rounded-md">
+        Save
+      </Button>
+    );
 
-      render(<Link href="/test">Go to test</Link>);
-      const link = screen.getByText('Go to test');
-
-      expect(link.tagName).toBe('A');
-      expect(link).toHaveAttribute('href', '/test');
-      expect(link).toHaveClass('link');
-    });
+    const button = screen.getByRole('button', { name: 'Save' });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    expect(button.className).toBe(
+      'inline-flex items-center gap-2 bg-blue text-white opacity-50 rounded-md'
+    );
+    expect(screen.getByTestId('spinner').className).toBe(
+      'hidden size-4 text-blue-100 inline-block animate-spin'
+    );
+    expect(screen.getByTestId('label').className).toBe(
+      'transition-opacity opacity-0'
+    );
   });
 
-  describe('render prop with ReactElement', () => {
-    it('should render as different element with render prop', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-        variants: {
-          color: { primary: 'bg-blue' },
-        },
-      });
-
-      render(
-        <Button color="primary" render={<a href="/link" />}>
-          Link as button
-        </Button>
-      );
-
-      const link = screen.getByText('Link as button');
-      expect(link.tagName).toBe('A');
-      expect(link).toHaveAttribute('href', '/link');
-      expect(link).toHaveClass('btn', 'bg-blue');
-    });
-
-    it('should merge props with render element props', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-      });
-
-      render(
-        <Button
-          className="extra-class"
-          onClick={() => {}}
-          render={<a href="/link" className="link-class" />}
-        >
-          Link
-        </Button>
-      );
-
-      const link = screen.getByText('Link');
-      expect(link).toHaveClass('btn', 'link-class', 'extra-class');
-      expect(link).toHaveAttribute('href', '/link');
-    });
-
-    it('should merge event handlers with render element', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-      });
-
-      const calls: string[] = [];
-      const componentHandler = () => calls.push('component');
-      const renderHandler = () => calls.push('render');
-
-      render(
-        <Button
-          onClick={componentHandler}
-          render={<a href="#" onClick={renderHandler} />}
-        >
-          Click
-        </Button>
-      );
-
-      const link = screen.getByText('Click');
-      link.click();
-
-      // mergeProps calls override handler first, then base handler
-      expect(calls).toEqual(['render', 'component']);
-    });
-
-    it('should merge styles with render element', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-      });
-
-      render(
-        <Button
-          style={{ color: 'red', fontSize: '16px' }}
-          render={<a style={{ color: 'blue', padding: '10px' }} />}
-        >
-          Styled
-        </Button>
-      );
-
-      const link = screen.getByText('Styled');
-      // Style merging: override wins for color, base fontSize is preserved
-      expect(link).toHaveStyle({
-        padding: '10px',
-      });
-      // Verify that styles were applied (jsdom may render colors differently)
-      expect(link.style.color).toBeTruthy();
-      expect(link.style.padding).toBe('10px');
-    });
-  });
-
-  describe('render prop with function', () => {
-    it('should render using render function', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-        variants: {
-          color: { primary: 'bg-blue' },
-        },
-      });
-
-      render(
-        <Button color="primary" render={props => <a {...props} href="/link" />}>
-          Function render
-        </Button>
-      );
-
-      const link = screen.getByText('Function render');
-      expect(link.tagName).toBe('A');
-      expect(link).toHaveClass('btn', 'bg-blue');
-      expect(link).toHaveAttribute('href', '/link');
-    });
-
-    it('should pass resolved className to render function', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-        variants: {
-          color: { primary: 'bg-blue' },
-        },
-      });
-
-      const renderFn = vi.fn(props => <div {...props} />);
-
-      render(
-        <Button color="primary" render={renderFn}>
-          Test
-        </Button>
-      );
-
-      expect(renderFn).toHaveBeenCalledWith(
-        expect.objectContaining({
-          className: 'btn bg-blue',
-          children: 'Test',
-        })
-      );
-    });
-
-    it('should pass and forward ref through render function props', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-      });
-
-      const ref = createRef<HTMLButtonElement>();
-      let seenRef = null as unknown;
-      const renderFn = vi.fn(props => {
-        seenRef = props.ref;
-        return <button {...props}>Ref target</button>;
-      });
-
-      render(
-        <Button ref={ref} render={renderFn}>
-          Ref target
-        </Button>
-      );
-
-      expect(renderFn).toHaveBeenCalledTimes(1);
-      expect(seenRef).toEqual(expect.any(Function));
-      expect(ref.current).toBeInstanceOf(HTMLButtonElement);
-      expect(ref.current?.textContent).toBe('Ref target');
-    });
-
-    it('should pass broad spread-safe props and forwardProps to render function', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-        variants: {
-          disabled: {
-            true: 'opacity-50',
-            false: 'opacity-100',
+  it('supports slotted compose without a root slot', () => {
+    const fieldRecipe = recipe({
+      slots: {
+        label: 'block text-sm',
+        input: 'block rounded-md',
+      },
+      variants: {
+        invalid: {
+          true: {
+            label: 'text-red-700',
+            input: 'border-red-500',
           },
         },
-        forwardProps: ['disabled'],
-      });
-
-      const onClick = vi.fn();
-      const ref = createRef<HTMLButtonElement>();
-      let seenRef: unknown = null;
-      const renderFn = vi.fn(props => {
-        seenRef = props.ref;
-        return <button {...props} data-testid="rendered-button" />;
-      });
-
-      render(
-        <Button
-          disabled
-          id="submit-action"
-          title="Submit action"
-          role="button"
-          aria-label="Submit form"
-          data-track="checkout"
-          onClick={onClick}
-          ref={ref}
-          render={renderFn}
-        >
-          Submit
-        </Button>
-      );
-
-      expect(renderFn).toHaveBeenCalledWith(
-        expect.objectContaining({
-          className: 'btn opacity-50',
-          disabled: true,
-          id: 'submit-action',
-          title: 'Submit action',
-          role: 'button',
-          'aria-label': 'Submit form',
-          'data-track': 'checkout',
-          onClick,
-          children: 'Submit',
-        })
-      );
-      expect(seenRef).toEqual(expect.any(Function));
-      expect(ref.current).toBeInstanceOf(HTMLButtonElement);
+      },
+    });
+    const Field = styled('label', fieldRecipe, {
+      compose: ({ Root, slots }, { className, children, ...props }) => (
+        <Root {...props} className={slots.label({ className })}>
+          <input aria-label="field" className={slots.input()} />
+          {children}
+        </Root>
+      ),
     });
 
-    it('should exclude variant props from render function args', () => {
-      const Button = variantComponent('button', {
-        variants: {
-          color: { primary: 'bg-blue' },
-          size: { large: 'text-lg' },
-        },
-      });
-
-      const renderFn = vi.fn(props => <div {...props} />);
-
-      render(
-        <Button
-          color="primary"
-          size="large"
-          onClick={() => {}}
-          render={renderFn}
-        >
-          Test
-        </Button>
-      );
-
-      expect(renderFn).toHaveBeenCalledWith(
-        expect.not.objectContaining({
-          color: expect.anything(),
-          size: expect.anything(),
-        })
-      );
-      expect(renderFn).toHaveBeenCalledWith(
-        expect.objectContaining({
-          className: 'bg-blue text-lg',
-          onClick: expect.any(Function),
-        })
-      );
-    });
-  });
-
-  describe('ref forwarding', () => {
-    it('should forward ref to base element', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-      });
-
-      const ref = createRef<HTMLButtonElement>();
-      render(<Button ref={ref}>Click me</Button>);
-
-      expect(ref.current).toBeInstanceOf(HTMLButtonElement);
-      expect(ref.current?.textContent).toBe('Click me');
-    });
-
-    it('should merge ref with render element ref', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-      });
-
-      const componentRef = createRef<HTMLButtonElement>();
-      const renderRef = createRef<HTMLAnchorElement>();
-
-      render(
-        <Button ref={componentRef} render={<a ref={renderRef} />}>
-          Link
-        </Button>
-      );
-
-      expect(componentRef.current).toBeInstanceOf(HTMLAnchorElement);
-      expect(renderRef.current).toBeInstanceOf(HTMLAnchorElement);
-      expect(componentRef.current).toBe(renderRef.current);
-    });
-
-    it('should work with function refs', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-      });
-
-      let element = null as HTMLButtonElement | null;
-      const ref = (el: HTMLButtonElement | null) => {
-        element = el;
-      };
-
-      render(<Button ref={ref}>Click me</Button>);
-
-      expect(element).toBeInstanceOf(HTMLButtonElement);
-      expect(element?.textContent).toBe('Click me');
-    });
-
-    it('should merge function refs in render prop', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-      });
-
-      const elements: (HTMLButtonElement | HTMLAnchorElement | null)[] = [];
-      const componentRef = (el: HTMLButtonElement | null) => {
-        elements.push(el);
-      };
-      const renderRef = (el: HTMLAnchorElement | null) => {
-        elements.push(el);
-      };
-
-      render(
-        <Button ref={componentRef} render={<a ref={renderRef} />}>
-          Link
-        </Button>
-      );
-
-      expect(elements).toHaveLength(2);
-      expect(elements[0]).toBeInstanceOf(HTMLAnchorElement);
-      expect(elements[0]).toBe(elements[1]);
-    });
-  });
-
-  describe('withoutRenderProp option', () => {
-    it('should not accept render prop when withoutRenderProp is true', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-        variants: {
-          color: { primary: 'bg-blue' },
-        },
-        withoutRenderProp: true,
-      });
-
-      // Type-level test - TypeScript should error if we try to pass render prop
-      // Runtime test - render prop should be ignored
-      render(
-        <Button color="primary" {...({ render: <a /> } as any)}>
-          Click me
-        </Button>
-      );
-
-      const button = screen.getByText('Click me');
-      expect(button.tagName).toBe('BUTTON');
-    });
-  });
-
-  describe('custom component (non-string elementType)', () => {
-    it('should render custom component without render prop support', () => {
-      const CustomButton = forwardRef<
-        HTMLButtonElement,
-        ComponentPropsWithRef<'button'>
-      >((props, ref) => <button {...props} ref={ref} data-custom="true" />);
-
-      const Button = variantComponent(CustomButton, {
-        base: 'btn',
-        variants: {
-          color: { primary: 'bg-blue' },
-        },
-      });
-
-      render(<Button color="primary">Custom</Button>);
-
-      const button = screen.getByText('Custom');
-      expect(button).toHaveAttribute('data-custom', 'true');
-      expect(button).toHaveClass('btn', 'bg-blue');
-    });
-
-    it('should forward ref to custom component', () => {
-      const CustomButton = forwardRef<
-        HTMLButtonElement,
-        ComponentPropsWithRef<'button'>
-      >((props, ref) => <button {...props} ref={ref} />);
-
-      const Button = variantComponent(CustomButton, {
-        base: 'btn',
-      });
-
-      const ref = createRef<HTMLButtonElement>();
-      render(<Button ref={ref}>Custom</Button>);
-
-      expect(ref.current).toBeInstanceOf(HTMLButtonElement);
-    });
-  });
-
-  describe('forwardProps option', () => {
-    it('should keep non-intrinsic forwarded variant props available without relying on DOM reflection', () => {
-      const Button = variantComponent('button', {
-        variants: {
-          color: { primary: 'bg-blue' },
-          size: { large: 'text-lg' },
-        },
-        forwardProps: ['size'],
-      });
-
-      render(
-        <Button color="primary" size="large" data-testid="btn">
-          Test
-        </Button>
-      );
-
-      const button = screen.getByTestId('btn');
-      // forwardProps keeps the prop in the resolved props object, but native DOM
-      // reflection still depends on whether the rendered target accepts that prop.
-      expect(button).toHaveClass('bg-blue', 'text-lg');
-    });
-
-    it('should preserve styling when forwarded props are unused by a render element', () => {
-      const Button = variantComponent('button', {
-        variants: {
-          size: { large: 'text-lg' },
-        },
-        forwardProps: ['size'],
-      });
-
-      render(
-        <Button size="large" render={<a href="/" />}>
-          Link
-        </Button>
-      );
-
-      const link = screen.getByText('Link');
-      expect(link).toHaveClass('text-lg');
-    });
-
-    it('should preserve valid intrinsic forwarded props for native elements', () => {
-      const Button = variantComponent('button', {
-        variants: {
-          disabled: {
-            true: 'opacity-50 cursor-not-allowed',
-            false: 'opacity-100',
-          },
-        },
-        forwardProps: ['disabled'],
-      });
-
-      render(<Button disabled>Disabled</Button>);
-
-      const button = screen.getByRole('button');
-      expect(button).toBeDisabled();
-      expect(button).toHaveClass('opacity-50', 'cursor-not-allowed');
-    });
-
-    it('should treat overlap keys as variant-first even for unsupported values', () => {
-      const Input = variantComponent('input', {
-        variants: {
-          size: { sm: 'text-sm', lg: 'text-lg' },
-        },
-      });
-
-      render(
-        <Input
-          {...({
-            size: 20,
-            defaultValue: 'Hello',
-            'data-testid': 'field',
-          } as any)}
-        />
-      );
-
-      const input = screen.getByTestId('field') as HTMLInputElement;
-      expect(input).toHaveValue('Hello');
-      expect(input).not.toHaveAttribute('size');
-      expect(input.className).toBe('');
-    });
-
-    it('should consume matching overlap values as variants', () => {
-      const Input = variantComponent('input', {
-        variants: {
-          size: { sm: 'text-sm', lg: 'text-lg' },
-        },
-      });
-
-      render(<Input size="sm" defaultValue="Hello" data-testid="field" />);
-
-      const input = screen.getByTestId('field');
-      expect(input).toHaveClass('text-sm');
-      expect(input).not.toHaveAttribute('size');
-    });
-
-    it('should forward unsupported overlap values only when forwardProps opts in', () => {
-      const Input = variantComponent('input', {
-        variants: {
-          size: { sm: 'text-sm', lg: 'text-lg' },
-        },
-        forwardProps: ['size'],
-      });
-
-      render(
-        <Input
-          {...({
-            size: 20,
-            defaultValue: 'Hello',
-            'data-testid': 'field',
-          } as any)}
-        />
-      );
-
-      const input = screen.getByTestId('field') as HTMLInputElement;
-      expect(input).toHaveValue('Hello');
-      expect(input).toHaveAttribute('size', '20');
-      expect(input.className).toBe('');
-    });
-  });
-
-  describe('compound variants in component', () => {
-    it('should apply compound variant classes', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-        variants: {
-          color: {
-            primary: 'bg-blue',
-            secondary: 'bg-gray',
-          },
-          size: {
-            small: 'text-sm',
-            large: 'text-lg',
-          },
-        },
-        compoundVariants: [
-          {
-            variants: { color: 'primary', size: 'large' },
-            className: 'font-bold shadow-lg',
-          },
-        ],
-      });
-
-      render(
-        <Button color="primary" size="large">
-          Compound
-        </Button>
-      );
-
-      const button = screen.getByText('Compound');
-      expect(button).toHaveClass(
-        'btn',
-        'bg-blue',
-        'text-lg',
-        'font-bold',
-        'shadow-lg'
-      );
-    });
-  });
-
-  describe('integration with onClassesMerged', () => {
-    it('should apply onClassesMerged to component classes', () => {
-      const { variantComponent } = defineConfig({
-        onClassesMerged: cls => cls.split(' ').sort().join(' '),
-      });
-
-      const Button = variantComponent('button', {
-        base: 'z-10 a-1',
-        variants: {
-          color: { primary: 'y-5 b-2' },
-        },
-      });
-
-      render(<Button color="primary">Sorted</Button>);
-
-      const button = screen.getByText('Sorted');
-      // Classes should be sorted alphabetically
-      expect(button.className).toBe('a-1 b-2 y-5 z-10');
-    });
-  });
-
-  describe('edge cases', () => {
-    it('should handle component without children', () => {
-      const Input = variantComponent('input', {
-        base: 'input',
-        variants: {
-          size: { large: 'text-lg' },
-        },
-      });
-
-      render(<Input size="large" data-testid="input" />);
-      const input = screen.getByTestId('input');
-
-      expect(input).toHaveClass('input', 'text-lg');
-    });
-
-    it('should handle null children', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-      });
-
-      render(<Button>{null}</Button>);
-      const button = screen.getByRole('button');
-
-      expect(button).toBeInTheDocument();
-      expect(button).toHaveClass('btn');
-      expect(button.textContent).toBe('');
-    });
-
-    it('should handle undefined className', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-      });
-
-      render(<Button className={undefined}>Test</Button>);
-      const button = screen.getByText('Test');
-
-      expect(button).toHaveClass('btn');
-    });
-
-    it('should handle empty variants config', () => {
-      const Button = variantComponent('button', {});
-
-      render(<Button>Empty</Button>);
-      const button = screen.getByText('Empty');
-
-      expect(button).toBeInTheDocument();
-      expect(button.className).toBe('');
-    });
-
-    it('should handle render prop returning null', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-      });
-
-      render(<Button render={() => null}>Test</Button>);
-
-      expect(screen.queryByText('Test')).not.toBeInTheDocument();
-    });
-
-    it('should handle render prop with fragment', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-      });
-
-      render(
-        <Button
-          render={({ className, children }) => (
-            <>
-              <div className={className}>{children}</div>
-            </>
-          )}
-        >
-          Fragment
-        </Button>
-      );
-
-      const div = screen.getByText('Fragment');
-      expect(div.tagName).toBe('DIV');
-      expect(div).toHaveClass('btn');
-    });
-
-    it('should re-render when variant props change', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-        variants: {
-          color: {
-            primary: 'bg-blue',
-            secondary: 'bg-gray',
-          },
-        },
-      });
-
-      const { rerender } = render(<Button color="primary">Click</Button>);
-      let button = screen.getByText('Click');
-      expect(button).toHaveClass('bg-blue');
-
-      rerender(<Button color="secondary">Click</Button>);
-      button = screen.getByText('Click');
-      expect(button).toHaveClass('bg-gray');
-      expect(button).not.toHaveClass('bg-blue');
-    });
-  });
-
-  describe('displayName', () => {
-    it('should set displayName for string element type', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-      });
-
-      expect((Button as any).displayName).toBe('Variant(button)');
-    });
-
-    it('should prefer a custom displayName when provided', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-        displayName: 'MyButton',
-      });
-
-      expect((Button as any).displayName).toBe('Variant(MyButton)');
-    });
-
-    it('should set displayName for custom component with displayName', () => {
-      const CustomButton = forwardRef<
-        HTMLButtonElement,
-        ComponentPropsWithRef<'button'>
-      >((props, ref) => <button {...props} ref={ref} />);
-      CustomButton.displayName = 'CustomButton';
-
-      const Button = variantComponent(CustomButton, {
-        base: 'btn',
-      });
-
-      expect((Button as any).displayName).toBe('Variant(CustomButton)');
-    });
-
-    it('should set displayName for custom component with name property', () => {
-      function NamedButton(props: ComponentPropsWithRef<'button'>) {
-        return <button {...props} />;
-      }
-
-      const Button = variantComponent(NamedButton, {
-        base: 'btn',
-      });
-
-      expect((Button as any).displayName).toBe('Variant(NamedButton)');
-    });
-
-    it('should set displayName for anonymous component', () => {
-      const Button = variantComponent(
-        forwardRef<HTMLButtonElement, ComponentPropsWithRef<'button'>>(
-          (props, ref) => <button {...props} ref={ref} />
-        ),
-        { base: 'btn' }
-      );
-
-      // Anonymous forwardRef components have empty displayName
-      expect((Button as any).displayName).toMatch(/^Variant\(/);
-    });
-
-    it('should set displayName with withoutRenderProp', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-        withoutRenderProp: true,
-      });
-
-      expect((Button as any).displayName).toBe('Variant(button)');
-    });
-
-    it('should set displayName for different HTML elements', () => {
-      const Div = variantComponent('div', { base: 'box' });
-      const Span = variantComponent('span', { base: 'inline' });
-      const Input = variantComponent('input', { base: 'field' });
-      const Anchor = variantComponent('a', { base: 'link' });
-
-      expect((Div as any).displayName).toBe('Variant(div)');
-      expect((Span as any).displayName).toBe('Variant(span)');
-      expect((Input as any).displayName).toBe('Variant(input)');
-      expect((Anchor as any).displayName).toBe('Variant(a)');
-    });
-  });
-
-  describe('invalid configuration', () => {
-    it('should throw a detailed aggregated error for component-specific and minimal intrinsic collisions', () => {
-      expect(() =>
-        variantComponent('button', {
-          variants: {
-            ref: { primary: 'ring-2' },
-            children: { primary: 'px-4' },
-            type: { primary: 'bg-blue' },
-          } as any,
-        })
-      ).toThrowError(
-        expect.objectContaining({
-          message: expect.stringContaining("API: variantComponent('button')"),
-        })
-      );
-
-      expect(() =>
-        variantComponent('button', {
-          variants: {
-            ref: { primary: 'ring-2' },
-            children: { primary: 'px-4' },
-            type: { primary: 'bg-blue' },
-          } as any,
-        })
-      ).toThrowError(
-        expect.objectContaining({
-          message: expect.stringContaining(
-            'variant key "ref" conflicts with React ref handling.'
-          ),
-        })
-      );
-
-      expect(() =>
-        variantComponent('button', {
-          variants: {
-            ref: { primary: 'ring-2' },
-            children: { primary: 'px-4' },
-            type: { primary: 'bg-blue' },
-          } as any,
-        })
-      ).toThrowError(
-        expect.objectContaining({
-          message: expect.stringContaining(
-            'variant key "type" conflicts with the intrinsic prop name "type" on "button" elements.'
-          ),
-        })
-      );
-    });
-
-    it('should validate component-only reserved keys for custom components', () => {
-      expect(() =>
-        variantComponent(() => null, {
-          variants: {
-            render: {
-              primary: 'bg-blue',
-            },
-          } as any,
-        })
-      ).toThrowError(
-        expect.objectContaining({
-          message: expect.stringContaining(
-            'conflicts with the polymorphic render prop.'
-          ),
-        })
-      );
-    });
-
-    it('should throw for critical intrinsic collisions like href on anchors', () => {
-      expect(() =>
-        variantComponent('a', {
-          variants: {
-            href: {
-              docs: 'text-blue',
-            },
-          } as any,
-        })
-      ).toThrowError(
-        expect.objectContaining({
-          message: expect.stringContaining(
-            'conflicts with the intrinsic prop name "href" on "a" elements.'
-          ),
-        })
-      );
-    });
-
-    it('should throw for expanded dangerous intrinsic collisions like id, name, src, and htmlFor', () => {
-      expect(() =>
-        variantComponent('input', {
-          variants: {
-            id: {
-              field: 'ring-2',
-            },
-            name: {
-              email: 'border',
-            },
-          } as any,
-        })
-      ).toThrowError(
-        expect.objectContaining({
-          message: expect.stringContaining(
-            'variant key "id" conflicts with the intrinsic prop name "id" on "input" elements.'
-          ),
-        })
-      );
-
-      expect(() =>
-        variantComponent('img', {
-          variants: {
-            src: {
-              hero: 'rounded-xl',
-            },
-          } as any,
-        })
-      ).toThrowError(
-        expect.objectContaining({
-          message: expect.stringContaining(
-            'variant key "src" conflicts with the intrinsic prop name "src" on "img" elements.'
-          ),
-        })
-      );
-
-      expect(() =>
-        variantComponent('label', {
-          variants: {
-            htmlFor: {
-              field: 'font-medium',
-            },
-          } as any,
-        })
-      ).toThrowError(
-        expect.objectContaining({
-          message: expect.stringContaining(
-            'variant key "htmlFor" conflicts with the intrinsic prop name "htmlFor" on "label" elements.'
-          ),
-        })
-      );
-    });
-
-    it('should allow non-dangerous overlap names like onClick and size at runtime', () => {
-      expect(() =>
-        variantComponent('button', {
-          variants: {
-            onClick: {
-              primary: 'cursor-pointer',
-            },
-          } as any,
-        } as any)
-      ).not.toThrow();
-
-      expect(() =>
-        variantComponent('input', {
-          variants: {
-            size: {
-              sm: 'text-sm',
-            },
-          } as any,
-        } as any)
-      ).not.toThrow();
-    });
-
-    it('should not over-restrict element-specific intrinsic collisions on unrelated elements', () => {
-      expect(() =>
-        variantComponent('div', {
-          variants: {
-            method: {
-              post: 'border',
-            },
-          } as any,
-        } as any)
-      ).not.toThrow();
-
-      expect(() =>
-        variantComponent('button', {
-          variants: {
-            alt: {
-              icon: 'rounded',
-            },
-          } as any,
-        } as any)
-      ).not.toThrow();
-
-      expect(() =>
-        variantComponent('span', {
-          variants: {
-            href: {
-              inline: 'underline',
-            },
-          } as any,
-        } as any)
-      ).not.toThrow();
-    });
-  });
-
-  describe('various HTML elements', () => {
-    it('should work with div element', () => {
-      const Box = variantComponent('div', {
-        base: 'box',
-        variants: {
-          padding: { sm: 'p-2', lg: 'p-8' },
-        },
-      });
-
-      render(
-        <Box padding="lg" data-testid="box">
-          Content
-        </Box>
-      );
-      const box = screen.getByTestId('box');
-
-      expect(box.tagName).toBe('DIV');
-      expect(box).toHaveClass('box', 'p-8');
-    });
-
-    it('should work with span element', () => {
-      const Badge = variantComponent('span', {
-        base: 'badge',
-        variants: {
-          color: { success: 'bg-green', error: 'bg-red' },
-        },
-      });
-
-      render(<Badge color="success">OK</Badge>);
-      const badge = screen.getByText('OK');
-
-      expect(badge.tagName).toBe('SPAN');
-      expect(badge).toHaveClass('badge', 'bg-green');
-    });
-
-    it('should work with input element', () => {
-      const Input = variantComponent('input', {
-        base: 'input',
-        variants: {
-          size: { sm: 'text-sm', lg: 'text-lg' },
-        },
-      });
-
-      render(<Input size="sm" placeholder="Enter text" data-testid="input" />);
-      const input = screen.getByTestId('input');
-
-      expect(input.tagName).toBe('INPUT');
-      expect(input).toHaveClass('input', 'text-sm');
-      expect(input).toHaveAttribute('placeholder', 'Enter text');
-    });
-
-    it('should work with textarea element', () => {
-      const Textarea = variantComponent('textarea', {
-        base: 'textarea',
-      });
-
-      render(<Textarea rows={5} data-testid="textarea" />);
-      const textarea = screen.getByTestId('textarea');
-
-      expect(textarea.tagName).toBe('TEXTAREA');
-      expect(textarea).toHaveAttribute('rows', '5');
-    });
-
-    it('should work with select element', () => {
-      const Select = variantComponent('select', {
-        base: 'select',
-      });
-
-      render(
-        <Select data-testid="select">
-          <option value="1">One</option>
-          <option value="2">Two</option>
-        </Select>
-      );
-      const select = screen.getByTestId('select');
-
-      expect(select.tagName).toBe('SELECT');
-      expect(select).toHaveClass('select');
-    });
-  });
-
-  describe('aria and accessibility attributes', () => {
-    it('should pass through aria attributes', () => {
-      const Button = variantComponent('button', { base: 'btn' });
-
-      render(
-        <Button
-          aria-label="Close dialog"
-          aria-pressed={true}
-          aria-disabled={false}
-          aria-describedby="tooltip"
-        >
-          ×
-        </Button>
-      );
-
-      const button = screen.getByRole('button');
-      expect(button).toHaveAttribute('aria-label', 'Close dialog');
-      expect(button).toHaveAttribute('aria-pressed', 'true');
-      expect(button).toHaveAttribute('aria-disabled', 'false');
-      expect(button).toHaveAttribute('aria-describedby', 'tooltip');
-    });
-
-    it('should pass through role attribute', () => {
-      const Div = variantComponent('div', { base: 'alert' });
-
-      render(<Div role="alert">Error message</Div>);
-
-      const element = screen.getByRole('alert');
-      expect(element).toBeInTheDocument();
-    });
-
-    it('should work with disabled button', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-        variants: {
-          variant: { primary: 'bg-blue', disabled: 'bg-gray' },
-        },
-      });
-
-      render(
-        <Button variant="disabled" disabled>
-          Disabled
-        </Button>
-      );
-
-      const button = screen.getByRole('button');
-      expect(button).toBeDisabled();
-      expect(button).toHaveClass('bg-gray');
-    });
-  });
-
-  describe('multiple instances', () => {
-    it('should create independent component instances', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-        variants: {
-          color: { red: 'bg-red', blue: 'bg-blue' },
-        },
-      });
-
-      render(
-        <>
-          <Button color="red" data-testid="btn1">
-            Red
-          </Button>
-          <Button color="blue" data-testid="btn2">
-            Blue
-          </Button>
-        </>
-      );
-
-      const btn1 = screen.getByTestId('btn1');
-      const btn2 = screen.getByTestId('btn2');
-
-      expect(btn1).toHaveClass('bg-red');
-      expect(btn1).not.toHaveClass('bg-blue');
-      expect(btn2).toHaveClass('bg-blue');
-      expect(btn2).not.toHaveClass('bg-red');
-    });
-
-    it('should handle rapid state changes', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-        variants: {
-          active: { true: 'active', false: 'inactive' },
-        },
-      });
-
-      const { rerender } = render(<Button active={true}>Test</Button>);
-
-      // Loop 10 times (0-9), last iteration i=9, 9%2===1, so active=false
-      for (let i = 0; i < 10; i++) {
-        rerender(<Button active={i % 2 === 0}>Test</Button>);
-      }
-
-      const button = screen.getByText('Test');
-      // Last iteration: 9 % 2 === 1, so active={false} → 'inactive'
-      expect(button).toHaveClass('inactive');
-    });
-  });
-
-  describe('SSR compatibility', () => {
-    it('should render to string without errors', async () => {
-      const { renderToString } = await import('react-dom/server');
-
-      const Button = variantComponent('button', {
-        base: 'btn',
-        variants: {
-          color: { primary: 'bg-blue', secondary: 'bg-gray' },
-        },
-      });
-
-      const html = renderToString(<Button color="primary">SSR Button</Button>);
-
-      expect(html).toContain('btn');
-      expect(html).toContain('bg-blue');
-      expect(html).toContain('SSR Button');
-    });
-
-    it('should handle all variant types in SSR', async () => {
-      const { renderToString } = await import('react-dom/server');
-
-      const Button = variantComponent('button', {
-        base: 'btn',
-        variants: {
-          color: { primary: 'bg-blue' },
-          disabled: { true: 'opacity-50', false: 'opacity-100' },
-        },
-        defaultVariants: { color: 'primary' },
-        compoundVariants: [
-          {
-            variants: { color: 'primary', disabled: true },
-            className: 'cursor-not-allowed',
-          },
-        ],
-      });
-
-      const html = renderToString(<Button disabled>Disabled</Button>);
-
-      expect(html).toContain('btn');
-      expect(html).toContain('bg-blue');
-      expect(html).toContain('opacity-50');
-      expect(html).toContain('cursor-not-allowed');
-    });
-
-    it('should render polymorphic components in SSR', async () => {
-      const { renderToString } = await import('react-dom/server');
-
-      const Button = variantComponent('button', {
-        base: 'btn',
-        variants: {
-          color: { primary: 'bg-blue' },
-        },
-      });
-
-      const html = renderToString(
-        <Button color="primary" render={<a href="/test" />}>
-          Link
-        </Button>
-      );
-
-      expect(html).toContain('<a');
-      expect(html).toContain('href="/test"');
-      expect(html).toContain('btn');
-      expect(html).toContain('bg-blue');
-    });
-  });
-
-  describe('event handler edge cases', () => {
-    it('should preserve event.preventDefault when composing handlers', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-      });
-
-      const preventDefaultSpy = vi.fn();
-      const originalHandler = vi.fn((e: React.MouseEvent) => {
-        e.preventDefault();
-        preventDefaultSpy();
-      });
-
-      render(
-        <Button
-          render={<a href="/test" onClick={originalHandler} />}
-          onClick={() => {}}
-        >
-          Link
-        </Button>
-      );
-
-      const link = screen.getByText('Link');
-      link.click();
-
-      expect(preventDefaultSpy).toHaveBeenCalled();
-    });
-
-    it('should call both handlers when composing onClick', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-      });
-
-      const handler1 = vi.fn();
-      const handler2 = vi.fn();
-
-      render(
-        <Button render={<a href="#" onClick={handler1} />} onClick={handler2}>
-          Link
-        </Button>
-      );
-
-      const link = screen.getByText('Link');
-      link.click();
-
-      expect(handler1).toHaveBeenCalled();
-      expect(handler2).toHaveBeenCalled();
-    });
-
-    it('should call handlers in correct order (override first, then base)', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-      });
-
-      const order: string[] = [];
-      const baseHandler = vi.fn(() => order.push('base'));
-      const overrideHandler = vi.fn(() => order.push('override'));
-
-      render(
-        <Button
-          render={<a href="#" onClick={overrideHandler} />}
-          onClick={baseHandler}
-        >
-          Link
-        </Button>
-      );
-
-      const link = screen.getByText('Link');
-      link.click();
-
-      expect(order).toEqual(['override', 'base']);
-    });
-
-    it('should handle multiple event types independently', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-      });
-
-      const onClickBase = vi.fn();
-      const onClickOverride = vi.fn();
-      const onFocusBase = vi.fn();
-      const onFocusOverride = vi.fn();
-
-      render(
-        <Button
-          render={
-            <a href="#" onClick={onClickOverride} onFocus={onFocusOverride} />
-          }
-          onClick={onClickBase}
-          onFocus={onFocusBase}
-        >
-          Link
-        </Button>
-      );
-
-      const link = screen.getByText('Link');
-
-      link.click();
-      expect(onClickBase).toHaveBeenCalled();
-      expect(onClickOverride).toHaveBeenCalled();
-
-      link.focus();
-      expect(onFocusBase).toHaveBeenCalled();
-      expect(onFocusOverride).toHaveBeenCalled();
-    });
-  });
-
-  describe('forwardProps with render prop', () => {
-    it('should forward specified props to render element', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-        variants: {
-          size: { sm: 'text-sm', lg: 'text-lg' },
-        },
-        forwardProps: ['size'],
-      });
-
-      render(
-        <Button
-          size="lg"
-          render={props => <div data-testid="custom" data-size={props.size} />}
-        >
-          Test
-        </Button>
-      );
-
-      const element = screen.getByTestId('custom');
-      expect(element).toHaveAttribute('data-size', 'lg');
-    });
-
-    it('should not forward variant props not in forwardProps', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-        variants: {
-          color: { primary: 'bg-blue' },
-          size: { lg: 'text-lg' },
-        },
-        forwardProps: ['size'],
-      });
-
-      const renderFn = vi.fn((props: any) => <div data-testid="custom" />);
-
-      render(
-        <Button color="primary" size="lg" render={renderFn}>
-          Test
-        </Button>
-      );
-
-      expect(renderFn).toHaveBeenCalledWith(
-        expect.objectContaining({
-          size: 'lg',
-        })
-      );
-      expect(renderFn).toHaveBeenCalledWith(
-        expect.not.objectContaining({
-          color: 'primary',
-        })
-      );
-    });
-
-    it('should work with compound variants and forwardProps', () => {
-      const Button = variantComponent('button', {
-        base: 'btn',
-        variants: {
-          color: { primary: 'bg-blue' },
-          size: { lg: 'text-lg' },
-        },
-        compoundVariants: [
-          {
-            variants: { color: 'primary', size: 'lg' },
-            className: 'font-bold',
-          },
-        ],
-        forwardProps: ['size'],
-      });
-
-      render(
-        <Button
-          color="primary"
-          size="lg"
-          render={<a href="#" data-testid="link" />}
-        >
-          Link
-        </Button>
-      );
-
-      const link = screen.getByTestId('link');
-      expect(link).toHaveClass('btn', 'bg-blue', 'text-lg', 'font-bold');
-    });
+    render(
+      <Field invalid className="font-medium">
+        Email
+      </Field>
+    );
+
+    expect(screen.getByText('Email').className).toBe(
+      'block text-sm text-red-700 font-medium'
+    );
+    expect(screen.getByLabelText('field').className).toBe(
+      'block rounded-md border-red-500'
+    );
   });
 });

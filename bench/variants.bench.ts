@@ -1,16 +1,14 @@
 import { bench, describe } from 'vitest';
-import { defineConfig } from '../src';
+import { recipe } from '../src';
 
-const { variants } = defineConfig();
-
-const simpleVariants = variants({
+const simpleVariants = recipe({
   base: 'btn',
   variants: {
     color: { primary: 'bg-blue-500', secondary: 'bg-gray-500' },
   },
 });
 
-const multipleVariants = variants({
+const multipleVariants = recipe({
   base: 'btn px-4 py-2 rounded',
   variants: {
     color: {
@@ -28,7 +26,7 @@ const multipleVariants = variants({
   },
 });
 
-const complexVariants = variants({
+const complexVariants = recipe({
   base: 'btn px-4 py-2 rounded font-medium',
   variants: {
     color: {
@@ -52,37 +50,44 @@ const complexVariants = variants({
   },
   compoundVariants: [
     {
-      variants: { color: 'primary', variant: 'outline' },
+      color: 'primary',
+      variant: 'outline',
       className: 'border-blue-500 text-blue-500',
     },
     {
-      variants: { color: 'secondary', variant: 'outline' },
+      color: 'secondary',
+      variant: 'outline',
       className: 'border-gray-500 text-gray-500',
     },
     {
-      variants: { color: 'danger', variant: 'outline' },
+      color: 'danger',
+      variant: 'outline',
       className: 'border-red-500 text-red-500',
     },
     {
-      variants: { color: 'primary', variant: 'ghost' },
+      color: 'primary',
+      variant: 'ghost',
       className: 'text-blue-500 hover:bg-blue-50',
     },
     {
-      variants: { color: 'secondary', variant: 'ghost' },
+      color: 'secondary',
+      variant: 'ghost',
       className: 'text-gray-500 hover:bg-gray-50',
     },
     {
-      variants: { color: 'danger', variant: 'ghost' },
+      color: 'danger',
+      variant: 'ghost',
       className: 'text-red-500 hover:bg-red-50',
     },
     {
-      variants: { disabled: true, variant: 'outline' },
+      disabled: true,
+      variant: 'outline',
       className: 'border-opacity-50',
     },
   ],
 });
 
-const manyCompoundVariants = variants({
+const manyCompoundVariants = recipe({
   base: 'component',
   variants: {
     a: { a1: 'a1', a2: 'a2', a3: 'a3' },
@@ -91,24 +96,24 @@ const manyCompoundVariants = variants({
     d: { d1: 'd1', d2: 'd2', d3: 'd3' },
   },
   compoundVariants: [
-    { variants: { a: 'a1', b: 'b1' }, className: 'cv-1' },
-    { variants: { a: 'a2', b: 'b2' }, className: 'cv-2' },
-    { variants: { a: 'a3', b: 'b3' }, className: 'cv-3' },
-    { variants: { b: 'b1', c: 'c1' }, className: 'cv-4' },
-    { variants: { b: 'b2', c: 'c2' }, className: 'cv-5' },
-    { variants: { b: 'b3', c: 'c3' }, className: 'cv-6' },
-    { variants: { c: 'c1', d: 'd1' }, className: 'cv-7' },
-    { variants: { c: 'c2', d: 'd2' }, className: 'cv-8' },
-    { variants: { c: 'c3', d: 'd3' }, className: 'cv-9' },
-    { variants: { a: 'a1', d: 'd1' }, className: 'cv-10' },
-    { variants: { a: 'a2', d: 'd2' }, className: 'cv-11' },
-    { variants: { a: 'a3', d: 'd3' }, className: 'cv-12' },
-    { variants: { a: ['a1', 'a2'], b: ['b1', 'b2'] }, className: 'cv-array-1' },
-    { variants: { c: ['c1', 'c2'], d: ['d1', 'd2'] }, className: 'cv-array-2' },
+    { a: 'a1', b: 'b1', className: 'cv-1' },
+    { a: 'a2', b: 'b2', className: 'cv-2' },
+    { a: 'a3', b: 'b3', className: 'cv-3' },
+    { b: 'b1', c: 'c1', className: 'cv-4' },
+    { b: 'b2', c: 'c2', className: 'cv-5' },
+    { b: 'b3', c: 'c3', className: 'cv-6' },
+    { c: 'c1', d: 'd1', className: 'cv-7' },
+    { c: 'c2', d: 'd2', className: 'cv-8' },
+    { c: 'c3', d: 'd3', className: 'cv-9' },
+    { a: 'a1', d: 'd1', className: 'cv-10' },
+    { a: 'a2', d: 'd2', className: 'cv-11' },
+    { a: 'a3', d: 'd3', className: 'cv-12' },
+    { a: ['a1', 'a2'], b: ['b1', 'b2'], className: 'cv-array-1' },
+    { c: ['c1', 'c2'], d: ['d1', 'd2'], className: 'cv-array-2' },
   ],
 });
 
-describe('variants()', () => {
+describe('recipe()', () => {
   describe('simple variants', () => {
     bench('resolve with props', () => {
       simpleVariants({ color: 'primary' });
@@ -171,9 +176,9 @@ describe('variants()', () => {
   });
 });
 
-describe('variants() creation', () => {
+describe('recipe() creation', () => {
   bench('create simple variants', () => {
-    variants({
+    recipe({
       base: 'btn',
       variants: {
         color: { primary: 'bg-blue', secondary: 'bg-gray' },
@@ -182,7 +187,7 @@ describe('variants() creation', () => {
   });
 
   bench('create complex variants', () => {
-    variants({
+    recipe({
       base: 'btn px-4 py-2',
       variants: {
         color: { primary: 'bg-blue', secondary: 'bg-gray', danger: 'bg-red' },
@@ -196,11 +201,13 @@ describe('variants() creation', () => {
       },
       compoundVariants: [
         {
-          variants: { color: 'primary', variant: 'outline' },
+          color: 'primary',
+          variant: 'outline',
           className: 'border-blue',
         },
         {
-          variants: { color: 'secondary', variant: 'outline' },
+          color: 'secondary',
+          variant: 'outline',
           className: 'border-gray',
         },
       ],

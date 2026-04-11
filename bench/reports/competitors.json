@@ -1,0 +1,366 @@
+{
+  "environment": {
+    "mode": "production",
+    "node": "v22.17.0",
+    "platform": "darwin arm64"
+  },
+  "generatedAt": "2026-04-11T00:54:34.860Z",
+  "runtime": {
+    "plain": {
+      "simpleDefaults": {
+        "react-class-variants": {
+          "opsPerSec": 11376237.79206793,
+          "samples": 5
+        },
+        "class-variance-authority": {
+          "opsPerSec": 6272364.408769729,
+          "samples": 5
+        },
+        "classname-variants": {
+          "opsPerSec": 4945567.262864501,
+          "samples": 5
+        },
+        "tailwind-variants/lite": {
+          "opsPerSec": 1517816.86175626,
+          "samples": 5
+        }
+      },
+      "simpleExplicit": {
+        "react-class-variants": {
+          "opsPerSec": 12020198.637397248,
+          "samples": 5
+        },
+        "class-variance-authority": {
+          "opsPerSec": 5512110.720153318,
+          "samples": 5
+        },
+        "classname-variants": {
+          "opsPerSec": 5532677.267869608,
+          "samples": 5
+        },
+        "tailwind-variants/lite": {
+          "opsPerSec": 1659973.8572805913,
+          "samples": 5
+        }
+      },
+      "complexWithCompound": {
+        "react-class-variants": {
+          "opsPerSec": 5426010.217130066,
+          "samples": 5
+        },
+        "class-variance-authority": {
+          "opsPerSec": 769597.8512715999,
+          "samples": 5
+        },
+        "classname-variants": {
+          "opsPerSec": 2290103.440078539,
+          "samples": 5
+        },
+        "tailwind-variants/lite": {
+          "opsPerSec": 577556.2712535359,
+          "samples": 5
+        }
+      },
+      "complexNoCompound": {
+        "react-class-variants": {
+          "opsPerSec": 6332430.602705449,
+          "samples": 5
+        },
+        "class-variance-authority": {
+          "opsPerSec": 1154210.1324547897,
+          "samples": 5
+        },
+        "classname-variants": {
+          "opsPerSec": 2500167.497822513,
+          "samples": 5
+        },
+        "tailwind-variants/lite": {
+          "opsPerSec": 740741.3597838529,
+          "samples": 5
+        }
+      },
+      "complexExplicit": {
+        "react-class-variants": {
+          "opsPerSec": 5124472.661483949,
+          "samples": 5
+        },
+        "class-variance-authority": {
+          "opsPerSec": 883828.8341726537,
+          "samples": 5
+        },
+        "classname-variants": {
+          "opsPerSec": 2375468.1615170306,
+          "samples": 5
+        },
+        "tailwind-variants/lite": {
+          "opsPerSec": 541197.3849342406,
+          "samples": 5
+        }
+      }
+    },
+    "tailwindAware": {
+      "simpleDefaults": {
+        "react-class-variants + twMerge": {
+          "opsPerSec": 4657468.266162989,
+          "samples": 5
+        },
+        "class-variance-authority + twMerge": {
+          "opsPerSec": 3634529.9389738915,
+          "samples": 5
+        },
+        "classname-variants + twMerge": {
+          "opsPerSec": 3491973.2235494037,
+          "samples": 5
+        },
+        "tailwind-variants": {
+          "opsPerSec": 1285259.2639578886,
+          "samples": 5
+        }
+      },
+      "simpleExplicit": {
+        "react-class-variants + twMerge": {
+          "opsPerSec": 4786482.255787327,
+          "samples": 5
+        },
+        "class-variance-authority + twMerge": {
+          "opsPerSec": 3356356.693825161,
+          "samples": 5
+        },
+        "classname-variants + twMerge": {
+          "opsPerSec": 3701926.583392032,
+          "samples": 5
+        },
+        "tailwind-variants": {
+          "opsPerSec": 1351890.7185618633,
+          "samples": 5
+        }
+      },
+      "complexWithCompound": {
+        "react-class-variants + twMerge": {
+          "opsPerSec": 2332728.0773278764,
+          "samples": 5
+        },
+        "class-variance-authority + twMerge": {
+          "opsPerSec": 880325.652368091,
+          "samples": 5
+        },
+        "classname-variants + twMerge": {
+          "opsPerSec": 1504691.662200343,
+          "samples": 5
+        },
+        "tailwind-variants": {
+          "opsPerSec": 448668.3726368041,
+          "samples": 5
+        }
+      },
+      "complexNoCompound": {
+        "react-class-variants + twMerge": {
+          "opsPerSec": 3194377.639356485,
+          "samples": 5
+        },
+        "class-variance-authority + twMerge": {
+          "opsPerSec": 946287.7403797787,
+          "samples": 5
+        },
+        "classname-variants + twMerge": {
+          "opsPerSec": 1926638.4128466763,
+          "samples": 5
+        },
+        "tailwind-variants": {
+          "opsPerSec": 658641.5966960042,
+          "samples": 5
+        }
+      },
+      "complexExplicit": {
+        "react-class-variants + twMerge": {
+          "opsPerSec": 1780459.9321529737,
+          "samples": 5
+        },
+        "class-variance-authority + twMerge": {
+          "opsPerSec": 621366.1575457421,
+          "samples": 5
+        },
+        "classname-variants + twMerge": {
+          "opsPerSec": 1279483.465050537,
+          "samples": 5
+        },
+        "tailwind-variants": {
+          "opsPerSec": 422151.5638047079,
+          "samples": 5
+        }
+      }
+    }
+  },
+  "creation": {
+    "plain": {
+      "freshComplexConfig": {
+        "react-class-variants": {
+          "opsPerSec": 766073.9808301431,
+          "samples": 5
+        },
+        "class-variance-authority": {
+          "opsPerSec": 13199756.018413039,
+          "samples": 5
+        },
+        "classname-variants": {
+          "opsPerSec": 12333349.238343107,
+          "samples": 5
+        },
+        "tailwind-variants/lite": {
+          "opsPerSec": 6911780.398190793,
+          "samples": 5
+        }
+      },
+      "reusedComplexConfig": {
+        "react-class-variants": {
+          "opsPerSec": 840676.4205661791,
+          "samples": 5
+        },
+        "class-variance-authority": {
+          "opsPerSec": 41843095.39226142,
+          "samples": 5
+        },
+        "classname-variants": {
+          "opsPerSec": 40344352.87779632,
+          "samples": 5
+        },
+        "tailwind-variants/lite": {
+          "opsPerSec": 11854992.128285322,
+          "samples": 5
+        }
+      }
+    },
+    "tailwindAware": {
+      "freshComplexConfig": {
+        "react-class-variants + twMerge": {
+          "opsPerSec": 789285.8187563445,
+          "samples": 5
+        },
+        "class-variance-authority + twMerge": {
+          "opsPerSec": 12308197.981455205,
+          "samples": 5
+        },
+        "classname-variants + twMerge": {
+          "opsPerSec": 11277762.377385102,
+          "samples": 5
+        },
+        "tailwind-variants": {
+          "opsPerSec": 6976503.501003393,
+          "samples": 5
+        }
+      },
+      "reusedComplexConfig": {
+        "react-class-variants + twMerge": {
+          "opsPerSec": 864282.170683086,
+          "samples": 5
+        },
+        "class-variance-authority + twMerge": {
+          "opsPerSec": 37642253.328263275,
+          "samples": 5
+        },
+        "classname-variants + twMerge": {
+          "opsPerSec": 32878506.888067592,
+          "samples": 5
+        },
+        "tailwind-variants": {
+          "opsPerSec": 11238102.588126823,
+          "samples": 5
+        }
+      }
+    }
+  },
+  "memory": {
+    "plain": {
+      "freshComplexConfig": {
+        "react-class-variants": {
+          "bytesPerInstance": 2736.164,
+          "count": 10000,
+          "retainedBytes": 27361640
+        },
+        "class-variance-authority": {
+          "bytesPerInstance": 728.5592,
+          "count": 10000,
+          "retainedBytes": 7285592
+        },
+        "classname-variants": {
+          "bytesPerInstance": 888.3592,
+          "count": 10000,
+          "retainedBytes": 8883592
+        },
+        "tailwind-variants/lite": {
+          "bytesPerInstance": 1088.3112,
+          "count": 10000,
+          "retainedBytes": 10883112
+        }
+      },
+      "freshSimpleConfig": {
+        "react-class-variants": {
+          "bytesPerInstance": 1028.5704,
+          "count": 10000,
+          "retainedBytes": 10285704
+        },
+        "class-variance-authority": {
+          "bytesPerInstance": 320.4888,
+          "count": 10000,
+          "retainedBytes": 3204888
+        },
+        "classname-variants": {
+          "bytesPerInstance": 360.5496,
+          "count": 10000,
+          "retainedBytes": 3605496
+        },
+        "tailwind-variants/lite": {
+          "bytesPerInstance": 706.08,
+          "count": 10000,
+          "retainedBytes": 7060800
+        }
+      }
+    },
+    "tailwindAware": {
+      "freshComplexConfig": {
+        "react-class-variants + twMerge": {
+          "bytesPerInstance": 2736.7512,
+          "count": 10000,
+          "retainedBytes": 27367512
+        },
+        "class-variance-authority + twMerge": {
+          "bytesPerInstance": 824.1248,
+          "count": 10000,
+          "retainedBytes": 8241248
+        },
+        "classname-variants + twMerge": {
+          "bytesPerInstance": 984.1248,
+          "count": 10000,
+          "retainedBytes": 9841248
+        },
+        "tailwind-variants": {
+          "bytesPerInstance": 1087.1608,
+          "count": 10000,
+          "retainedBytes": 10871608
+        }
+      },
+      "freshSimpleConfig": {
+        "react-class-variants + twMerge": {
+          "bytesPerInstance": 1022.8808,
+          "count": 10000,
+          "retainedBytes": 10228808
+        },
+        "class-variance-authority + twMerge": {
+          "bytesPerInstance": 417.0088,
+          "count": 10000,
+          "retainedBytes": 4170088
+        },
+        "classname-variants + twMerge": {
+          "bytesPerInstance": 456.4736,
+          "count": 10000,
+          "retainedBytes": 4564736
+        },
+        "tailwind-variants": {
+          "bytesPerInstance": 704.4264,
+          "count": 10000,
+          "retainedBytes": 7044264
+        }
+      }
+    }
+  }
+}

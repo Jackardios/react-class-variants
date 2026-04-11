@@ -1,9 +1,4 @@
-import {
-  createElement,
-  createRef,
-  type ComponentPropsWithoutRef,
-  type RefCallback,
-} from 'react';
+import { createElement } from 'react';
 import rcv = require('react-class-variants');
 
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
@@ -13,10 +8,10 @@ type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
   : false;
 type Expect<T extends true> = T;
 
-const { defineConfig, mergeProps, mergeRefs } = rcv;
-const { variants, variantComponent, variantPropsResolver } = defineConfig();
+const { recipe: configuredRecipe, styled: configuredStyled } =
+  rcv.defineConfig();
 
-const link = variants({
+const link = rcv.recipe({
   variants: {
     intent: {
       primary: 'text-blue-600',
@@ -24,154 +19,112 @@ const link = variants({
     },
     underline: {
       true: 'underline',
-      false: 'no-underline',
     },
   },
 });
 
-type LinkOptions = rcv.ExtractVariantOptions<typeof link>;
-type _LinkOptions = Expect<
-  Equal<
-    LinkOptions,
-    {
-      intent: 'primary' | 'secondary';
-      underline?: boolean;
-    }
-  >
->;
+type LinkOptions = rcv.RecipeInput<typeof link>;
+const linkPrimary: LinkOptions = { intent: 'primary' };
+const linkSecondary: LinkOptions = { intent: 'secondary', underline: true };
+void linkPrimary;
+void linkSecondary;
 
-const resolveLinkProps = variantPropsResolver({
+configuredRecipe({
+  base: 'inline-flex',
   variants: {
     intent: {
       primary: 'text-blue-600',
-      secondary: 'text-slate-700',
-    },
-    size: {
-      sm: 'text-sm',
-      lg: 'text-lg',
     },
   },
-  forwardProps: ['size'],
 });
 
-const resolvedLinkProps = resolveLinkProps({
-  intent: 'primary',
-  size: 'lg',
-  className: ['inline-flex', ['gap-2'], null, undefined],
-});
-
-type _ResolvedClassName = Expect<
-  Equal<typeof resolvedLinkProps.className, string>
->;
-type _ResolvedForwardedSize = Expect<
-  Equal<typeof resolvedLinkProps.size, 'lg'>
->;
-
-const Button = variantComponent('button', {
-  variants: {
-    intent: {
-      primary: 'text-blue-600',
-      secondary: 'text-slate-700',
+const Button = rcv.styled(
+  'button',
+  rcv.recipe({
+    variants: {
+      intent: {
+        primary: 'text-blue-600',
+        secondary: 'text-slate-700',
+      },
+      size: {
+        sm: 'text-sm',
+        lg: 'text-lg',
+      },
     },
-    size: {
-      sm: 'text-sm',
-      lg: 'text-lg',
-    },
-  },
-  forwardProps: ['intent'],
-});
+  }),
+  {
+    withRender: true,
+  }
+);
 
 Button({
   intent: 'primary',
   size: 'lg',
   render: props => {
     type _RenderClassName = Expect<Equal<typeof props.className, string>>;
-    type _RenderIntent = Expect<
-      Equal<typeof props.intent, 'primary' | 'secondary'>
-    >;
-
-    // @ts-expect-error non-forwarded variants stay out of render props
-    const leakedSize = props.size;
-    void leakedSize;
-
-    // @ts-expect-error base-element-specific props are intentionally not promised
-    const leakedType = props.type;
-    void leakedType;
-
     return createElement('a', { ...props, href: '/' });
   },
 });
 
-const Input = variantComponent('input', {
-  variants: {
-    size: {
-      sm: 'text-sm',
-      lg: 'text-lg',
+const Input = configuredStyled(
+  'input',
+  rcv.recipe({
+    variants: {
+      size: {
+        sm: 'text-sm',
+        lg: 'text-lg',
+      },
     },
-  },
-});
+  }),
+  {
+    nativeAliases: {
+      size: 'htmlSize',
+    },
+  }
+);
 
 Input({
   size: 'sm',
+  htmlSize: 20,
   value: 'variant size',
 });
 
 Input({
-  // @ts-expect-error overlap keys are variant-first and no longer accept native fallback types
+  // @ts-expect-error overlap keys are variant-first and require nativeAliases
   size: 20,
   value: 'native size',
 });
-
-const baseButtonProps: ComponentPropsWithoutRef<'button'> = {
-  className: 'base',
-  disabled: false,
-  type: 'button',
-};
-const overrideButtonProps: Partial<ComponentPropsWithoutRef<'button'>> = {
-  className: 'override',
-  disabled: true,
-};
-const mergedButtonProps = mergeProps(baseButtonProps, overrideButtonProps);
-type _MergedClassName = Expect<
-  Equal<typeof mergedButtonProps.className, string | undefined>
->;
-type _MergedType = Expect<
-  Equal<
-    typeof mergedButtonProps.type,
-    'button' | 'submit' | 'reset' | undefined
-  >
->;
-
-const mergedConflictProps = mergeProps({ foo: 'base' }, { foo: 1 });
-type _MergedConflictFoo = Expect<Equal<typeof mergedConflictProps.foo, number>>;
-
-const buttonRefObject = createRef<HTMLButtonElement>();
-const buttonRefCallback: RefCallback<HTMLButtonElement> = () => {};
-const mergedRefCallback = mergeRefs(buttonRefObject, buttonRefCallback);
-type _MergedRef = Expect<
-  Equal<typeof mergedRefCallback, RefCallback<HTMLButtonElement> | undefined>
->;
 
 link({ intent: 'primary', underline: true });
 
 // @ts-expect-error invalid variant value must fail from require() consumers
 link({ intent: 'ghost' });
 
-variantPropsResolver({
+const multipartButtonRecipe = rcv.recipe({
+  slots: {
+    root: 'inline-flex',
+    icon: 'size-4',
+  },
   variants: {
-    size: {
-      sm: 'text-sm',
+    intent: {
+      primary: {
+        root: 'text-blue-600',
+        icon: 'text-blue-300',
+      },
     },
   },
-  // @ts-expect-error typo in forwardProps must be rejected from require() consumers
-  forwardProps: ['sizze'],
 });
 
-// @ts-expect-error reserved keys must be rejected from require() consumers
-variantComponent('button', {
-  variants: {
-    ref: {
-      primary: 'ring-2',
-    },
-  },
+const MultipartButton = rcv.styled('button', multipartButtonRecipe, {
+  compose: ({ Root, slots }) =>
+    createElement(
+      Root,
+      { className: slots.root() },
+      createElement('span', { className: slots.icon() })
+    ),
+});
+
+MultipartButton({
+  intent: 'primary',
+  className: 'px-4',
 });

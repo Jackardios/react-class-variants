@@ -5,1435 +5,296 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A lightweight, type-safe library for building composable React components with dynamic CSS class variations. Works seamlessly with **Tailwind CSS**, **CSS Modules**, or any CSS solution.
+`react-class-variants` is a recipe-first API for type-safe class composition in React components.
 
-> **Important**
->
-> `react-tailwind-variants` was renamed to `react-class-variants`.
-> The v2 line is currently published on the `alpha` channel, so the recommended install command is `react-class-variants@alpha`.
-> The legacy `react-tailwind-variants` package is frozen and kept only for migration and maintenance notices.
-> Start with the [Migration Guide](https://github.com/Jackardios/react-class-variants/blob/next/docs/migration-from-react-tailwind-variants.md) and keep the [Legacy v1 Docs](https://github.com/Jackardios/react-class-variants/blob/next/docs/react-tailwind-variants-v1.md) handy while migrating.
+It provides:
 
-## Why React Class Variants?
+- one adaptive `recipe()` primitive for root-only and slotted recipes
+- one `styled()` builder for simple components and custom composition
+- `defineConfig()` for shared merge behavior such as `tailwind-merge`
+- strict variant inference for required, defaulted, and boolean variants
+- opt-in render polymorphism through `withRender`
 
-Building UI components often requires managing multiple visual states and combinations. React Class Variants provides a powerful API inspired by [Stitches.js](https://stitches.dev/) that makes this trivial:
+## Status
 
-```tsx
-// Define variants once
-const Button = variantComponent('button', {
-  variants: {
-    color: {
-      primary: 'bg-blue-500 text-white',
-      secondary: 'bg-gray-500 text-white',
-    },
-    size: {
-      sm: 'px-3 py-1 text-sm',
-      lg: 'px-6 py-3 text-lg',
-    },
-  },
-});
+- Package name: `react-class-variants`
+- Current release line: `2.0.0-alpha.x`
+- Recommended install: `react-class-variants@alpha`
+- Legacy v1 package name: `react-tailwind-variants`
 
-// Use anywhere with full type safety
-<Button color="primary" size="lg">
-  Click me
-</Button>;
-```
+The v2 alpha public API is exported from the package root:
 
-No more messy `className` logic, no more props duplication, just clean, type-safe components.
-
-## Features
-
-- **🎯 Type-Safe** - Automatic TypeScript inference for all variant combinations
-- **🎨 Flexible** - Works with Tailwind CSS, CSS Modules, or plain CSS classes
-- **⚡ Lightweight** - Zero dependencies (~2KB minified + gzipped)
-- **🔀 Compound Variants** - Apply styles based on multiple variant combinations
-- **🎭 Polymorphic** - Render components as different elements with full type safety
-- **🔧 Smart Merging** - Optional class conflict resolution via `tailwind-merge` or custom function
-- **📦 Tree-Shakeable** - Import only what you need
-- **⚛️ React 19 Ready** - Full support for modern React
-
-## Table of Contents
-
-- [Why React Class Variants?](#why-react-class-variants)
-- [Features](#features)
-- [Migration](#migration)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-  - [1. Basic Usage](#1-basic-usage)
-  - [2. Creating Components](#2-creating-components)
-  - [3. With Tailwind Merge (Recommended for Tailwind CSS)](#3-with-tailwind-merge-recommended-for-tailwind-css)
-- [Tailwind CSS IntelliSense](#tailwind-css-intellisense)
-  - [Setting Up VS Code](#setting-up-vs-code)
-- [Core Concepts](#core-concepts)
-  - [Variants](#variants)
-  - [Boolean Variants](#boolean-variants)
-  - [Compound Variants](#compound-variants)
-  - [Default Variants](#default-variants)
-  - [Polymorphic Components](#polymorphic-components)
-  - [Prop Name Collisions](#prop-name-collisions)
-- [API Reference](#api-reference)
-  - [defineConfig(options?)](#defineconfigoptions)
-  - [defineVariantConfig(config)](#definevariantconfigconfig)
-  - [variants(config)](#variantsconfig)
-  - [variantComponent(element, config)](#variantcomponentelement-config)
-  - [variantPropsResolver(config)](#variantpropsresolverconfig)
-- [TypeScript](#typescript)
-  - [Type Inference](#type-inference)
-  - [Reusable Configs](#reusable-configs)
-  - [Optional vs Required](#optional-vs-required)
-  - [Type Utilities](#type-utilities)
-    - [ExtractVariantOptions](#extractvariantoptionst)
-    - [ExtractVariantConfig](#extractvariantconfigt)
-- [Usage with Different CSS Solutions](#usage-with-different-css-solutions)
-  - [Tailwind CSS](#tailwind-css)
-  - [CSS Modules](#css-modules)
-  - [Plain CSS](#plain-css)
-  - [Mixed Approaches](#mixed-approaches)
-- [Real-World Examples](#real-world-examples)
-  - [Button Component](#button-component)
-  - [Card Component](#card-component)
-  - [Badge Component](#badge-component)
-  - [Input Component](#input-component)
-- [Advanced Patterns](#advanced-patterns)
-  - [Sharing Configurations](#sharing-configurations)
-  - [Extending Components](#extending-components)
-  - [Dynamic Variants](#dynamic-variants)
-  - [Forwarding Variant Props](#forwarding-variant-props)
-- [Performance](#performance)
-- [Comparison](#comparison)
-- [Release Process](#release-process)
-- [Contributing](#contributing)
-- [License](#license)
-- [Links](#links)
-
-## Migration
-
-- Renamed package: `react-tailwind-variants` -> `react-class-variants`
-- Current release channel: `alpha`
-- Recommended install for v2: `npm install react-class-variants@alpha`
-- Migration guide: [docs/migration-from-react-tailwind-variants.md](https://github.com/Jackardios/react-class-variants/blob/next/docs/migration-from-react-tailwind-variants.md)
-- Legacy v1 docs: [docs/react-tailwind-variants-v1.md](https://github.com/Jackardios/react-class-variants/blob/next/docs/react-tailwind-variants-v1.md)
+- `recipe()`
+- `styled()`
+- `defineConfig()`
+- `mergeProps()`
+- `mergeRefs()`
+- `useMergeRefs()`
+- `hasOwnProperty()`
+- public recipe and React types such as `VariantProps`
 
 ## Installation
-
-Compatibility:
-
-- React `19+`
-- Node.js `20.19+`
-- Current v2 install channel: `react-class-variants@alpha`
-
-```bash
-npm install react-class-variants@alpha
-```
-
-```bash
-yarn add react-class-variants@alpha
-```
 
 ```bash
 pnpm add react-class-variants@alpha
 ```
 
-**Optional:** For Tailwind CSS class conflict resolution:
+Optional Tailwind conflict resolution:
 
 ```bash
-npm install tailwind-merge
+pnpm add tailwind-merge
 ```
 
 ## Quick Start
 
-### 1. Basic Usage
-
 ```tsx
-import { defineConfig } from 'react-class-variants';
+import { recipe, styled } from 'react-class-variants';
 
-const { variants } = defineConfig();
-
-// Create a variant function
-const buttonClasses = variants({
-  base: 'font-semibold rounded transition',
+const buttonRecipe = recipe({
+  base: 'inline-flex items-center justify-center rounded-md font-medium transition',
   variants: {
-    color: {
-      blue: 'bg-blue-500 text-white hover:bg-blue-600',
-      gray: 'bg-gray-200 text-gray-900 hover:bg-gray-300',
-    },
-  },
-});
-
-// Use it
-function MyButton() {
-  return <button className={buttonClasses({ color: 'blue' })}>Click me</button>;
-}
-```
-
-### 2. Creating Components
-
-```tsx
-import { defineConfig } from 'react-class-variants';
-
-const { variantComponent } = defineConfig();
-
-const Button = variantComponent('button', {
-  base: 'font-semibold rounded transition',
-  variants: {
-    color: {
-      blue: 'bg-blue-500 text-white hover:bg-blue-600',
-      gray: 'bg-gray-200 text-gray-900 hover:bg-gray-300',
+    tone: {
+      primary: 'bg-blue-600 text-white hover:bg-blue-700',
+      ghost: 'bg-transparent text-slate-900 hover:bg-slate-100',
     },
     size: {
-      sm: 'px-3 py-1.5 text-sm',
-      md: 'px-4 py-2',
-      lg: 'px-6 py-3 text-lg',
+      sm: 'h-8 px-3 text-sm',
+      md: 'h-10 px-4 text-base',
     },
   },
   defaultVariants: {
-    color: 'blue',
+    tone: 'primary',
     size: 'md',
   },
 });
 
-// Component is fully typed!
-function App() {
-  return (
-    <Button color="gray" size="lg">
-      Hello
-    </Button>
-  );
-}
+export const Button = styled('button', buttonRecipe);
 ```
 
-### 3. With Tailwind Merge (Recommended for Tailwind CSS)
+`Button` is fully typed:
+
+```tsx
+<Button tone="ghost" size="sm" type="button">
+  Cancel
+</Button>
+```
+
+## Custom Merge
+
+Use `defineConfig()` to create a configured `recipe()` factory and matching `styled()` builder:
 
 ```tsx
 import { defineConfig } from 'react-class-variants';
 import { twMerge } from 'tailwind-merge';
 
-// Configure once for your entire app
-const { variants, variantComponent } = defineConfig({
-  onClassesMerged: twMerge, // Handles conflicting Tailwind classes
-});
-
-const Button = variantComponent('button', {
-  base: 'px-4 py-2', // These get properly merged...
-  variants: {
-    spacing: {
-      tight: 'px-2 py-1', // ...with these
-      wide: 'px-8 py-4',
-    },
-  },
-});
-
-// px-4 from base is overridden by px-2 from variant
-<Button spacing="tight" />;
-```
-
-## Tailwind CSS IntelliSense
-
-If you're using Tailwind CSS, you can enable autocompletion and syntax highlighting for class names inside your variant configurations.
-
-### Setting Up VS Code
-
-1. Install the [Tailwind CSS IntelliSense](https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss) extension for VS Code
-
-2. Add the following configuration to your VS Code `settings.json`:
-
-```json
-{
-  "tailwindCSS.classFunctions": [
-    "variants",
-    "variantPropsResolver",
-    "variantComponent"
-  ]
-}
-```
-
-3. Now you'll get full IntelliSense support in your variant configurations:
-
-```tsx
-import { defineConfig } from 'react-class-variants';
-
-const { variantComponent } = defineConfig();
-
-const Button = variantComponent('button', {
-  base: 'px-5 py-2 text-white transition-colors',
-  variants: {
-    color: {
-      neutral: 'bg-slate-500 hover:bg-slate-400', // Full IntelliSense here
-      accent: 'bg-teal-500 hover:bg-teal-400',
-    },
-    size: {
-      sm: 'text-sm',
-      lg: 'text-lg',
-    },
-  },
+export const { recipe, styled } = defineConfig({
+  merge: twMerge,
 });
 ```
 
-You'll get:
+The merge hook runs after class resolution.
 
-- Autocompletion for Tailwind classes
-- Hover previews showing the actual CSS
-- Linting for invalid or conflicting classes
-- Color decorators
+## Root Recipes
 
-## Core Concepts
+Root recipes use `base` and return a class string when called directly:
 
-### Variants
-
-Variants are different visual states of a component:
-
-```tsx
-const alert = variants({
+```ts
+const inputRecipe = recipe({
+  base: [
+    'w-full rounded-md border transition-colors',
+    'focus:outline-none focus:ring-2 focus:ring-offset-1',
+  ],
   variants: {
     variant: {
-      info: 'bg-blue-100 text-blue-900 border-blue-200',
-      success: 'bg-green-100 text-green-900 border-green-200',
-      warning: 'bg-yellow-100 text-yellow-900 border-yellow-200',
-      error: 'bg-red-100 text-red-900 border-red-200',
-    },
-  },
-});
-
-alert({ variant: 'success' }); // Returns success classes
-```
-
-### Boolean Variants
-
-Use `"true"` and `"false"` string keys for boolean props:
-
-```tsx
-const button = variants({
-  variants: {
-    outlined: {
-      true: 'border-2 bg-transparent',
-      false: 'border-0',
+      outline: 'bg-white border-gray-300 focus:border-blue-500',
+      filled: 'bg-gray-100 border-transparent focus:bg-white',
     },
     disabled: {
       true: 'opacity-50 cursor-not-allowed',
     },
   },
-});
-
-// Usage
-<Button outlined /> // outlined: true
-<Button outlined={false} /> // outlined: false
-<Button disabled /> // disabled: true
-```
-
-### Compound Variants
-
-Apply styles when multiple variants match:
-
-```tsx
-const button = variants({
-  variants: {
-    color: {
-      primary: 'bg-blue-500',
-      secondary: 'bg-gray-500',
-    },
-    size: {
-      sm: 'text-sm',
-      lg: 'text-lg',
-    },
-  },
   compoundVariants: [
     {
-      variants: {
-        color: 'primary',
-        size: 'lg',
-      },
-      className: 'font-bold shadow-lg',
+      variant: ['outline', 'filled'],
+      disabled: true,
+      className: 'opacity-70',
     },
   ],
+  defaultVariants: {
+    variant: 'outline',
+  },
 });
 
-// Gets: bg-blue-500 + text-lg + font-bold shadow-lg
-button({ color: 'primary', size: 'lg' });
+inputRecipe({ variant: 'filled', className: 'text-black' });
 ```
 
-Compound variants support array matching (OR condition):
+Use `resolve()` when you want to pass a full component-like prop bag:
 
-```tsx
-compoundVariants: [
+```ts
+inputRecipe.resolve(
   {
-    variants: {
-      color: ['primary', 'secondary'], // Matches if primary OR secondary
-      size: 'lg',
-    },
-    className: 'uppercase',
+    variant: 'filled',
+    className: 'text-black',
+    type: 'email',
+    disabled: true,
+    htmlSize: 20,
   },
-];
-```
-
-### Default Variants
-
-Make variants optional by providing defaults:
-
-```tsx
-const button = variants({
-  variants: {
-    color: {
-      primary: 'bg-blue-500',
-      secondary: 'bg-gray-500',
-    },
-    size: {
-      sm: 'text-sm',
-      md: 'text-base',
-      lg: 'text-lg',
-    },
-  },
-  defaultVariants: {
-    color: 'primary', // Now optional
-    size: 'md', // Now optional
-  },
-});
-
-// All equivalent:
-button({});
-button({ color: 'primary' });
-button({ size: 'md' });
-button({ color: 'primary', size: 'md' });
-```
-
-### Polymorphic Components
-
-Render components as different elements while preserving styles:
-
-```tsx
-const Button = variantComponent('button', {
-  base: 'px-4 py-2 rounded font-semibold',
-  variants: {
-    color: {
-      primary: 'bg-blue-500 text-white',
-    },
-  },
-});
-
-// Render as a link
-<Button color="primary" render={<a href="/home" />}>
-  Go Home
-</Button>;
-
-// Render with custom component
-import { Link } from 'react-router-dom';
-
-<Button color="primary" render={props => <Link {...props} to="/home" />}>
-  Go Home
-</Button>;
-```
-
-Props, refs, and event handlers are automatically merged!
-When `render` is a function, its argument is intentionally broad and spread-safe: it includes generic `HTMLAttributes<any>`, a flattened `className`, an optional `ref`, and any variant props listed in `forwardProps`. Base-element-specific props like `type`, `disabled`, `form`, `href`, and `target` are intentionally not part of the typed/stable callback contract.
-
-> **Note:** The `render` prop pattern is a well-established composition pattern in the React ecosystem, used by libraries like [Base UI](https://base-ui.com/) and [Ariakit](https://ariakit.org/) for building accessible, composable components.
-
-### Prop Name Collisions
-
-Generic helpers do not perform runtime validation for variant-key collisions. Their safety for reserved names is TypeScript-first, so JavaScript consumers should avoid reserved keys such as `className` manually.
-
-`variantComponent()` carries the rest of the runtime safety. It rejects component-level collisions such as `render`, `ref`, and React special props like `children` and `style`.
-
-For `variantComponent()` on intrinsic elements, dangerous intrinsic collisions are rejected when they actually apply to that element. Global props like `id` and `role` are always blocked, while element-specific props such as `href`, `src`, `alt`, `htmlFor`, `method`, `target`, `type`, `value`, and `checked` are blocked only on the intrinsic elements where they are meaningful.
-
-Allowed overlaps are variant-first. If you declare an overlap key, that prop name belongs to the variant API:
-
-```tsx
-const Input = variantComponent('input', {
-  variants: {
-    size: {
-      sm: 'text-sm',
-      lg: 'text-lg',
-    },
-  },
-});
-
-<Input size="sm" />; // variant selection
-```
-
-If you still need the native `<input size>` prop, rename the variant key to something like `inputSize` instead of relying on the same prop name. Names such as `onClick`, `size`, or `color` can still be legal overlaps, but they are variant-first and should be chosen carefully.
-
-Passing a variant prop as `undefined` is treated the same as omitting it entirely, so `defaultVariants` and boolean `false` fallbacks still apply.
-
-## API Reference
-
-### `defineConfig(options?)`
-
-Creates a configured factory for creating variants and components.
-
-```typescript
-const config = defineConfig({
-  onClassesMerged?: (classNames: string) => string;
-});
-```
-
-**Options:**
-
-- `onClassesMerged` - Function to merge/process final class names (e.g., `twMerge`)
-
-**Returns:**
-
-- `variants` - Function to create class name resolvers
-- `variantComponent` - Function to create React components
-- `variantPropsResolver` - Function to create props resolvers
-
----
-
-### `defineVariantConfig(config)`
-
-Captures a reusable variants config with literal-preserving inference.
-
-This is useful when you want to hoist a config into a shared constant and then
-pass it to both `variants()` and `variantComponent()` without adding `as const`
-to each nested value manually.
-
-```typescript
-import { defineConfig, defineVariantConfig } from 'react-class-variants';
-
-const { variants, variantComponent } = defineConfig();
-
-const surfaceConfig = defineVariantConfig({
-  base: ['rounded-xl', 'p-4'],
-  variants: {
-    appearance: {
-      outlined: 'bg-white border',
-      soft: 'bg-gray-100 border',
-    },
-    interactive: {
-      true: 'cursor-pointer',
-      false: '',
-    },
-  },
-  defaultVariants: {
-    appearance: 'outlined',
-    interactive: false,
-  },
-});
-
-const surfaceVariants = variants(surfaceConfig);
-const Surface = variantComponent('div', surfaceConfig);
-```
-
-Top-level `as const` is also supported for reusable configs, including readonly
-class arrays and readonly `compoundVariants` selector arrays.
-
----
-
-### `variants(config)`
-
-Creates a function that resolves variant props to class names.
-
-```typescript
-const buttonVariants = variants({
-  base?: ClassNameValue;
-  variants?: {
-    [variantName: string]: {
-      [variantValue: string]: ClassNameValue;
-    };
-  };
-  compoundVariants?: ReadonlyArray<{
-    variants: Record<string, string | readonly string[]>;
-    className: ClassNameValue;
-  }>;
-  defaultVariants?: Record<string, string>;
-});
-```
-
-**Returns:** `(props) => string`
-
----
-
-### `variantComponent(element, config)`
-
-Creates a React component with variant support.
-
-```typescript
-const Button = variantComponent(
-  element: string | React.ComponentType,
-  config: VariantsConfig & {
-    displayName?: string;
-    withoutRenderProp?: boolean;
-    forwardProps?: readonly string[];
+  {
+    forwardProps: ['disabled'],
+    nativeAliases: { size: 'htmlSize' },
   }
 );
 ```
 
-**Config Options:**
+`resolve()` strips variant props by default, then optionally re-adds the
+effective variant selection through `forwardProps`. That means defaults and
+boolean fallbacks are already applied in `resolvedProps` when you opt into
+forwarding a variant key.
 
-- All `VariantsConfig` options (`base`, `variants`, `compoundVariants`, `defaultVariants`)
-- `displayName` - Custom React DevTools display name for the generated component (optional)
-- `withoutRenderProp` - Disables the `render` prop pattern (optional)
-- `forwardProps` - Array of variant prop names to keep in the resolved props object and expose to `render` or custom targets (optional)
+## Slotted Recipes
 
-**Component Props:**
+Slotted recipes use `slots`. Slot variant values and compound classes must be explicit slot maps.
 
-- All variant props (inferred from config)
-- Native element props (e.g., `onClick`, `disabled`)
-- `className` - Additional classes (merged with highest priority)
-- `render` - Polymorphic rendering (unless `withoutRenderProp` is true). Function renders receive a broad spread-safe prop bag: generic `HTMLAttributes<any>`, a flattened `className: string`, an optional `ref`, and any forwarded variant props. Base-element-specific props like `type`, `disabled`, `form`, `href`, and `target` are intentionally not part of the typed/stable callback contract.
-
----
-
-### `variantPropsResolver(config)`
-
-Creates a function that extracts variant props and resolves them to a className.
-
-```typescript
-const resolveButtonProps = variantPropsResolver(config);
-
-const { className, ...rest } = resolveButtonProps({
-  color: 'primary',
-  size: 'lg',
-  className: ['inline-flex', ['gap-2']],
-  onClick: handleClick,
-});
-// className: resolved variant classes as a flattened string
-// rest: { onClick: handleClick }
-```
-
-`variantPropsResolver()` accepts the same `ClassNameValue` shapes as `variants()` for its input `className`, but always returns a resolved `className: string`.
-
-## TypeScript
-
-Full TypeScript support with automatic type inference.
-
-### Type Inference
-
-```typescript
-const Button = variantComponent('button', {
-  variants: {
-    color: {
-      primary: 'bg-blue-500',
-      secondary: 'bg-gray-500',
-    },
-    size: {
-      sm: 'text-sm',
-      lg: 'text-lg',
-    },
+```tsx
+const buttonRecipe = recipe({
+  slots: {
+    root: 'relative inline-flex items-center justify-center rounded-md font-medium',
+    label: 'transition-opacity',
+    spinner: 'absolute hidden size-4',
   },
-  defaultVariants: {
-    size: 'sm',
-  },
-});
-
-// TypeScript knows:
-// ✅ color is required (no default)
-// ✅ size is optional (has default)
-// ✅ color only accepts 'primary' | 'secondary'
-// ✅ size only accepts 'sm' | 'lg'
-
-<Button color="primary" />              // ✅
-<Button color="invalid" />              // ❌ Type error
-<Button size="sm" />                    // ❌ Type error (missing color)
-<Button color="primary" size="lg" />    // ✅
-```
-
-### Reusable Configs
-
-Inline configs usually infer well automatically. For hoisted reusable configs,
-use `defineVariantConfig()` to preserve nested literals at the definition site:
-
-```typescript
-import { defineConfig, defineVariantConfig } from 'react-class-variants';
-
-const { variants, variantComponent } = defineConfig();
-
-const badgeConfig = defineVariantConfig({
-  base: ['inline-flex', 'items-center'],
   variants: {
     tone: {
-      neutral: 'bg-slate-100 text-slate-900',
-      accent: 'bg-sky-500 text-white',
-    },
-    outlined: {
-      true: 'ring-1 ring-inset',
-      false: '',
-    },
-  },
-  compoundVariants: [
-    {
-      variants: {
-        tone: 'accent',
-        outlined: true,
+      primary: {
+        root: 'bg-blue-600 text-white',
+        spinner: 'text-blue-100',
       },
-      className: 'ring-sky-300',
+      ghost: {
+        root: 'bg-transparent text-slate-900',
+      },
     },
-  ],
-  defaultVariants: {
-    tone: 'neutral',
-    outlined: false,
-  },
-});
-
-const badge = variants(badgeConfig);
-const Badge = variantComponent('span', badgeConfig);
-```
-
-If you prefer, a top-level `as const` now also works cleanly for reusable
-configs, including readonly class arrays:
-
-```typescript
-const badgeConfig = {
-  base: ['inline-flex', 'items-center'],
-  variants: {
-    tone: {
-      neutral: ['bg-slate-100', 'text-slate-900'],
-      accent: ['bg-sky-500', 'text-white'],
+    loading: {
+      true: {
+        label: 'opacity-0',
+        spinner: 'inline-block animate-spin',
+      },
     },
   },
   defaultVariants: {
-    tone: 'neutral',
+    tone: 'primary',
+    loading: false,
   },
-} as const;
+});
 ```
 
-### Optional vs Required
+A direct slotted recipe call returns slot functions:
 
-Variants are **required** by default. They become **optional** when:
+```ts
+const slots = buttonRecipe({ tone: 'ghost' });
 
-1. They are boolean variants (`"true"` / `"false"` keys)
-2. They have a value in `defaultVariants`
-
-```typescript
-const component = variants({
-  variants: {
-    color: { red: '...', blue: '...' }, // Required
-    size: { sm: '...', lg: '...' }, // Required
-    outlined: { true: '...', false: '...' }, // Optional (boolean)
-  },
-  defaultVariants: {
-    size: 'sm', // Makes size optional
-  },
-});
-// color: required
-// size: optional (has default)
-// outlined: optional (boolean)
+slots.root({ className: 'px-4' });
+slots.spinner({ tone: 'primary' });
 ```
 
-### Type Utilities
+`SlotRecipe.resolve()` keeps an incoming component-level `className` as a normal
+passthrough prop. It never assigns that `className` to a slot automatically;
+your `compose` function decides whether it belongs on `slots.root(...)` or
+somewhere else.
 
-React Class Variants provides several utility types for working with variants and components:
-
-```typescript
-import {
-  defineConfig,
-  type ClassNameValue,
-  type ExtractVariantOptions,
-  type ExtractVariantConfig,
-} from 'react-class-variants';
-
-const { variants } = defineConfig();
-
-const badge = variants({
-  variants: {
-    tone: {
-      neutral: 'bg-slate-100',
-      accent: 'bg-sky-500',
-    },
-  },
-});
-
-type BadgeConfig = ExtractVariantConfig<typeof badge>;
-type BadgeVariants = ExtractVariantOptions<typeof badge>;
-
-// Use in props
-type Props = BadgeVariants & {
-  className?: ClassNameValue;
-};
-```
-
-#### `ExtractVariantOptions<T>`
-
-**Universal type utility** that extracts variant options from any variant function, resolver, or component. Works with:
-
-- `variants()` - className resolver functions
-- `variantPropsResolver()` - props resolver functions
-- `variantComponent()` - React components
-
-This is useful when you need to reference variant props in other parts of your code.
-
-```typescript
-const { variants, variantPropsResolver, variantComponent } = defineConfig();
-
-// Works with variants()
-const buttonVariants = variants({
-  variants: {
-    color: {
-      primary: 'bg-blue-500',
-      secondary: 'bg-gray-500',
-    },
-    size: {
-      sm: 'text-sm',
-      lg: 'text-lg',
-    },
-  },
-  defaultVariants: {
-    size: 'sm',
-  },
-});
-
-type ButtonOptions1 = ExtractVariantOptions<typeof buttonVariants>;
-// Result: { color: 'primary' | 'secondary', size?: 'sm' | 'lg' }
-
-// Works with variantPropsResolver()
-const resolveButtonProps = variantPropsResolver({
-  variants: {
-    variant: { solid: 'bg-fill', outline: 'border' },
-  },
-});
-
-type ButtonOptions2 = ExtractVariantOptions<typeof resolveButtonProps>;
-// Result: { variant: 'solid' | 'outline' }
-
-// Works with variantComponent()
-const Button = variantComponent('button', {
-  variants: {
-    color: { primary: 'bg-blue-500' },
-  },
-});
-
-type ButtonOptions3 = ExtractVariantOptions<typeof Button>;
-// Result: { color: 'primary' }
-
-// Use in your own components
-function ButtonGroup({ variant }: { variant: ButtonOptions1['color'] }) {
-  return (
-    <div>
-      <Button color={variant} />
-      <Button color={variant} />
-    </div>
-  );
-}
-```
-
-**Key Points:**
-
-- **Universal:** Works with all three core functions (`variants`, `variantPropsResolver`, `variantComponent`)
-- Respects optional vs required variants (based on `defaultVariants` and boolean variants)
-- Includes only variant props (excludes native element props like `onClick`, `className`, etc.)
-- Useful for prop forwarding and composition
-
-React Class Variants also exports runtime utilities from the package root:
-
-```typescript
-import {
-  hasOwnProperty,
-  mergeProps,
-  mergeRefs,
-  useMergeRefs,
-} from 'react-class-variants';
-```
-
-#### `ExtractVariantConfig<T>`
-
-**Universal type utility** that extracts the full configuration from any variant function, resolver, or component. Works with:
-
-- `variants()` - className resolver functions
-- `variantPropsResolver()` - props resolver functions
-- `variantComponent()` - React components
-
-This is useful for reusing or extending configurations.
-
-```typescript
-const { variants, variantPropsResolver, variantComponent } = defineConfig();
-
-// Works with variants()
-const buttonVariants = variants({
-  base: 'rounded font-semibold',
-  variants: {
-    color: {
-      primary: 'bg-blue-500',
-      secondary: 'bg-gray-500',
-    },
-  },
-  defaultVariants: {
-    color: 'primary',
-  },
-  compoundVariants: [
-    {
-      variants: { color: 'primary' },
-      className: 'shadow-lg',
-    },
-  ],
-});
-
-type ButtonConfig1 = ExtractVariantConfig<typeof buttonVariants>;
-// Result: {
-//   base?: ClassNameValue,
-//   variants?: { color: { primary: string, secondary: string } },
-//   defaultVariants?: { color: 'primary' | 'secondary' },
-//   compoundVariants?: Array<...>
-// }
-
-// Works with variantPropsResolver()
-const resolveProps = variantPropsResolver({
-  base: 'input',
-  variants: { size: { sm: 'h-8', lg: 'h-12' } },
-});
-
-type ResolverConfig = ExtractVariantConfig<typeof resolveProps>;
-
-// Works with variantComponent()
-const Button = variantComponent('button', {
-  base: 'btn',
-  variants: { color: { primary: 'bg-blue' } },
-});
-
-type ButtonConfig2 = ExtractVariantConfig<typeof Button>;
-
-// Reuse the original config object when you want to derive another config at runtime
-const buttonConfig = defineVariantConfig({
-  base: 'btn',
-  variants: {
-    color: {
-      primary: 'bg-blue',
-      secondary: 'bg-gray',
-    },
-  },
-});
-
-const buttonClasses = variants(buttonConfig);
-
-const dangerConfig = defineVariantConfig({
-  ...buttonConfig,
-  variants: {
-    color: {
-      danger: 'bg-red-500 text-white',
-      warning: 'bg-yellow-500 text-black',
-    },
-  },
-});
-
-const dangerVariants = variants(dangerConfig);
-```
-
-**Key Points:**
-
-- **Universal:** Works with all three core functions (`variants`, `variantPropsResolver`, `variantComponent`)
-- Extracts the complete `VariantsConfig` including `base`, `variants`, `defaultVariants`, and `compoundVariants`
-- Useful for creating derived components or sharing configurations
-- Returns a prettified type for better IDE support
-
-## Usage with Different CSS Solutions
-
-### Tailwind CSS
+Slotted components require `compose`, because the recipe does not assume a canonical root slot:
 
 ```tsx
-import { defineConfig } from 'react-class-variants';
-import { twMerge } from 'tailwind-merge';
-
-const { variantComponent } = defineConfig({
-  onClassesMerged: twMerge,
-});
-
-const Button = variantComponent('button', {
-  base: 'rounded font-medium transition-colors',
-  variants: {
-    color: {
-      blue: 'bg-blue-500 hover:bg-blue-600 text-white',
-      red: 'bg-red-500 hover:bg-red-600 text-white',
-    },
-  },
+export const Button = styled('button', buttonRecipe, {
+  withRender: true,
+  forwardProps: ['loading'],
+  compose: (
+    { Root, variants, slots },
+    { className, children, render, ref, ...resolvedProps }
+  ) => (
+    <Root
+      {...resolvedProps}
+      ref={ref}
+      render={render}
+      className={slots.root({ className })}
+      aria-busy={variants.loading || undefined}
+      disabled={variants.loading}
+    >
+      {variants.loading ? (
+        <span aria-hidden="true" className={slots.spinner()} />
+      ) : null}
+      <span className={slots.label()}>{children}</span>
+    </Root>
+  ),
 });
 ```
 
-### CSS Modules
+## Polymorphism
+
+`render` is opt-in:
 
 ```tsx
-import { defineConfig } from 'react-class-variants';
-import styles from './Button.module.css';
-
-const { variantComponent } = defineConfig();
-
-const Button = variantComponent('button', {
-  base: styles.button,
-  variants: {
-    color: {
-      primary: styles.primary,
-      secondary: styles.secondary,
-    },
-    size: {
-      sm: styles.small,
-      lg: styles.large,
-    },
-  },
+const LinkButton = styled('button', buttonRecipe, {
+  withRender: true,
 });
+
+<LinkButton render={<a href="/docs" />}>Docs</LinkButton>;
 ```
 
-### Plain CSS
+When `withRender` is `false`, the component does not expose a `render` prop.
+
+## Intrinsic Prop Collisions
+
+Variant keys are variant-first. If you need a native prop with the same name, use `nativeAliases`:
 
 ```tsx
-import { defineConfig } from 'react-class-variants';
-import './Button.css';
-
-const { variantComponent } = defineConfig();
-
-const Button = variantComponent('button', {
-  base: 'btn',
-  variants: {
-    color: {
-      primary: 'btn-primary',
-      secondary: 'btn-secondary',
+const Input = styled(
+  'input',
+  recipe({
+    variants: {
+      size: {
+        sm: 'text-sm',
+        md: 'text-base',
+      },
     },
-  },
-});
+  }),
+  {
+    nativeAliases: {
+      size: 'htmlSize',
+    },
+  }
+);
+
+<Input size="sm" htmlSize={20} />;
 ```
 
-### Mixed Approaches
+## Utilities
 
-```tsx
-import { defineConfig } from 'react-class-variants';
-import { twMerge } from 'tailwind-merge';
-import styles from './Button.module.css';
+- `hasOwnProperty()` is a narrowed object property guard.
+- `mergeProps()` merges DOM props and composes event handlers.
+- `mergeRefs()` and `useMergeRefs()` compose multiple refs.
 
-const { variantComponent } = defineConfig({
-  onClassesMerged: twMerge,
-});
+## Benchmarks
 
-const Button = variantComponent('button', {
-  base: [styles.button, 'transition-all'],
-  variants: {
-    color: {
-      primary: [styles.primary, 'shadow-lg'],
-      secondary: [styles.secondary, 'shadow-md'],
-    },
-  },
-});
-```
+The repository keeps two complementary benchmark tracks:
 
-## Real-World Examples
+- `pnpm bench` runs the Vitest microbench suite in [`bench/`](./bench)
+- `pnpm bench:competitors` writes reproducible speed and retained-memory reports
+  to [`bench/reports/competitors.md`](./bench/reports/competitors.md) and
+  [`bench/reports/competitors.json`](./bench/reports/competitors.json)
+- `pnpm bench:overhead` measures package-specific bundle, runtime, retained
+  memory, and synthetic TypeScript overhead into
+  [`bench/overhead/reports/current.json`](./bench/overhead/reports/current.json)
 
-### Button Component
+The competitor report compares `react-class-variants` against
+`class-variance-authority`, `classname-variants`, and `tailwind-variants`
+across root-only common-denominator scenarios. The primary creation metric uses
+fresh unique complex configs so it reflects first-time compile cost; reused
+config creation is reported separately as a diagnostic scenario.
 
-```tsx
-import { defineConfig } from 'react-class-variants';
-import { twMerge } from 'tailwind-merge';
+## Migration
 
-const { variantComponent } = defineConfig({ onClassesMerged: twMerge });
-
-export const Button = variantComponent('button', {
-  base: [
-    'inline-flex items-center justify-center',
-    'font-medium rounded-lg',
-    'transition-all duration-200',
-    'focus:outline-none focus:ring-2 focus:ring-offset-2',
-    'disabled:opacity-50 disabled:cursor-not-allowed',
-  ],
-  variants: {
-    variant: {
-      solid: '',
-      outline: 'bg-transparent border-2',
-      ghost: 'bg-transparent',
-    },
-    color: {
-      blue: '',
-      red: '',
-      green: '',
-      gray: '',
-    },
-    size: {
-      sm: 'px-3 py-1.5 text-sm',
-      md: 'px-4 py-2 text-base',
-      lg: 'px-6 py-3 text-lg',
-    },
-  },
-  compoundVariants: [
-    // Solid variants
-    {
-      variants: { variant: 'solid', color: 'blue' },
-      className: 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500',
-    },
-    {
-      variants: { variant: 'solid', color: 'red' },
-      className: 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500',
-    },
-    {
-      variants: { variant: 'solid', color: 'green' },
-      className:
-        'bg-green-600 hover:bg-green-700 text-white focus:ring-green-500',
-    },
-    {
-      variants: { variant: 'solid', color: 'gray' },
-      className: 'bg-gray-600 hover:bg-gray-700 text-white focus:ring-gray-500',
-    },
-    // Outline variants
-    {
-      variants: { variant: 'outline', color: 'blue' },
-      className:
-        'border-blue-600 text-blue-600 hover:bg-blue-50 focus:ring-blue-500',
-    },
-    {
-      variants: { variant: 'outline', color: 'red' },
-      className:
-        'border-red-600 text-red-600 hover:bg-red-50 focus:ring-red-500',
-    },
-    // Ghost variants
-    {
-      variants: { variant: 'ghost', color: 'blue' },
-      className: 'text-blue-600 hover:bg-blue-50 focus:ring-blue-500',
-    },
-  ],
-  defaultVariants: {
-    variant: 'solid',
-    color: 'blue',
-    size: 'md',
-  },
-});
-```
-
-Usage:
-
-```tsx
-<Button>Default</Button>
-<Button variant="outline" color="red" size="lg">Outline</Button>
-<Button variant="ghost" color="green">Ghost</Button>
-<Button disabled>Disabled</Button>
-<Button render={<a href="/" />}>Link Button</Button>
-```
-
-### Card Component
-
-```tsx
-export const Card = variantComponent('div', {
-  base: 'rounded-lg overflow-hidden',
-  variants: {
-    variant: {
-      elevated: 'shadow-md hover:shadow-lg transition-shadow',
-      outlined: 'border border-gray-200',
-      filled: 'bg-gray-50',
-    },
-    padding: {
-      none: 'p-0',
-      sm: 'p-4',
-      md: 'p-6',
-      lg: 'p-8',
-    },
-  },
-  defaultVariants: {
-    variant: 'elevated',
-    padding: 'md',
-  },
-});
-
-export const CardHeader = variantComponent('div', {
-  base: 'border-b border-gray-200 pb-4 mb-4',
-});
-
-export const CardTitle = variantComponent('h3', {
-  base: 'text-lg font-semibold text-gray-900',
-});
-
-export const CardContent = variantComponent('div', {
-  base: 'text-gray-600',
-});
-```
-
-Usage:
-
-```tsx
-<Card>
-  <CardHeader>
-    <CardTitle>Card Title</CardTitle>
-  </CardHeader>
-  <CardContent>Card content goes here</CardContent>
-</Card>
-```
-
-### Badge Component
-
-```tsx
-export const Badge = variantComponent('span', {
-  base: 'inline-flex items-center font-medium rounded-full',
-  variants: {
-    variant: {
-      solid: '',
-      outline: 'border bg-transparent',
-      subtle: '',
-    },
-    color: {
-      gray: '',
-      blue: '',
-      green: '',
-      yellow: '',
-      red: '',
-    },
-    size: {
-      sm: 'px-2 py-0.5 text-xs',
-      md: 'px-2.5 py-0.5 text-sm',
-      lg: 'px-3 py-1 text-base',
-    },
-  },
-  compoundVariants: [
-    // Solid
-    {
-      variants: { variant: 'solid', color: 'gray' },
-      className: 'bg-gray-100 text-gray-800',
-    },
-    {
-      variants: { variant: 'solid', color: 'blue' },
-      className: 'bg-blue-100 text-blue-800',
-    },
-    {
-      variants: { variant: 'solid', color: 'green' },
-      className: 'bg-green-100 text-green-800',
-    },
-    {
-      variants: { variant: 'solid', color: 'yellow' },
-      className: 'bg-yellow-100 text-yellow-800',
-    },
-    {
-      variants: { variant: 'solid', color: 'red' },
-      className: 'bg-red-100 text-red-800',
-    },
-    // Outline
-    {
-      variants: { variant: 'outline', color: 'blue' },
-      className: 'border-blue-500 text-blue-700',
-    },
-    // Subtle
-    {
-      variants: { variant: 'subtle', color: 'blue' },
-      className: 'bg-blue-50 text-blue-700',
-    },
-  ],
-  defaultVariants: {
-    variant: 'solid',
-    color: 'gray',
-    size: 'md',
-  },
-});
-```
-
-### Input Component
-
-```tsx
-export const Input = variantComponent('input', {
-  base: [
-    'w-full rounded-md border transition-colors',
-    'focus:outline-none focus:ring-2 focus:ring-offset-1',
-    'disabled:opacity-50 disabled:cursor-not-allowed',
-  ],
-  variants: {
-    variant: {
-      outline:
-        'bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-200',
-      filled:
-        'bg-gray-100 border-transparent focus:bg-white focus:ring-blue-200',
-      flushed:
-        'bg-transparent border-t-0 border-x-0 border-b-2 rounded-none focus:ring-0',
-    },
-    size: {
-      sm: 'px-2 py-1.5 text-sm',
-      md: 'px-3 py-2 text-base',
-      lg: 'px-4 py-3 text-lg',
-    },
-    error: {
-      true: 'border-red-500 focus:border-red-500 focus:ring-red-200',
-    },
-  },
-  defaultVariants: {
-    variant: 'outline',
-    size: 'md',
-  },
-});
-```
-
-## Advanced Patterns
-
-### Sharing Configurations
-
-```tsx
-// config/variants.ts
-import { defineConfig } from 'react-class-variants';
-import { twMerge } from 'tailwind-merge';
-
-export const { variants, variantComponent } = defineConfig({
-  onClassesMerged: twMerge,
-});
-
-// components/Button.tsx
-import { variantComponent } from '@/config/variants';
-
-export const Button = variantComponent('button', { ... });
-
-// components/Card.tsx
-import { variantComponent } from '@/config/variants';
-
-export const Card = variantComponent('div', { ... });
-```
-
-### Extending Components
-
-```tsx
-const BaseButton = variantComponent('button', {
-  base: 'rounded font-medium',
-  variants: {
-    size: {
-      sm: 'px-3 py-1',
-      lg: 'px-6 py-3',
-    },
-  },
-});
-
-// Extend with additional props
-const IconButton = ({
-  icon,
-  children,
-  ...props
-}: React.ComponentProps<typeof BaseButton> & { icon: React.ReactNode }) => {
-  return (
-    <BaseButton {...props}>
-      {icon}
-      {children}
-    </BaseButton>
-  );
-};
-```
-
-### Dynamic Variants
-
-```tsx
-const createColorVariants = (colors: string[]) => {
-  return colors.reduce((acc, color) => {
-    acc[color] = `bg-${color}-500 text-white hover:bg-${color}-600`;
-    return acc;
-  }, {} as Record<string, string>);
-};
-
-const Button = variantComponent('button', {
-  variants: {
-    color: createColorVariants(['blue', 'red', 'green', 'purple']),
-  },
-});
-```
-
-### Forwarding Variant Props
-
-By default, variant props are consumed and removed from the resolved props object. Use `forwardProps` to keep specific variant props available for valid DOM props, custom components, or `render` functions:
-
-```tsx
-const Button = variantComponent('button', {
-  base: 'px-4 py-2 rounded font-medium transition-colors',
-  variants: {
-    color: {
-      primary: 'bg-blue-600 hover:bg-blue-700 text-white',
-      secondary: 'bg-gray-600 hover:bg-gray-700 text-white',
-    },
-    disabled: {
-      true: 'opacity-50 cursor-not-allowed',
-      false: '',
-    },
-  },
-  // Keep 'disabled' in the resolved props object. Since <button> accepts it,
-  // React will also reflect it to the DOM.
-  forwardProps: ['disabled'],
-});
-
-// The 'color' prop is consumed and removed from the resolved props object
-// The 'disabled' prop is used for styling and remains available to <button>
-<Button color="primary" disabled>
-  Submit
-</Button>;
-```
-
-`forwardProps` does not force React to render arbitrary unknown props on native DOM elements. It keeps the selected variant props in the resolved props object; native DOM reflection only happens when the rendered target actually accepts that prop. It is not a mechanism for resolving ambiguous overlap keys: if you declare `size` as a variant on `input`, `size` is still a variant key first and a native fallback is no longer supported. Dangerous intrinsic collisions such as `id`/`role` globally or `src` on `img`, `method` on `form`, and `href` on anchors are rejected up front instead of relying on `forwardProps`.
-
-For non-DOM variant keys, map them explicitly in `render` or a custom component:
-
-```tsx
-const Button = variantComponent('button', {
-  variants: {
-    size: {
-      sm: 'text-sm',
-      lg: 'text-lg',
-    },
-  },
-  forwardProps: ['size'],
-});
-
-<Button size="lg" render={props => <div {...props} data-size={props.size} />}>
-  Custom target
-</Button>;
-```
-
-## Performance
-
-React Class Variants is optimized for performance:
-
-- **Zero Runtime Dependencies** - Only peer dependency is React
-- **Minimal Bundle Size** - ~2KB minified + gzipped
-- **Efficient Caching** - Boolean variant lookups are cached
-- **No Re-renders** - Components only re-render when props change
-- **Tree-Shakeable** - Import only what you use
-
-## Comparison
-
-|                   |      react-class-variants       |   CVA    |     classname-variants      | tailwind-variants | Stitches  |
-| ----------------- | :-----------------------------: | :------: | :-------------------------: | :---------------: | --------- |
-| Framework         |              React              | Agnostic |            React            |     Agnostic      | React     |
-| TypeScript        |               ✅                |    ✅    |             ✅              |        ✅         | ✅        |
-| Variants          |               ✅                |    ✅    |             ✅              |        ✅         | ✅        |
-| Compound Variants |               ✅                |    ✅    |             ✅              |        ✅         | ✅        |
-| React Components  |           ✅ Built-in           |    ❌    |         ✅ Built-in         |        ❌         | ✅        |
-| Polymorphic       | ✅ Built-in (via `render` prop) |    ❌    | ✅ Built-in (via `as` prop) |        ❌         | ✅        |
-| Forward Props     |        ✅ `forwardProps`        |    ❌    |      ✅ `forwardProps`      |        ❌         | ❌        |
-| CSS Solution      |               Any               |   Any    |             Any             |     Tailwind      | CSS-in-JS |
-
-## Contributing
-
-Contributions are welcome! Please check out our [Contributing Guide](CONTRIBUTING.md).
-
-```bash
-# Clone the repo
-git clone https://github.com/Jackardios/react-class-variants.git
-
-# Install dependencies
-pnpm install
-
-# Type-check publish surface
-pnpm lint
-
-# Type-check src plus runtime tests (excluding tsd files)
-pnpm lint:all
-
-# Run the reusable verification gate
-pnpm run verify
-
-# Run tests in watch mode
-pnpm dev
-
-# Build
-pnpm build
-
-# Run release-intent checks
-pnpm run ci
-```
-
-`pnpm run verify` runs the reusable package gate: `lint`, `lint:all`, ESLint, Prettier, runtime tests, type tests, and package linting with `publint`.
-
-`pnpm run ci` adds the release-intent `changeset` check on top of `verify`.
-
-## Release Process
-
-The alpha line is maintained from the `next` branch.
-
-- Open all v2 feature and fix PRs against `next`
-- Add a changeset for any source, package metadata, public type, or build/release-affecting change
-- Use `pnpm run verify` for the reusable package gate
-- Use `pnpm run check:changeset` or `pnpm run ci` to validate release intent on the current branch
-- Alpha publishes are triggered from `next` via npm trusted publishing
-- After each alpha publish, check the npm `dist-tags`; update `react-class-variants@alpha` manually if you want it to follow the newest prerelease before the first stable release
-- When the package is ready for stable, run `changeset pre exit`, publish `2.0.0`, and then fast-forward `main` to the stable release commit
+- From legacy v1: [docs/migration-from-react-tailwind-variants.md](./docs/migration-from-react-tailwind-variants.md)
+- Benchmark methodology: [docs/benchmarks.md](./docs/benchmarks.md)
 
 ## License
 
-MIT © [Salavat Salakhutdinov](https://github.com/Jackardios)
-
-## Links
-
-- [GitHub](https://github.com/Jackardios/react-class-variants)
-- [npm](https://www.npmjs.com/package/react-class-variants)
-- [Issues](https://github.com/Jackardios/react-class-variants/issues)
-- [Changelog](https://github.com/Jackardios/react-class-variants/releases)
-- [Migration Guide](https://github.com/Jackardios/react-class-variants/blob/next/docs/migration-from-react-tailwind-variants.md)
-- [Legacy v1 Docs](https://github.com/Jackardios/react-class-variants/blob/next/docs/react-tailwind-variants-v1.md)
-- [Release Process](https://github.com/Jackardios/react-class-variants/blob/next/docs/release-process.md)
+MIT

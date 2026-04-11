@@ -1,9 +1,10 @@
 import { createElement, type ComponentProps } from 'react';
 import {
   defineConfig,
-  type ExtractVariantConfig,
-  type ExtractVariantOptions,
-  mergeProps,
+  recipe,
+  styled,
+  type RecipeConfigOf,
+  type RecipeInput,
 } from 'react-class-variants';
 
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
@@ -13,9 +14,9 @@ type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
   : false;
 type Expect<T extends true> = T;
 
-const { variants, variantComponent, variantPropsResolver } = defineConfig();
+const { recipe: configuredRecipe } = defineConfig();
 
-const badge = variants({
+const badge = recipe({
   base: 'badge',
   variants: {
     tone: {
@@ -28,7 +29,6 @@ const badge = variants({
     },
     disabled: {
       true: 'opacity-50',
-      false: 'opacity-100',
     },
   },
   defaultVariants: {
@@ -36,30 +36,35 @@ const badge = variants({
   },
   compoundVariants: [
     {
-      variants: {
-        tone: ['neutral', 'accent'],
-        size: 'lg',
-      },
+      tone: ['neutral', 'accent'],
+      size: 'lg',
       className: 'tracking-wide',
     },
   ],
 });
 
-type BadgeOptions = ExtractVariantOptions<typeof badge>;
-type BadgeConfig = ExtractVariantConfig<typeof badge>;
+configuredRecipe({
+  base: 'inline-flex',
+  variants: {
+    tone: {
+      neutral: 'text-slate-700',
+    },
+  },
+});
 
-type _BadgeOptions = Expect<
-  Equal<
-    BadgeOptions,
-    {
-      tone: 'neutral' | 'accent';
-      size?: 'sm' | 'lg';
-      disabled?: boolean;
-    }
-  >
->;
+type BadgeOptions = RecipeInput<typeof badge>;
+type BadgeConfig = RecipeConfigOf<typeof badge>;
+
+const badgePrimary: BadgeOptions = { tone: 'neutral' };
+const badgeAccent: BadgeOptions = {
+  tone: 'accent',
+  size: 'lg',
+  disabled: true,
+};
+void badgePrimary;
+void badgeAccent;
 type _BadgeToneClass = Expect<
-  Equal<NonNullable<BadgeConfig['variants']>['tone']['neutral'], string>
+  Equal<NonNullable<BadgeConfig['variants']>['tone']['neutral'], 'bg-slate-100'>
 >;
 
 badge({ tone: 'neutral' });
@@ -68,51 +73,27 @@ badge({ tone: 'accent', size: 'lg', disabled: true });
 // @ts-expect-error tone stays a literal union for ESM consumers
 badge({ tone: 'warning' });
 
-// @ts-expect-error tone remains required without a default variant
+// @ts-expect-error tone remains required without a default
 badge({});
 
-variants({
-  variants: {
-    tone: {
-      neutral: 'bg-slate-100',
-    },
-  },
-  defaultVariants: {
-    // @ts-expect-error typo in defaultVariants key must be rejected from packed types
-    tonee: 'neutral',
-  },
-});
-
-variants({
-  variants: {
-    tone: {
-      neutral: 'bg-slate-100',
-    },
-  },
-  compoundVariants: [
-    {
-      variants: {
-        // @ts-expect-error typo in compoundVariants selector key must be rejected
-        tonee: 'neutral',
+const Button = styled(
+  'button',
+  recipe({
+    variants: {
+      tone: {
+        neutral: 'bg-slate-100',
+        accent: 'bg-sky-500',
       },
-      className: 'tracking-wide',
+      size: {
+        sm: 'text-xs',
+        lg: 'text-lg',
+      },
     },
-  ],
-});
-
-const Button = variantComponent('button', {
-  variants: {
-    tone: {
-      neutral: 'bg-slate-100',
-      accent: 'bg-sky-500',
-    },
-    size: {
-      sm: 'text-xs',
-      lg: 'text-lg',
-    },
-  },
-  forwardProps: ['tone'],
-});
+  }),
+  {
+    withRender: true,
+  }
+);
 
 Button({
   tone: 'neutral',
@@ -122,16 +103,6 @@ Button({
   form: 'checkout',
   render: props => {
     type _RenderClassName = Expect<Equal<typeof props.className, string>>;
-    type _RenderTone = Expect<Equal<typeof props.tone, 'neutral' | 'accent'>>;
-
-    // @ts-expect-error non-forwarded variants stay out of render props
-    const leakedSize = props.size;
-    void leakedSize;
-
-    // @ts-expect-error base-element-specific props are intentionally not promised
-    const leakedType = props.type;
-    void leakedType;
-
     return null;
   },
 });
@@ -144,52 +115,62 @@ Button({
   render: props => createElement(RouterLink, { ...props, to: '/router' }),
 });
 
-const resolveButtonProps = variantPropsResolver({
-  variants: {
-    tone: {
-      neutral: 'bg-slate-100',
-      accent: 'bg-sky-500',
+type _ResolvedButtonClassName = Expect<Equal<ReturnType<typeof badge>, string>>;
+
+const Input = styled(
+  'input',
+  recipe({
+    variants: {
+      size: {
+        sm: 'text-xs',
+        lg: 'text-lg',
+      },
     },
-  },
-});
-
-const resolvedButtonProps = resolveButtonProps({
-  tone: 'neutral',
-  className: ['inline-flex', ['gap-2'], null, undefined],
-});
-
-type _ResolvedButtonClassName = Expect<
-  Equal<typeof resolvedButtonProps.className, string>
->;
-
-const Input = variantComponent('input', {
-  variants: {
-    size: {
-      sm: 'text-xs',
-      lg: 'text-lg',
+  }),
+  {
+    nativeAliases: {
+      size: 'htmlSize',
     },
-  },
-});
+  }
+);
 
 Input({
   size: 'sm',
+  htmlSize: 20,
   value: 'variant size',
 });
 
 Input({
-  // @ts-expect-error overlap keys are variant-first and no longer accept native fallback types
+  // @ts-expect-error overlap keys are variant-first and require nativeAliases
   size: 20,
   value: 'native size',
 });
 
-const mergedConflictProps = mergeProps({ foo: 'base' }, { foo: 1 });
-type _MergedConflictFoo = Expect<Equal<typeof mergedConflictProps.foo, number>>;
-
-// @ts-expect-error reserved keys must be rejected for ESM consumers
-variantComponent('button', {
+const multipartButtonRecipe = recipe({
+  slots: {
+    root: 'inline-flex',
+    icon: 'size-4',
+  },
   variants: {
-    render: {
-      primary: 'bg-slate-100',
+    tone: {
+      neutral: {
+        root: 'bg-slate-100',
+        icon: 'text-sky-500',
+      },
     },
   },
+});
+
+const MultipartButton = styled('button', multipartButtonRecipe, {
+  compose: ({ Root, slots }) =>
+    createElement(
+      Root,
+      { className: slots.root() },
+      createElement('span', { className: slots.icon() })
+    ),
+});
+
+MultipartButton({
+  tone: 'neutral',
+  className: 'px-4',
 });

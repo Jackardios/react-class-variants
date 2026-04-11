@@ -1,4 +1,10 @@
-import { defineConfig, defineVariantConfig } from 'react-class-variants';
+import {
+  defineConfig,
+  recipe,
+  styled,
+  type RecipeConfigOf,
+  type RecipeInput,
+} from 'react-class-variants';
 
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
   ? 1
@@ -7,9 +13,9 @@ type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
   : false;
 type Expect<T extends true> = T;
 
-const { variants, variantComponent, variantPropsResolver } = defineConfig();
+const { recipe: configuredRecipe, styled: configuredStyled } = defineConfig();
 
-const badgeConfig = defineVariantConfig({
+const badge = recipe({
   base: ['badge', 'rounded-full'],
   variants: {
     tone: {
@@ -27,37 +33,32 @@ const badgeConfig = defineVariantConfig({
   },
   compoundVariants: [
     {
-      variants: {
-        tone: 'danger',
-        size: 'lg',
-      },
+      tone: 'danger',
+      size: 'lg',
       className: ['tracking-wide'],
     },
   ],
 });
 
-const badge = variants(badgeConfig);
 badge();
 badge({ tone: 'danger', size: 'lg' });
 
-const Button = variantComponent('button', {
+configuredRecipe({
+  base: 'inline-flex',
   variants: {
     tone: {
-      info: 'bg-sky-500',
-      danger: 'bg-rose-500',
-    },
-    size: {
-      sm: 'text-sm',
-      lg: 'text-lg',
+      info: 'text-sky-500',
     },
   },
-  forwardProps: ['tone'] as const,
 });
+
+const Button = styled('button', badge, { withRender: true });
 
 type ButtonProps = Parameters<typeof Button>[0];
 type _IntrinsicButtonType = Expect<
   Equal<ButtonProps['type'], 'button' | 'submit' | 'reset' | undefined>
 >;
+type _ResolvedButtonClassName = Expect<Equal<ReturnType<typeof badge>, string>>;
 
 Button({
   tone: 'info',
@@ -69,75 +70,36 @@ Button({
   },
   render: props => {
     type _ClassName = Expect<Equal<typeof props.className, string>>;
-    type _ForwardedTone = Expect<Equal<typeof props.tone, 'info' | 'danger'>>;
-
-    // @ts-expect-error non-forwarded variant props must stay out of render props
-    const leakedSize = props.size;
-    void leakedSize;
-
-    // @ts-expect-error base-element-specific props are intentionally not promised
-    const leakedType = props.type;
-    void leakedType;
-
     return <a {...props} href="/" />;
   },
   children: 'Link button',
 });
 
-const resolveButtonProps = variantPropsResolver({
-  variants: {
-    tone: {
-      info: 'bg-sky-500',
+const Input = configuredStyled(
+  'input',
+  recipe({
+    variants: {
+      size: {
+        sm: 'text-sm',
+        lg: 'text-lg',
+      },
     },
-  },
-});
-
-const resolvedButtonProps = resolveButtonProps({
-  tone: 'info',
-  className: ['inline-flex', ['gap-2'], null, undefined],
-});
-
-type _ResolvedButtonClassName = Expect<
-  Equal<typeof resolvedButtonProps.className, string>
->;
-
-const NoRenderButton = variantComponent('button', {
-  variants: {
-    tone: {
-      info: 'bg-sky-500',
+  }),
+  {
+    nativeAliases: {
+      size: 'htmlSize',
     },
-  },
-  withoutRenderProp: true,
-});
-
-NoRenderButton({
-  tone: 'info',
-  type: 'button',
-  children: 'Plain button',
-});
-
-NoRenderButton({
-  tone: 'info',
-  // @ts-expect-error render is disabled when withoutRenderProp is true
-  render: <a href="/" />,
-});
-
-const Input = variantComponent('input', {
-  variants: {
-    size: {
-      sm: 'text-sm',
-      lg: 'text-lg',
-    },
-  },
-});
+  }
+);
 
 Input({
   size: 'sm',
+  htmlSize: 20,
   value: 'variant input',
 });
 
 Input({
-  // @ts-expect-error overlap keys are variant-first and no longer accept native fallback types
+  // @ts-expect-error overlap keys are variant-first and require nativeAliases
   size: 20,
   value: 'typed input',
 });
@@ -145,11 +107,41 @@ Input({
 // @ts-expect-error invalid tone should fail in bundler projects too
 Button({ tone: 'ghost' });
 
-// @ts-expect-error reserved keys must be rejected from packed consumer types
-variantComponent('button', {
+const multipartButtonRecipe = recipe({
+  slots: {
+    root: 'inline-flex',
+    icon: 'size-4',
+  },
   variants: {
-    ref: {
-      primary: 'ring-2',
+    tone: {
+      info: {
+        root: 'bg-sky-500',
+        icon: 'text-white',
+      },
     },
   },
 });
+
+const MultipartButton = styled('button', multipartButtonRecipe, {
+  compose: ({ Root, slots }) => (
+    <Root className={slots.root()}>
+      <span className={slots.icon()} />
+    </Root>
+  ),
+});
+
+MultipartButton({
+  tone: 'info',
+  className: 'px-4',
+});
+
+type BadgeOptions = RecipeInput<typeof badge>;
+type BadgeConfig = RecipeConfigOf<typeof badge>;
+
+const badgePrimary: BadgeOptions = {};
+const badgeDanger: BadgeOptions = { tone: 'danger', size: 'lg' };
+void badgePrimary;
+void badgeDanger;
+type _BadgeToneClass = Expect<
+  Equal<NonNullable<BadgeConfig['variants']>['tone']['info'], 'bg-sky-500'>
+>;

@@ -2,13 +2,13 @@ import { execFileSync } from 'node:child_process';
 import {
   cpSync,
   mkdtempSync,
-  readFileSync,
   readdirSync,
   rmSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, relative, resolve } from 'node:path';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
@@ -17,7 +17,7 @@ const fixturesRoot = join(repoRoot, 'test', 'types', 'consumers', 'fixtures');
 const tempRoot = mkdtempSync(
   join(tmpdir(), 'react-class-variants-type-tests-')
 );
-const pnpmStoreDir = join(tempRoot, '.pnpm-store');
+const require = createRequire(import.meta.url);
 
 function run(command, args, cwd) {
   console.log(`\n> (${cwd}) ${command} ${args.join(' ')}`);
@@ -27,25 +27,46 @@ function run(command, args, cwd) {
   });
 }
 
-function writeFixturePackageJson(projectDir, tarballPath, rootPackageJson) {
+function toFileDependency(projectDir, packagePath) {
+  void projectDir;
+  return `file:${packagePath}`;
+}
+
+function resolveInstalledPackageDir(packageName, fromPath = repoRoot) {
+  return dirname(
+    require.resolve(`${packageName}/package.json`, {
+      paths: [fromPath],
+    })
+  );
+}
+
+function writeFixturePackageJson(projectDir, tarballPath) {
   const tarballSpec = `file:${relative(projectDir, tarballPath)}`;
-  const reactVersion = JSON.parse(
-    readFileSync(
-      join(repoRoot, 'node_modules', 'react', 'package.json'),
-      'utf8'
-    )
-  ).version;
+  const reactTypesDir = resolveInstalledPackageDir('@types/react');
+  const csstypeDependency = toFileDependency(
+    projectDir,
+    resolveInstalledPackageDir('csstype', reactTypesDir)
+  );
 
   const manifest = {
     name: `type-consumer-${basename(projectDir)}`,
     private: true,
     dependencies: {
-      react: reactVersion,
+      react: toFileDependency(projectDir, resolveInstalledPackageDir('react')),
       'react-class-variants': tarballSpec,
     },
     devDependencies: {
-      '@types/react': rootPackageJson.devDependencies['@types/react'],
-      typescript: rootPackageJson.devDependencies.typescript,
+      '@types/react': toFileDependency(projectDir, reactTypesDir),
+      csstype: csstypeDependency,
+      typescript: toFileDependency(
+        projectDir,
+        resolveInstalledPackageDir('typescript')
+      ),
+    },
+    pnpm: {
+      overrides: {
+        csstype: csstypeDependency,
+      },
     },
   };
 
@@ -56,9 +77,6 @@ function writeFixturePackageJson(projectDir, tarballPath, rootPackageJson) {
 }
 
 try {
-  const rootPackageJson = JSON.parse(
-    readFileSync(join(repoRoot, 'package.json'), 'utf8')
-  );
   const fixtureNames = readdirSync(fixturesRoot, { withFileTypes: true })
     .filter(entry => entry.isDirectory())
     .map(entry => entry.name)
@@ -86,16 +104,10 @@ try {
 
   for (const fixtureName of fixtureNames) {
     const projectDir = join(workspaceRoot, fixtureName);
-    writeFixturePackageJson(projectDir, tarballPath, rootPackageJson);
+    writeFixturePackageJson(projectDir, tarballPath);
     run(
       'pnpm',
-      [
-        'install',
-        '--ignore-scripts',
-        '--config.lockfile=false',
-        '--store-dir',
-        pnpmStoreDir,
-      ],
+      ['install', '--ignore-scripts', '--config.lockfile=false'],
       projectDir
     );
     run(

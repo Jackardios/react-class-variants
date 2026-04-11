@@ -1,8 +1,12 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "strict": true,
     "jsx": "react-jsx",
     "esModuleInterop": true,
+    "paths": {
+      "react-class-variants": ["./dist/index.d.ts"]
+    },
     "types": ["@testing-library/jest-dom"]
   }
 }

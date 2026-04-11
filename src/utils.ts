@@ -7,29 +7,8 @@ import {
   type RefCallback,
   type RefObject,
 } from 'react';
-
-/**
- * Checks whether `prop` is an own property of `obj` or not.
- * Uses Object.hasOwn when available, falls back to Object.prototype.hasOwnProperty.
- *
- * @param object - The object to check
- * @param prop - The property name to check for
- * @returns True if the property is an own property of the object
- *
- * @example
- * hasOwnProperty({ foo: 1 }, 'foo'); // true
- * hasOwnProperty({ foo: 1 }, 'bar'); // false
- */
-export function hasOwnProperty<T extends object>(
-  object: T,
-  prop: PropertyKey
-): prop is keyof T {
-  if (typeof Object.hasOwn === 'function') {
-    return Object.hasOwn(object, prop);
-  }
-
-  return Object.prototype.hasOwnProperty.call(object, prop);
-}
+import { hasOwnProperty } from './internal/core-utils';
+export { hasOwnProperty } from './internal/core-utils';
 
 /**
  * Checks if an element is a valid React element with a ref property.
@@ -66,8 +45,7 @@ export function isValidElementWithRef<P extends { ref?: Ref<unknown> }>(
  */
 export function getRefProperty(element: unknown): Ref<unknown> | null {
   if (!isValidElementWithRef(element)) return null;
-  const props = { ...element.props };
-  return props.ref ?? element.ref ?? null;
+  return element.props.ref ?? element.ref ?? null;
 }
 
 /**
@@ -123,10 +101,6 @@ export function mergeProps<TBase extends object, TOverrides extends object>(
   base: TBase & MergeableProps,
   overrides: TOverrides & MergeableProps
 ): MergedProps<TBase, TOverrides> {
-  if (!overrides || Object.keys(overrides).length === 0) {
-    return base as MergedProps<TBase, TOverrides>;
-  }
-
   const props = { ...base } as Record<string, unknown> & MergeableProps;
   const baseProps = base as Record<string, unknown> & MergeableProps;
   const overrideProps = overrides as Record<string, unknown> & MergeableProps;
@@ -194,11 +168,21 @@ function mergeRefsImpl<T>(
   if (refs.length === 0) return;
   if (refs.length === 1) return refs[0] || undefined;
 
-  const validRefs = refs.filter((ref): ref is Ref<T> => Boolean(ref));
-  if (validRefs.length === 0) return;
+  let validRefCount = 0;
+  let singleRef: Ref<T> | undefined;
+
+  for (const ref of refs) {
+    if (!ref) continue;
+    validRefCount += 1;
+    singleRef = ref;
+  }
+
+  if (validRefCount === 0) return;
+  if (validRefCount === 1) return singleRef;
 
   return (value: T | null) => {
-    for (const ref of validRefs) {
+    for (const ref of refs) {
+      if (!ref) continue;
       setRef(ref, value);
     }
   };

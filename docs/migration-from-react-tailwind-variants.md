@@ -1,417 +1,232 @@
-# Migration from `react-tailwind-variants` to `react-class-variants`
+# Migration from `react-tailwind-variants` v1
 
-This guide covers the public migration path from `react-tailwind-variants` v1 (`v1-maintenance`) to `react-class-variants` v2 (`next`, currently `2.0.0-alpha.x`).
+`react-tailwind-variants` v1 exposed a Tailwind-first API built around:
 
-The good news: the core variant config model is still familiar. `base`, `variants`, `defaultVariants`, and `compoundVariants` still work the same way. The main changes are the package name, the factory-based entrypoint, the component API, the polymorphism model, the class merging strategy, and some type utilities.
-
-## What stayed the same
-
-- Variant configs still use `base`, `variants`, `defaultVariants`, and `compoundVariants`.
-- Class values still support strings, arrays, `null`, and `undefined`.
-- Boolean variants still use `"true"` and `"false"` keys and remain optional.
-- Variants with defaults remain optional; variants without defaults remain required.
-- Compound variants still support matching single values or arrays of values.
-
-## Before you start
-
-- v2 is published under a new package name: `react-class-variants`.
-- The current v2 release channel is `alpha`.
-- v1 and v2 can coexist in the same application during migration because they have different package names.
-- v2 requires `react@^19`, `react-dom@^19`, and Node `>=20.19`.
-- `tailwind-merge` is no longer a peer dependency. Install it only if you want Tailwind conflict resolution.
-- v2 ships an `exports` map, so import from the package root rather than internal paths.
-
-## Quick checklist
-
-1. Install `react-class-variants@alpha`.
-2. Create a shared `defineConfig()` instance.
-3. Replace `styled()` with `variantComponent()`.
-4. Replace `variantProps()` with `variantPropsResolver()`.
-5. Replace `asChild` with the `render` prop.
-6. Re-enable Tailwind conflict resolution with `defineConfig({ onClassesMerged: twMerge })` if you relied on it in v1.
-7. Replace removed type utilities and remove `tw`.
-8. Re-run runtime tests and type checks before removing v1.
-
-## API mapping
-
-| v1                                   | v2                                                | Notes                                                                   |
-| ------------------------------------ | ------------------------------------------------- | ----------------------------------------------------------------------- |
-| `styled()`                           | `defineConfig().variantComponent()`               | Main component factory                                                  |
-| `variants()`                         | `defineConfig().variants()`                       | Same config shape, now created from a shared factory                    |
-| `variantProps()`                     | `defineConfig().variantPropsResolver()`           | Same role, new name                                                     |
-| `cx()`                               | `defineConfig({ onClassesMerged })`               | No standalone `cx()` export in v2                                       |
-| `extractVariantsConfig(component)`   | No runtime equivalent                             | Keep the config object yourself; `ExtractVariantConfig<T>` is type-only |
-| `VariantPropsOf<typeof Component>`   | `ExtractVariantOptions<typeof Component>`         | Also works with `variants()` and `variantPropsResolver()`               |
-| `VariantsConfigOf<typeof Component>` | `ExtractVariantConfig<typeof Component>`          | Type-only                                                               |
-| `StyledComponent`                    | `typeof Component` or `VariantComponentType<...>` | In most app code, `typeof Button` is enough                             |
-| `tw`                                 | Removed                                           | Use normal strings or arrays and update Tailwind IntelliSense settings  |
-| `CxOptions`, `CxReturn`              | Removed with `cx()`                               | Usually no replacement is needed                                        |
-
-## 1. Replace install and imports
-
-Install v2:
-
-```bash
-npm install react-class-variants@alpha
-```
-
-Install `tailwind-merge` as well if you want the same Tailwind conflict resolution behavior that v1 had by default:
-
-```bash
-npm install tailwind-merge
-```
-
-Update imports:
-
-```tsx
-// v1
-import {
-  styled,
-  variantProps,
-  variants,
-  type VariantPropsOf,
-} from 'react-tailwind-variants';
-
-// v2
-import {
-  defineConfig,
-  type ExtractVariantOptions,
-  type ExtractVariantConfig,
-} from 'react-class-variants';
-import { twMerge } from 'tailwind-merge';
-
-const { variants, variantComponent, variantPropsResolver } = defineConfig({
-  onClassesMerged: twMerge,
-});
-```
-
-## 2. Create a shared v2 factory
-
-In v1, helpers were exported directly. In v2, you create them from `defineConfig()`. This lets you configure class post-processing once and reuse it everywhere.
-
-```tsx
-// variants.config.ts
-import { defineConfig } from 'react-class-variants';
-import { twMerge } from 'tailwind-merge';
-
-export const { variants, variantComponent, variantPropsResolver } =
-  defineConfig({
-    onClassesMerged: twMerge,
-  });
-```
-
-If you do not pass `onClassesMerged`, v2 will only flatten and concatenate class names. Conflicting Tailwind classes will no longer be resolved automatically.
-
-## 3. Migrate `variants()`
-
-The config shape is unchanged. The main difference is that the helper comes from your shared `defineConfig()` instance.
-
-```tsx
-// v1
-import { variants } from 'react-tailwind-variants';
-
-export const buttonVariants = variants({
-  base: 'rounded font-medium',
-  variants: {
-    color: {
-      brand: 'bg-sky-500 text-white',
-      accent: 'bg-teal-500 text-white',
-    },
-  },
-  defaultVariants: {
-    color: 'brand',
-  },
-});
-
-// v2
-import { variants } from './variants.config';
-
-export const buttonVariants = variants({
-  base: 'rounded font-medium',
-  variants: {
-    color: {
-      brand: 'bg-sky-500 text-white',
-      accent: 'bg-teal-500 text-white',
-    },
-  },
-  defaultVariants: {
-    color: 'brand',
-  },
-});
-```
-
-## 4. Migrate `styled()` to `variantComponent()`
-
-The config itself stays familiar:
-
-```tsx
-// v1
-import { styled } from 'react-tailwind-variants';
-
-export const Button = styled('button', {
-  base: 'rounded font-medium',
-  variants: {
-    color: {
-      brand: 'bg-sky-500 text-white',
-      accent: 'bg-teal-500 text-white',
-    },
-    size: {
-      sm: 'px-3 py-2 text-sm',
-      lg: 'px-5 py-3 text-base',
-    },
-  },
-  defaultVariants: {
-    size: 'sm',
-  },
-});
-
-// v2
-import { variantComponent } from './variants.config';
-
-export const Button = variantComponent('button', {
-  base: 'rounded font-medium',
-  variants: {
-    color: {
-      brand: 'bg-sky-500 text-white',
-      accent: 'bg-teal-500 text-white',
-    },
-    size: {
-      sm: 'px-3 py-2 text-sm',
-      lg: 'px-5 py-3 text-base',
-    },
-  },
-  defaultVariants: {
-    size: 'sm',
-  },
-});
-```
-
-If you previously used `styled(BaseButton, config)`, you now have two common options:
-
-- Pass the base component to `variantComponent(BaseButton, config)` when you want another variant layer on top of an existing component.
-- Wrap the existing component with `React.ComponentProps<typeof BaseButton>` when you only need extra behavior or extra markup.
-
-## 5. Replace `asChild` with `render`
-
-v1 polymorphism used `asChild` and `@radix-ui/react-slot`. v2 replaces that with a `render` prop.
-
-### Element replacement
-
-```tsx
-// v1
-<Button asChild color="brand" size="lg">
-  <a href="/docs" className="mt-4">
-    Docs
-  </a>
-</Button>
-
-// v2
-<Button
-  color="brand"
-  size="lg"
-  render={<a href="/docs" className="mt-4" />}
->
-  Docs
-</Button>
-```
-
-### Function form
-
-Use the function form when you need to adapt props for router links or custom components:
-
-```tsx
-<Button color="brand" render={props => <Link {...props} to="/docs" />}>
-  Docs
-</Button>
-```
-
-### Behavior differences to expect
-
-- When `render` receives a React element, that element's props override the resolved props.
-- Render functions receive a broad resolved props bag, not all variant props. The typed/stable contract intentionally guarantees spread-safe HTML attributes, `className`, `ref`, and any variant props listed in `forwardProps`.
-- `className` values are concatenated.
-- `style` objects are shallow-merged.
-- React event handlers are composed, and the render element's handler runs first.
-- Refs from the component and the render element are merged.
-- Generic helpers no longer validate variant-key collisions at runtime. Their reserved-name protection is TypeScript-first, so JavaScript consumers should avoid reserved keys like `className` manually.
-- `variantComponent()` rejects component-level collisions such as `render`, `ref`, and React special props, and intrinsic elements additionally reject dangerous intrinsic collisions when they actually apply to that element. Global props like `id` and `role` are always blocked, while element-specific props such as `href`, `src`, `alt`, `htmlFor`, `method`, `target`, `type`, `value`, and `checked` are blocked only on matching intrinsic elements.
-- Other overlaps remain allowed, but they are variant-first: if a prop name is declared in `variants`, it belongs to the variant API unless you rename it.
-- Passing a variant prop as `undefined` now behaves like omission, so `defaultVariants` and boolean `false` fallbacks still apply.
-
-If you do not want polymorphism on a string element component, set `withoutRenderProp: true`. If you pass a custom React component as the base element, the generated component does not expose `render`.
-
-## 6. Migrate `variantProps()` to `variantPropsResolver()`
-
-The purpose is the same: separate variant props from other props and return a resolved `className`.
-
-```tsx
-// v1
-import { variantProps } from 'react-tailwind-variants';
-
-const resolveButtonProps = variantProps({
-  base: 'rounded font-medium',
-  variants: {
-    color: {
-      brand: 'bg-sky-500 text-white',
-      accent: 'bg-teal-500 text-white',
-    },
-  },
-});
-
-// v2
-import { variantPropsResolver } from './variants.config';
-
-const resolveButtonProps = variantPropsResolver({
-  base: 'rounded font-medium',
-  variants: {
-    color: {
-      brand: 'bg-sky-500 text-white',
-      accent: 'bg-teal-500 text-white',
-    },
-  },
-});
-```
-
-By default, variant props are consumed and removed from the resolved props object. If you need specific variant props to survive resolution, use `forwardProps`:
-
-```tsx
-const Button = variantComponent('button', {
-  variants: {
-    disabled: {
-      true: 'opacity-50 cursor-not-allowed',
-      false: 'opacity-100',
-    },
-  },
-  forwardProps: ['disabled'],
-});
-```
-
-`forwardProps` keeps those props in the resolved props object, which is useful for valid DOM props like `disabled`, custom components, or `render` functions. It does not force React to keep arbitrary unknown attributes on native DOM elements, and it is not a mechanism for restoring native fallback behavior for overlap keys. Dangerous intrinsic collisions such as `id`/`role` globally or `src` on `img`, `method` on `form`, and `href` on anchors are rejected by `variantComponent()` instead.
-
-If a variant key overlaps with a normal intrinsic prop and the overlap is allowed, that key is variant-first. For example, if you declare `size` as a variant on an `<input>`, you should rename the variant key if you still need the native `size` prop.
-
-## 7. Re-enable Tailwind conflict resolution explicitly
-
-This is the most important runtime difference.
-
-In v1, `styled()`, `variants()`, and `variantProps()` all ended up going through `cx()`, which used `tailwind-merge` by default. In v2, that behavior is opt-in.
-
-```tsx
-import { defineConfig } from 'react-class-variants';
-import { twMerge } from 'tailwind-merge';
-
-export const { variants, variantComponent, variantPropsResolver } =
-  defineConfig({
-    onClassesMerged: twMerge,
-  });
-```
-
-Without that configuration, conflicting Tailwind classes such as `px-2 px-6` or `bg-blue-500 bg-red-500` will both remain in the final string.
-
-## 8. Replace removed type helpers and runtime extraction
-
-v2 adds better extractor types, but removes the v1 runtime config extractor.
-
-```tsx
-// v1
-import {
-  extractVariantsConfig,
-  type VariantPropsOf,
-  type VariantsConfigOf,
-} from 'react-tailwind-variants';
-
-type ButtonVariants = VariantPropsOf<typeof Button>;
-type ButtonConfig = VariantsConfigOf<typeof Button>;
-const buttonConfig = extractVariantsConfig(Button);
-
-// v2
-import {
-  type ExtractVariantOptions,
-  type ExtractVariantConfig,
-} from 'react-class-variants';
-
-type ButtonVariants = ExtractVariantOptions<typeof Button>;
-type ButtonConfig = ExtractVariantConfig<typeof Button>;
-```
-
-If you need the config at runtime, keep it in your own variable instead of extracting it from the component:
-
-```tsx
-const buttonConfig = {
-  base: 'rounded font-medium',
-  variants: {
-    color: {
-      brand: 'bg-sky-500 text-white',
-      accent: 'bg-teal-500 text-white',
-    },
-  },
-} as const;
-
-const buttonVariants = variants(buttonConfig);
-const Button = variantComponent('button', buttonConfig);
-```
-
-`ExtractVariantOptions<T>` and `ExtractVariantConfig<T>` work with all three v2 APIs:
-
+- `styled()`
 - `variants()`
-- `variantPropsResolver()`
-- `variantComponent()`
+- `variantProps()`
+- implicit `tailwind-merge`
 
-## 9. Remove `tw` and update Tailwind IntelliSense
+`react-class-variants` v2 alpha is recipe-first and React-oriented. The public API is exported from `react-class-variants`:
 
-The v1 `tw` helper is gone. It was only a `String.raw` alias for editor tooling, so in v2 you can use normal strings and arrays directly.
+- `recipe()`
+- `styled()`
+- `defineConfig()`
+- `mergeProps()`
+- `mergeRefs()`
+- `useMergeRefs()`
+- `hasOwnProperty()`
 
-```tsx
-// v1
-import { styled, tw } from 'react-tailwind-variants';
+## Conceptual changes
 
-const Button = styled('button', {
-  base: tw`px-5 py-2 text-white`,
-  variants: {
-    color: {
-      neutral: tw`bg-slate-500 hover:bg-slate-400`,
-    },
-  },
-});
+### 1. One canonical primitive
 
-// v2
-const Button = variantComponent('button', {
-  base: 'px-5 py-2 text-white',
-  variants: {
-    color: {
-      neutral: 'bg-slate-500 hover:bg-slate-400',
-    },
-  },
+In v1 you had separate helpers for class strings, components, and prop splitting.
+
+In v2 you define a `recipe()` once and reuse it:
+
+- call it directly for a root class string
+- call slotted recipes to get slot render functions
+- use `.resolve()` when you need to split component-like props
+- pass it into `styled()` to create a component
+
+There is no public `.extend()`, `.slots()`, `.defaults`, or `.values` instance API in the current v2 alpha.
+
+### 2. Merge is explicit
+
+Tailwind conflict resolution is no longer implicit.
+
+```ts
+import { defineConfig } from 'react-class-variants';
+import { twMerge } from 'tailwind-merge';
+
+export const { recipe, styled } = defineConfig({
+  merge: twMerge,
 });
 ```
 
-Update VS Code Tailwind IntelliSense to use `classFunctions`:
+### 3. Multipart is built into `recipe()`
 
-```json
-{
-  "tailwindCSS.classFunctions": [
-    "variants",
-    "variantPropsResolver",
-    "variantComponent"
-  ]
+Use:
+
+- `base` for root-only recipes
+- `slots` for slotted recipes
+
+Slotted recipes do not need a `root` slot. Slotted `styled()` components require `compose`, because the library does not pick a canonical slot for you.
+
+### 4. Behavioral state is just variants
+
+There is no separate `state` section.
+
+```ts
+variants: {
+  loading: {
+    true: 'opacity-50',
+  },
 }
 ```
 
-If you only added `tailwindCSS.experimental.classRegex` for `tw`, you can remove that old setting.
+Boolean variants accept `boolean` values. If only `"true"` is defined, `false` applies no class.
 
-## Breaking changes summary
+## Old to new mapping
 
-- Package renamed from `react-tailwind-variants` to `react-class-variants`.
-- v2 requires React 19, React DOM 19, and Node 20.19+.
-- `defineConfig()` is now the entrypoint for all helper creation.
-- `styled()` was replaced by `variantComponent()`.
-- `variantProps()` was renamed to `variantPropsResolver()`.
-- `cx()` was removed; Tailwind conflict resolution is now opt-in through `onClassesMerged`.
-- `asChild` was removed in favor of `render`.
-- `extractVariantsConfig()` has no runtime replacement.
-- `tw` was removed.
-- Some v1 helper types were replaced by the new extractor utilities.
+| v1                        | v2 alpha                           |
+| ------------------------- | ---------------------------------- |
+| `variants(config)`        | `recipe(config)`                   |
+| `styled(tag, config)`     | `styled(tag, recipe(config))`      |
+| `variantProps(config)`    | `recipe.resolve()` or `styled()`   |
+| implicit `tailwind-merge` | `defineConfig({ merge: twMerge })` |
 
-## Legacy docs
+## Root-only class resolver
 
-Use [react-tailwind-variants-v1.md](./react-tailwind-variants-v1.md) for the frozen v1 line. If you need exact legacy examples while migrating incrementally, keep that document open alongside the v2 [README](../README.md).
+Before:
+
+```ts
+import { variants } from 'react-tailwind-variants';
+
+export const button = variants({
+  base: 'inline-flex items-center',
+  variants: {
+    tone: {
+      primary: 'bg-blue-600 text-white',
+      ghost: 'bg-transparent text-slate-900',
+    },
+  },
+});
+```
+
+Now:
+
+```ts
+import { recipe } from 'react-class-variants';
+
+export const button = recipe({
+  base: 'inline-flex items-center',
+  variants: {
+    tone: {
+      primary: 'bg-blue-600 text-white',
+      ghost: 'bg-transparent text-slate-900',
+    },
+  },
+});
+```
+
+## Component factory
+
+Before:
+
+```ts
+import { styled } from 'react-tailwind-variants';
+
+export const Button = styled('button', {
+  base: 'inline-flex items-center',
+  variants: {
+    tone: {
+      primary: 'bg-blue-600 text-white',
+      ghost: 'bg-transparent text-slate-900',
+    },
+  },
+});
+```
+
+Now:
+
+```ts
+import { recipe, styled } from 'react-class-variants';
+
+const buttonRecipe = recipe({
+  base: 'inline-flex items-center',
+  variants: {
+    tone: {
+      primary: 'bg-blue-600 text-white',
+      ghost: 'bg-transparent text-slate-900',
+    },
+  },
+});
+
+export const Button = styled('button', buttonRecipe);
+```
+
+## Slotted component
+
+```tsx
+import { recipe, styled } from 'react-class-variants';
+
+const buttonRecipe = recipe({
+  slots: {
+    root: 'inline-flex items-center gap-2',
+    icon: 'size-4',
+    label: 'truncate',
+  },
+  variants: {
+    tone: {
+      primary: {
+        root: 'bg-blue-600 text-white',
+        icon: 'text-blue-100',
+      },
+      ghost: {
+        root: 'bg-transparent text-slate-900',
+      },
+    },
+    loading: {
+      true: {
+        label: 'opacity-0',
+      },
+    },
+  },
+  defaultVariants: {
+    loading: false,
+  },
+});
+
+export const Button = styled('button', buttonRecipe, {
+  compose: ({ Root, slots, variants }, { className, children, ...props }) => (
+    <Root
+      {...props}
+      className={slots.root({ className })}
+      disabled={variants.loading}
+    >
+      <span className={slots.icon()} />
+      <span className={slots.label()}>{children}</span>
+    </Root>
+  ),
+});
+```
+
+## Intrinsic prop collisions
+
+Variant keys are variant-first. If you also need a native prop with the same name, use `nativeAliases`:
+
+```tsx
+const Input = styled(
+  'input',
+  recipe({
+    variants: {
+      size: {
+        sm: 'text-sm',
+        md: 'text-base',
+      },
+    },
+  }),
+  {
+    nativeAliases: {
+      size: 'htmlSize',
+    },
+  }
+);
+```
+
+## What to expect
+
+- required variants stay required
+- defaulted variants become optional
+- boolean `"true"` / `"false"` keys become `boolean`
+- root recipe `className` is merged into the root class string
+- slotted direct calls do not accept `className`
+- slotted component `className` is routed by your `compose` function
+- slotted variant and compound class values must be explicit slot maps
+- `render` remains the polymorphism API, but requires `withRender: true`
+
+## Related docs
+
+- Historical v1 reference: [react-tailwind-variants-v1.md](./react-tailwind-variants-v1.md)
