@@ -1,76 +1,7 @@
-import {
-  type CSSProperties,
-  isValidElement,
-  useMemo,
-  type ReactElement,
-  type Ref,
-  type RefCallback,
-  type RefObject,
-} from 'react';
+import { type CSSProperties, useMemo, type Ref, type RefCallback } from 'react';
+import { setRef } from './internal/react-utils';
 import { hasOwnProperty } from './internal/core-utils';
 export { hasOwnProperty } from './internal/core-utils';
-
-/**
- * Checks if an element is a valid React element with a ref property.
- *
- * @param element - The value to check
- * @returns True if the element is a valid React element with a ref
- *
- * @example
- * isValidElementWithRef(<div ref={ref} />); // true
- * isValidElementWithRef(<div />); // depends on React version
- * isValidElementWithRef(null); // false
- */
-export function isValidElementWithRef<P extends { ref?: Ref<unknown> }>(
-  element: unknown
-): element is ReactElement<P> & { ref?: Ref<unknown> } {
-  if (!element) return false;
-  if (!isValidElement<{ ref?: Ref<unknown> }>(element)) return false;
-  if ('ref' in element.props) return true;
-  if ('ref' in element) return true;
-  return false;
-}
-
-/**
- * Extracts the ref property from a React element.
- * Returns null if the element is not a valid React element or has no ref.
- *
- * @param element - The React element to extract ref from
- * @returns The ref property or null
- *
- * @example
- * const ref = createRef();
- * getRefProperty(<div ref={ref} />); // ref
- * getRefProperty(<div />); // null
- */
-export function getRefProperty(element: unknown): Ref<unknown> | null {
-  if (!isValidElementWithRef(element)) return null;
-  return element.props.ref ?? element.ref ?? null;
-}
-
-/**
- * Sets a React ref value, handling both function refs and object refs.
- *
- * @param ref - The ref to set (function ref, object ref, or null/undefined)
- * @param value - The value to set the ref to
- *
- * @example
- * const objRef = createRef<HTMLDivElement>();
- * setRef(objRef, element); // objRef.current = element
- *
- * const fnRef = (el) => console.log(el);
- * setRef(fnRef, element); // calls fnRef(element)
- */
-export function setRef<T>(
-  ref: RefCallback<T> | RefObject<T> | null | undefined,
-  value: T
-) {
-  if (typeof ref === 'function') {
-    ref(value);
-  } else if (ref) {
-    ref.current = value;
-  }
-}
 
 /**
  * Merges two sets of props with special handling for className, style, and event handlers.
@@ -185,19 +116,6 @@ function mergeRefsImpl<T>(
       if (!ref) continue;
       setRef(ref, value);
     }
-  };
-}
-
-export function mergeTwoRefs<T>(
-  refA: Ref<T> | undefined | null,
-  refB: Ref<T> | undefined | null
-): Ref<T> | RefCallback<T> | undefined {
-  if (!refA) return refB || undefined;
-  if (!refB) return refA || undefined;
-
-  return (value: T | null) => {
-    setRef(refA, value);
-    setRef(refB, value);
   };
 }
 

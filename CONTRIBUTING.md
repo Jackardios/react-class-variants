@@ -36,16 +36,18 @@ pnpm run ci
 - `pnpm lint:all` checks `src/` plus runtime tests and excludes `tsd` files, which are covered separately by `pnpm test:types`
 - `pnpm test:types:contracts` runs `tsd` against the built package root instead of importing `src/` directly
 - `pnpm test:types:exports` validates packed `types`, `main`, `module`, and `exports` wiring with `attw`
-- `pnpm test:types:consumers` compiles packed ESM, CJS, and Bundler fixtures to catch consumer-facing DX regressions
-- `pnpm bench:overhead` records bundle, runtime, retained-memory, and synthetic TypeScript overhead into `bench/overhead/reports/current.json`
-- `pnpm bench:competitors` rebuilds the package and writes runtime + retained-memory comparisons against CVA, classname-variants, and tailwind-variants into `bench/reports/competitors.{md,json}`
+- `pnpm test:types:consumers` compiles packed Bundler and NodeNext ESM fixtures to catch consumer-facing DX regressions for the current ESM-only package surface
+- `pnpm bench:overhead` records bundle, runtime, retained-memory, and named synthetic TypeScript / bundle profiles into `bench/overhead/reports/current.json`
+- `pnpm bench:competitors` rebuilds the package and writes common-denominator runtime + retained-memory comparisons against CVA, classname-variants, and tailwind-variants into `bench/competitors/reports/competitors.{md,json}` with `RME` in the markdown tables
+- `pnpm bench:diagnostics:competitors` runs the local non-authoritative competitor diagnostics under `bench/vitest/diagnostics/`
 - `pnpm check:overhead` re-measures the current tree and compares deterministic size checks against the baseline ref
+- All benchmark tooling lives under `bench/`: local Vitest suites in `bench/vitest/`, optional local diagnostics in `bench/vitest/diagnostics/`, competitor reporting in `bench/competitors/`, and package-overhead measurement in `bench/overhead/`
 - `pnpm lint:pkg` runs `publint` against the packed package metadata and publish surface
 - `pnpm run verify` is the reusable package gate: lint + tests + type checks + package linting
-- `pnpm test:types` runs the full type gate: build + contracts + packed export validation + packed consumer fixtures
+- `pnpm test:types` runs the full type gate: build + contracts + packed export validation + packed Bundler/NodeNext ESM consumer fixtures
 - `pnpm run ci` adds the release-intent changeset check on top of `verify`
 
-When a change affects public types, exports, or package metadata, run `pnpm test:types` locally before opening the PR. For the first release that changes the type-testing pipeline itself, do one manual VS Code / TS Server smoke-check against a consumer fixture to confirm completions still match the automated guarantees.
+The published package is currently ESM-only. When a change affects public types, exports, or package metadata, run `pnpm test:types` locally before opening the PR. For the first release that changes the type-testing pipeline itself, do one manual VS Code / TS Server smoke-check against a Bundler or NodeNext ESM consumer fixture to confirm completions still match the automated guarantees.
 
 ## Release flow
 

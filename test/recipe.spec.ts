@@ -283,6 +283,8 @@ describe('recipe()', () => {
 
     const slots = button({ loading: true });
 
+    expect(Object.keys(slots)).toEqual(['root', 'label', 'spinner']);
+    expect(Object.prototype.hasOwnProperty.call(slots, 'root')).toBe(true);
     expect(slots.root()).toBe('inline-flex items-center bg-blue text-white');
     expect(slots.label()).toBe('transition-opacity opacity-0');
     expect(slots.spinner()).toBe(
@@ -291,6 +293,43 @@ describe('recipe()', () => {
     expect(slots.spinner({ tone: 'ghost', className: 'text-red-500' })).toBe(
       'hidden size-4 text-slate-500 inline-block animate-spin text-red-500'
     );
+  });
+
+  it('treats destructured slot renderers as normal functions', () => {
+    const button = recipe({
+      slots: {
+        root: 'inline-flex items-center',
+        label: 'truncate',
+      },
+      variants: {
+        tone: {
+          primary: {
+            root: 'bg-blue text-white',
+          },
+          ghost: {
+            root: 'bg-transparent text-slate-900',
+          },
+        },
+        loading: {
+          true: {
+            label: 'opacity-0',
+          },
+        },
+      },
+      defaultVariants: {
+        tone: 'primary',
+        loading: false,
+      },
+    });
+
+    const slots = button({ loading: true });
+    const { root, label } = slots;
+
+    expect(root()).toBe('inline-flex items-center bg-blue text-white');
+    expect(root({ tone: 'ghost', className: 'rounded-md' })).toBe(
+      'inline-flex items-center bg-transparent text-slate-900 rounded-md'
+    );
+    expect(label()).toBe('truncate opacity-0');
   });
 
   it('supports slotted recipes without a root slot', () => {
@@ -748,7 +787,7 @@ describe('recipe()', () => {
     ).toThrow(/cannot mix boolean options/);
   });
 
-  it('treats config mutation after creation as unsupported', () => {
+  it('keeps default dev recipes detached from nested config mutations', () => {
     const config = {
       base: 'inline-flex',
       variants: {
@@ -763,8 +802,30 @@ describe('recipe()', () => {
     expect(() => {
       config.base = 'mutated';
     }).toThrow();
+    expect(() => {
+      config.variants.tone.info = 'text-red-500';
+    }).not.toThrow();
+
     expect(badge({ tone: 'info' })).toBe('inline-flex bg-sky-100');
     expect('config' in badge).toBe(false);
+  });
+
+  it('keeps strict recipes deeply frozen in validate: always mode', () => {
+    const { recipe: strictRecipe } = defineConfig({ validate: 'always' });
+    const config = {
+      base: 'inline-flex',
+      variants: {
+        tone: {
+          info: 'bg-sky-100',
+        },
+      },
+    };
+
+    strictRecipe(config);
+
+    expect(() => {
+      config.variants.tone.info = 'text-red-500';
+    }).toThrow();
   });
 
   it('keeps production-like recipes detached from config mutations', () => {

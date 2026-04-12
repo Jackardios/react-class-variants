@@ -18,8 +18,7 @@
 - `hasOwnProperty()`
 
 Recipe-only modules can import from `react-class-variants/core` to avoid React
-runtime imports. React-specific modules can import the same React surface from
-`react-class-variants/react`.
+runtime imports. The package root remains the canonical React surface.
 
 ## Conceptual changes
 

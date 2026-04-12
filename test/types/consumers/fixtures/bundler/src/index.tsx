@@ -11,11 +11,6 @@ import {
   defineRecipeConfig as defineCoreRecipeConfig,
   recipe as coreRecipe,
 } from 'react-class-variants/core';
-import {
-  defineRecipeConfig as defineReactRecipeConfig,
-  recipe as reactRecipe,
-  styled as reactStyled,
-} from 'react-class-variants/react';
 
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
   ? 1
@@ -86,20 +81,6 @@ defineCoreRecipeConfig({
     },
   },
 });
-
-const ReactSubpathButton = reactStyled(
-  'button',
-  reactRecipe(
-    defineReactRecipeConfig({
-      variants: {
-        tone: {
-          info: 'text-sky-700',
-        },
-      },
-    })
-  )
-);
-ReactSubpathButton({ tone: 'info', type: 'button' });
 
 const Button = styled('button', badge, { withRender: true });
 

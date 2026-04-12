@@ -50,6 +50,9 @@ importers:
       classname-variants:
         specifier: ^1.7.0
         version: 1.7.0
+      esbuild:
+        specifier: 0.25.9
+        version: 0.25.9
       eslint:
         specifier: ^9.39.2
         version: 9.39.2

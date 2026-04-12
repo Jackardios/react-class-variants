@@ -29,8 +29,9 @@ import {
   type RootCompiledRecipe,
   resolveRootComponentProps,
 } from './recipe';
+import { getRefProperty, mergeTwoRefs } from './react-utils';
 import { flattenClassName } from './class-name';
-import { getRefProperty, mergeProps, mergeTwoRefs } from '../utils';
+import { mergeProps } from '../utils';
 
 function splitReactProps(props: Record<string, unknown>) {
   const {
@@ -251,12 +252,6 @@ export function createSlotStyled<
     compiled,
     options as ResolveOptions
   );
-
-  if (compiled.validate && !options.compose) {
-    throw new Error(
-      'react-class-variants: slotted recipes require a compose callback.'
-    );
-  }
 
   const Component = forwardRef<
     unknown,

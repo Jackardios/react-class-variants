@@ -3,17 +3,24 @@
 This repository tracks performance in three layers:
 
 1. `pnpm bench`
-   - Vitest microbenchmarks in [`bench/`](../bench)
+   - Vitest microbenchmarks in [`bench/vitest/`](../bench/vitest)
    - fast local iteration for resolver, component, and creation hot paths
-2. `pnpm bench:competitors`
+   - excludes optional competitor-local diagnostics, which live under `bench/vitest/diagnostics/`
+2. `pnpm bench:diagnostics:competitors`
+   - runs the local, non-authoritative cross-library diagnostics in [`bench/vitest/diagnostics/`](../bench/vitest/diagnostics)
+   - useful while iterating, but intentionally separate from the reproducible report pipeline
+3. `pnpm bench:competitors`
    - builds the package
    - runs reproducible runtime, retained-memory, and synthetic bundle-size comparisons
-   - writes reports to [`bench/reports/competitors.md`](../bench/reports/competitors.md) and [`bench/reports/competitors.json`](../bench/reports/competitors.json)
+   - writes reports to [`bench/competitors/reports/competitors.md`](../bench/competitors/reports/competitors.md) and [`bench/competitors/reports/competitors.json`](../bench/competitors/reports/competitors.json)
    - runs with `NODE_ENV=production`
-3. `pnpm bench:overhead`
+   - isolates every runtime, creation, and retained-memory task in its own subprocess to avoid shared-process JIT / GC carryover bias
+4. `pnpm bench:overhead`
    - measures bundle size, retained memory, runtime throughput, and synthetic TypeScript diagnostics for `react-class-variants` itself
    - writes to [`bench/overhead/reports/current.json`](../bench/overhead/reports/current.json)
-   - uses the dedicated `react-class-variants/core` and `react-class-variants/react` entrypoints when present, so recipe-only bundle measurements do not include React runtime code
+   - uses the dedicated `react-class-variants/core` entrypoint together with the package root React surface, so recipe-only bundle measurements do not include React runtime code
+
+All performance tooling lives under [`bench/`](../bench): local Vitest suites in `bench/vitest/`, optional local diagnostics in `bench/vitest/diagnostics/`, reproducible competitor reporting in `bench/competitors/`, and package-overhead measurement/checking in `bench/overhead/`.
 
 ## Competitor matrix
 
@@ -49,7 +56,7 @@ The competitor report covers:
 - synthetic consumer bundle size for plain recipe imports, Tailwind-aware recipe imports, and React/styled imports
 
 All competitor comparisons use root-only recipes because that is the shared API surface across all libraries.
-Slotted behavior, `resolve()`, and React composition paths are benchmarked separately inside the repository's own Vitest benches and overhead tooling.
+Package-specific runtime, slotted recipe creation cost, `resolve()`, and React composition paths are benchmarked separately inside the repository's own Vitest benches and overhead tooling. Local competitor diagnostics remain intentionally non-authoritative; the publishable comparison story lives only in `bench/competitors/`.
 
 Creation is reported in two modes:
 
@@ -69,6 +76,25 @@ merge support changes the dependency graph substantially. They use esbuild with
 `format=esm`, `platform=browser`, `target=es2018`, `minify`, tree-shaking, and
 `react` marked external. The generated JSON keeps raw, gzip, and brotli bytes;
 the generated markdown sorts and compares by gzip bytes.
+
+Runtime and creation metrics now serialize median `opsPerSec` for backward
+compatibility together with the sample set, min / max / mean throughput,
+standard deviation, and `relativeMarginOfErrorPct`. The markdown report exposes
+`RME` so ratios near `1.0x` are interpreted as near-parity unless the stability
+margin is clearly separated.
+
+The package-overhead report uses named synthetic profiles instead of a single
+aggregate bundle / TypeScript number:
+
+- `bundles.recipeOnly`
+- `bundles.slottedRecipe`
+- `bundles.tailwindAwareRecipe`
+- `bundles.component`
+- `bundles.componentWithRender`
+- `typescript.profiles.bundlerRootOnly`
+- `typescript.profiles.bundlerReactSurface`
+- `typescript.profiles.bundlerSlottedRecipe`
+- `typescript.profiles.nodeNextReactSurface`
 
 ## Notes
 

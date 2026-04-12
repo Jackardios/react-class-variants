@@ -11,14 +11,28 @@ const npmCacheDir = mkdtempSync(
 );
 
 try {
-  execFileSync('pnpm', ['exec', 'attw', '--pack', '.', '--profile', 'node16'], {
-    cwd: repoRoot,
-    env: {
-      ...process.env,
-      npm_config_cache: npmCacheDir,
-    },
-    stdio: 'inherit',
-  });
+  execFileSync(
+    'pnpm',
+    [
+      'exec',
+      'attw',
+      '--pack',
+      '.',
+      '--profile',
+      'esm-only',
+      '--entrypoints',
+      '.',
+      './core',
+    ],
+    {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        npm_config_cache: npmCacheDir,
+      },
+      stdio: 'inherit',
+    }
+  );
 } finally {
   rmSync(npmCacheDir, { force: true, recursive: true });
 }

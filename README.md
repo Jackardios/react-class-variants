@@ -36,14 +36,11 @@ The v2 alpha React-oriented public API is exported from the package root:
 - `hasOwnProperty()`
 - public recipe and React types such as `VariantProps`
 
-Dedicated subpaths are also available when you want a narrower import surface:
+The dedicated core subpath is also available when you want a narrower import surface:
 
 - `react-class-variants/core` exports `recipe()`, a core-only `defineConfig()`,
   `defineRecipeConfig()`, core utilities, and recipe types without importing
   React runtime code
-- `react-class-variants/react` exports the React surface, including `recipe()`,
-  `styled()`, `defineRecipeConfig()`, React `defineConfig()`, utilities, and
-  public types
 
 ## Installation
 
@@ -300,14 +297,21 @@ const Input = styled(
 
 The repository keeps three complementary benchmark layers:
 
-- `pnpm bench` runs the Vitest microbench suite in [`bench/`](./bench)
+- `pnpm bench` runs the Vitest microbench suite in [`bench/vitest/`](./bench/vitest)
+- `pnpm bench:diagnostics:competitors` runs the optional local cross-library
+  diagnostics in [`bench/vitest/diagnostics/`](./bench/vitest/diagnostics)
 - `pnpm bench:competitors` writes reproducible speed, retained-memory, and
   synthetic bundle-size reports to
-  [`bench/reports/competitors.md`](./bench/reports/competitors.md) and
-  [`bench/reports/competitors.json`](./bench/reports/competitors.json)
+  [`bench/competitors/reports/competitors.md`](./bench/competitors/reports/competitors.md) and
+  [`bench/competitors/reports/competitors.json`](./bench/competitors/reports/competitors.json)
 - `pnpm bench:overhead` measures package-specific bundle, runtime, retained
   memory, and synthetic TypeScript overhead into
   [`bench/overhead/reports/current.json`](./bench/overhead/reports/current.json)
+
+All benchmark-related tooling now lives under [`bench/`](./bench): local
+Vitest suites in `bench/vitest/`, optional local diagnostics in
+`bench/vitest/diagnostics/`, competitor reporting in `bench/competitors/`, and
+package-overhead measurement in `bench/overhead/`.
 
 The competitor report compares `react-class-variants` against
 `class-variance-authority`, `classname-variants`, and `tailwind-variants`
@@ -315,7 +319,10 @@ across root-only common-denominator scenarios. The primary creation metric uses
 fresh unique complex configs so it reflects first-time compile cost; reused
 config creation is reported separately as a diagnostic scenario. Bundle-size
 comparisons use minified esbuild synthetic consumers and keep plain,
-Tailwind-aware, and React/styled imports in separate tables.
+Tailwind-aware, and React/styled imports in separate tables. Runtime tables
+include `RME` so near-parity ratios are read with stability metadata instead of
+as hard claims. The package-overhead report keeps named bundle and TypeScript
+profiles for root-only, slotted, Tailwind-aware, and `withRender` surfaces.
 
 ## Migration
 

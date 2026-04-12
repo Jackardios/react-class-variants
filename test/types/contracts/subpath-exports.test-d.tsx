@@ -1,15 +1,15 @@
 import type { ReactNode } from 'react';
 import { expectError, expectType } from 'tsd';
 import {
+  defineConfig as defineRootConfig,
+  recipe as rootRecipe,
+  styled,
+} from '../../../dist';
+import {
   defineConfig as defineCoreConfig,
   recipe as coreRecipe,
   type VariantProps,
 } from '../../../dist/core';
-import {
-  defineConfig as defineReactConfig,
-  recipe as reactRecipe,
-  styled,
-} from '../../../dist/react';
 
 const coreConfig = defineCoreConfig({
   merge: className => className,
@@ -39,8 +39,8 @@ type CoreBadgeVariants = VariantProps<typeof coreBadge>;
 const coreBadgeVariants: CoreBadgeVariants = { tone: 'info' };
 void coreBadgeVariants;
 
-const reactConfig = defineReactConfig();
-const buttonRecipe = reactRecipe({
+const reactConfig = defineRootConfig();
+const buttonRecipe = rootRecipe({
   base: 'inline-flex',
   variants: {
     tone: {

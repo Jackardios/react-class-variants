@@ -14,7 +14,7 @@
 4. Run `pnpm run verify` for the reusable package gate, and `pnpm run ci` when you also need to validate release intent.
 5. Merge to `next`; the release workflow publishes through npm trusted publishing and verifies the published version via `npm view`.
 
-`pnpm run verify` includes the full type gate via `pnpm test:types`, which builds the package, runs `tsd` against the package root, validates packed exports with `attw`, compiles packed ESM/CJS/Bundler consumer fixtures, and runs `publint` on the packed package surface. `pnpm run ci` adds the release-intent changeset check on top.
+`pnpm run verify` includes the full type gate via `pnpm test:types`, which builds the package, runs `tsd` against the package root, validates packed exports with `attw`, compiles packed Bundler and NodeNext ESM consumer fixtures, and runs `publint` on the packed package surface. The published v2 package surface is currently ESM-only. `pnpm run ci` adds the release-intent changeset check on top.
 
 ## Alpha release policy
 

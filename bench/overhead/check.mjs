@@ -5,8 +5,8 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
-const repoRoot = resolve(scriptDir, '..');
-const measureScript = join(scriptDir, 'measure-overhead.mjs');
+const repoRoot = resolve(scriptDir, '../..');
+const measureScript = join(scriptDir, 'measure.mjs');
 
 function parseArgs(argv) {
   const options = {
@@ -14,6 +14,7 @@ function parseArgs(argv) {
     componentMaxGzipBytes: null,
     recipeMaxRegression: 0.15,
     report: null,
+    slottedRecipeMaxRegression: 0.15,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -30,6 +31,11 @@ function parseArgs(argv) {
     }
     if (token === '--recipe-max-regression') {
       options.recipeMaxRegression = Number(argv[index + 1]);
+      index += 1;
+      continue;
+    }
+    if (token === '--slotted-recipe-max-regression') {
+      options.slottedRecipeMaxRegression = Number(argv[index + 1]);
       index += 1;
       continue;
     }
@@ -65,6 +71,27 @@ function formatBytes(bytes) {
   return `${bytes} B`;
 }
 
+function assertBundleRegressionWithinThreshold({
+  baselineMetric,
+  currentMetric,
+  label,
+  regressionThreshold,
+}) {
+  if (!baselineMetric || !currentMetric) {
+    return;
+  }
+
+  const allowedGzip = baselineMetric.gzipBytes * (1 + regressionThreshold);
+  assertCondition(
+    currentMetric.gzipBytes <= allowedGzip,
+    `${label} bundle gzip regressed above threshold: current ${formatBytes(
+      currentMetric.gzipBytes
+    )}, baseline ${formatBytes(
+      baselineMetric.gzipBytes
+    )}, allowed ${formatBytes(Math.round(allowedGzip))}.`
+  );
+}
+
 function main() {
   const options = parseArgs(process.argv.slice(2));
   const tempDir = mkdtempSync(join(tmpdir(), 'react-class-variants-check-'));
@@ -87,18 +114,18 @@ function main() {
         '--size-only',
       ]);
       const baseline = readReport(baselineReportPath);
-      const allowedRecipeGzip =
-        baseline.bundles.recipeOnly.gzipBytes *
-        (1 + options.recipeMaxRegression);
-
-      assertCondition(
-        current.bundles.recipeOnly.gzipBytes <= allowedRecipeGzip,
-        `Recipe-only bundle gzip regressed above threshold: current ${formatBytes(
-          current.bundles.recipeOnly.gzipBytes
-        )}, baseline ${formatBytes(
-          baseline.bundles.recipeOnly.gzipBytes
-        )}, allowed ${formatBytes(Math.round(allowedRecipeGzip))}.`
-      );
+      assertBundleRegressionWithinThreshold({
+        baselineMetric: baseline.bundles.recipeOnly,
+        currentMetric: current.bundles.recipeOnly,
+        label: 'Recipe-only',
+        regressionThreshold: options.recipeMaxRegression,
+      });
+      assertBundleRegressionWithinThreshold({
+        baselineMetric: baseline.bundles.slottedRecipe,
+        currentMetric: current.bundles.slottedRecipe,
+        label: 'Slotted recipe',
+        regressionThreshold: options.slottedRecipeMaxRegression,
+      });
     }
 
     if (options.componentMaxGzipBytes != null) {

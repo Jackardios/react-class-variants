@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import {
   cpSync,
+  existsSync,
   mkdtempSync,
   readdirSync,
   rmSync,
@@ -78,7 +79,11 @@ function writeFixturePackageJson(projectDir, tarballPath) {
 
 try {
   const fixtureNames = readdirSync(fixturesRoot, { withFileTypes: true })
-    .filter(entry => entry.isDirectory())
+    .filter(
+      entry =>
+        entry.isDirectory() &&
+        existsSync(join(fixturesRoot, entry.name, 'tsconfig.json'))
+    )
     .map(entry => entry.name)
     .sort();
 
