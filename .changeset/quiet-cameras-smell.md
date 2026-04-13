@@ -2,4 +2,4 @@
 'react-class-variants': patch
 ---
 
-Fix the project-wide typecheck pipeline, improve exported utility typings, and align release hygiene documentation with the current alpha workflow.
+Fix the package typecheck and packed-export validation pipeline, and improve the exported utility typings for the current root/core package surface.

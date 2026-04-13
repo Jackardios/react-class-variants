@@ -2,4 +2,4 @@
 'react-class-variants': minor
 ---
 
-Add `defineRecipeConfig()` as a zero-cost typed helper on the package root and the `/core` and `/react` subpath exports, remove the runtime `recipe.config` property in favor of storing configs separately, and tighten recipe creation performance with production-oriented compilation fast paths for root and slotted recipes.
+Add `defineRecipeConfig()` as a zero-cost typed helper on the package root and `react-class-variants/core`, remove the runtime `recipe.config` property in favor of keeping recipe configs explicit, accept readonly string arrays across `ClassNameValue`-backed recipe fields, and tighten recipe creation performance with production-oriented compilation fast paths for root and slotted recipes.
