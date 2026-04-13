@@ -82,7 +82,7 @@ describe('recipe()', () => {
     expect(toggle({ selected: true })).toBe('inline-flex is-selected');
   });
 
-  it('resolves component prop bags with forwardProps and nativeAliases', () => {
+  it('resolves component prop bags with forwardProps and propAliases', () => {
     const input = recipe({
       base: 'block',
       variants: {
@@ -110,7 +110,7 @@ describe('recipe()', () => {
         },
         {
           forwardProps: ['disabled'],
-          nativeAliases: { size: 'htmlSize' },
+          propAliases: { size: 'htmlSize' },
         }
       )
     ).toEqual({
@@ -185,7 +185,7 @@ describe('recipe()', () => {
     });
     const options = {
       forwardProps: ['disabled'],
-      nativeAliases: {
+      propAliases: {
         size: 'htmlSize',
       },
     } as const;
@@ -235,7 +235,7 @@ describe('recipe()', () => {
     });
     expect(options).toEqual({
       forwardProps: ['disabled'],
-      nativeAliases: {
+      propAliases: {
         size: 'htmlSize',
       },
     });
@@ -449,7 +449,7 @@ describe('recipe()', () => {
       root.resolve(
         { tone: 'info' },
         {
-          nativeAliases: {
+          propAliases: {
             type: 'tone',
           },
         }
@@ -486,12 +486,12 @@ describe('recipe()', () => {
       root.resolve(
         { tone: 'info', htmlClass: 'rounded-md' },
         {
-          nativeAliases: {
+          propAliases: {
             className: 'htmlClass',
           },
         }
       )
-    ).toThrow(/native alias target "className" conflicts with a reserved/);
+    ).toThrow(/prop alias target "className" conflicts with a reserved/);
 
     expect(() =>
       strictRecipe({

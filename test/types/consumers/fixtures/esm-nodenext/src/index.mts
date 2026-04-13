@@ -149,7 +149,7 @@ const Input = styled(
     },
   }),
   {
-    nativeAliases: {
+    propAliases: {
       size: 'htmlSize',
     },
   }
@@ -162,7 +162,7 @@ Input({
 });
 
 Input({
-  // @ts-expect-error overlap keys are variant-first and require nativeAliases
+  // @ts-expect-error overlap keys are variant-first and require propAliases
   size: 20,
   value: 'native size',
 });
@@ -183,12 +183,10 @@ const multipartButtonRecipe = recipe({
 });
 
 const MultipartButton = styled('button', multipartButtonRecipe, {
-  compose: ({ Root, slots }) =>
-    createElement(
-      Root,
-      { className: slots.root() },
-      createElement('span', { className: slots.icon() })
-    ),
+  view: ({ host, classes }) =>
+    host.render({
+      children: createElement('span', { className: classes.icon() }),
+    }),
 });
 
 MultipartButton({

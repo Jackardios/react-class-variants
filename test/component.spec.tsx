@@ -1,7 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { createRef } from 'react';
+import {
+  createRef,
+  forwardRef,
+  useEffect,
+  type ComponentPropsWithoutRef,
+} from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { defineConfig, recipe, styled } from '../src';
+import { defineConfig, recipe, styled, type RootStyledViewProps } from '../src';
 
 describe('styled()', () => {
   it('renders root recipes through the simple fast path', () => {
@@ -29,7 +34,7 @@ describe('styled()', () => {
     );
   });
 
-  it('supports root custom compose as an advanced path', () => {
+  it('supports root view components as the advanced path', () => {
     const badgeRecipe = recipe({
       base: 'inline-flex',
       variants: {
@@ -38,12 +43,19 @@ describe('styled()', () => {
         },
       },
     });
+
+    function BadgeView({
+      host,
+      variants,
+    }: RootStyledViewProps<'span', typeof badgeRecipe, false>) {
+      return host.render({
+        'data-tone': variants.tone,
+        children: host.children,
+      });
+    }
+
     const Badge = styled('span', badgeRecipe, {
-      compose: ({ Root, variants }, { children, ...props }) => (
-        <Root {...props} data-tone={variants.tone}>
-          {children}
-        </Root>
-      ),
+      view: BadgeView,
     });
 
     render(<Badge tone="info">Info</Badge>);
@@ -51,6 +63,57 @@ describe('styled()', () => {
     const badge = screen.getByText('Info');
     expect(badge).toHaveAttribute('data-tone', 'info');
     expect(badge.className).toBe('inline-flex bg-sky-100');
+  });
+
+  it('supports custom component bases', () => {
+    const buttonRecipe = recipe({
+      base: 'inline-flex items-center',
+      variants: {
+        tone: {
+          primary: 'bg-blue text-white',
+        },
+      },
+    });
+    const BaseButton = forwardRef<
+      HTMLButtonElement,
+      ComponentPropsWithoutRef<'button'>
+    >(function BaseButton(props, ref) {
+      return <button {...props} ref={ref} data-base="yes" />;
+    });
+    const Button = styled(BaseButton, buttonRecipe);
+
+    render(
+      <Button tone="primary" type="button">
+        Press
+      </Button>
+    );
+
+    const button = screen.getByRole('button', { name: 'Press' });
+    expect(button).toHaveAttribute('data-base', 'yes');
+    expect(button.className).toBe(
+      'inline-flex items-center bg-blue text-white'
+    );
+  });
+
+  it('rejects withRender for custom component bases', () => {
+    const buttonRecipe = recipe({
+      base: 'inline-flex',
+      variants: {
+        tone: {
+          primary: 'bg-blue',
+        },
+      },
+    });
+    const BaseButton = forwardRef<
+      HTMLButtonElement,
+      ComponentPropsWithoutRef<'button'>
+    >(function BaseButton(props, ref) {
+      return <button {...props} ref={ref} />;
+    });
+
+    expect(() =>
+      styled(BaseButton, buttonRecipe, { withRender: true } as never)
+    ).toThrow(/intrinsic base elements/);
   });
 
   it('keeps render polymorphism opt-in and supports element/function render', () => {
@@ -203,7 +266,7 @@ describe('styled()', () => {
     ).toThrow(/withRender: true/);
   });
 
-  it('supports nativeAliases and forwardProps', () => {
+  it('supports propAliases and forwardProps', () => {
     const inputRecipe = recipe({
       base: 'block rounded-md',
       variants: {
@@ -218,7 +281,7 @@ describe('styled()', () => {
     });
     const Input = styled('input', inputRecipe, {
       forwardProps: ['disabled'],
-      nativeAliases: {
+      propAliases: {
         size: 'htmlSize',
       },
     });
@@ -231,7 +294,7 @@ describe('styled()', () => {
     expect(input.className).toBe('block rounded-md text-sm opacity-50');
   });
 
-  it('rejects reserved native alias targets on the React surface', () => {
+  it('rejects reserved prop alias targets on the React surface', () => {
     const strict = defineConfig({ validate: 'always' });
     const inputRecipe = strict.recipe({
       variants: {
@@ -243,14 +306,14 @@ describe('styled()', () => {
 
     expect(() =>
       strict.styled('input', inputRecipe, {
-        nativeAliases: {
+        propAliases: {
           className: 'htmlClass',
         },
       } as never)
-    ).toThrow(/native alias target "className" conflicts with a reserved/);
+    ).toThrow(/prop alias target "className" conflicts with a reserved/);
   });
 
-  it('requires compose for slotted recipes and lets compose own className routing', () => {
+  it('requires a view component for slotted recipes and routes className to the host slot', () => {
     const buttonRecipe = recipe({
       slots: {
         root: 'inline-flex items-center gap-2',
@@ -283,29 +346,27 @@ describe('styled()', () => {
     });
 
     expect(() => styled('button', buttonRecipe as never)).toThrow(
-      /slotted recipes require a compose callback/
+      /slotted recipes require a view component/
     );
 
     const Button = styled('button', buttonRecipe, {
       forwardProps: ['disabled'],
-      compose: (
-        { Root, variants, slots },
-        { className, children, ...resolvedProps }
-      ) => (
-        <Root
-          {...resolvedProps}
-          className={slots.root({ className })}
-          aria-busy={variants.loading || undefined}
-          disabled={variants.disabled || variants.loading}
-        >
-          {variants.loading ? (
-            <span data-testid="spinner" className={slots.spinner()} />
-          ) : null}
-          <span data-testid="label" className={slots.label()}>
-            {children}
-          </span>
-        </Root>
-      ),
+      view({ host, variants, classes }) {
+        return host.render({
+          'aria-busy': variants.loading || undefined,
+          disabled: Boolean(host.props.disabled) || variants.loading,
+          children: (
+            <>
+              {variants.loading ? (
+                <span data-testid="spinner" className={classes.spinner()} />
+              ) : null}
+              <span data-testid="label" className={classes.label()}>
+                {host.children}
+              </span>
+            </>
+          ),
+        });
+      },
     });
 
     render(
@@ -328,7 +389,7 @@ describe('styled()', () => {
     );
   });
 
-  it('supports slotted compose without a root slot', () => {
+  it('supports slotted views without a root slot through hostSlot', () => {
     const fieldRecipe = recipe({
       slots: {
         label: 'block text-sm',
@@ -343,13 +404,27 @@ describe('styled()', () => {
         },
       },
     });
+
+    expect(() =>
+      styled('label', fieldRecipe, {
+        view() {
+          return null;
+        },
+      } as never)
+    ).toThrow(/require hostSlot/);
+
     const Field = styled('label', fieldRecipe, {
-      compose: ({ Root, slots }, { className, children, ...props }) => (
-        <Root {...props} className={slots.label({ className })}>
-          <input aria-label="field" className={slots.input()} />
-          {children}
-        </Root>
-      ),
+      hostSlot: 'label',
+      view({ host, classes }) {
+        return host.render({
+          children: (
+            <>
+              <input aria-label="field" className={classes.input()} />
+              {host.children}
+            </>
+          ),
+        });
+      },
     });
 
     render(
@@ -364,5 +439,134 @@ describe('styled()', () => {
     expect(screen.getByLabelText('field').className).toBe(
       'block rounded-md border-red-500'
     );
+  });
+
+  it('lets slotted view classes be safely destructured', () => {
+    const buttonRecipe = recipe({
+      slots: {
+        root: 'inline-flex items-center gap-2',
+        icon: 'size-4',
+        label: 'truncate',
+      },
+      variants: {
+        tone: {
+          primary: {
+            root: 'bg-blue text-white',
+            icon: 'text-blue-100',
+          },
+          ghost: {
+            root: 'bg-transparent text-slate-900',
+            icon: 'text-slate-500',
+          },
+        },
+      },
+      defaultVariants: {
+        tone: 'primary',
+      },
+    });
+
+    const Button = styled('button', buttonRecipe, {
+      view({ host, classes }) {
+        const { icon, label } = classes;
+
+        return host.render({
+          children: (
+            <>
+              <span data-testid="icon" className={icon({ tone: 'ghost' })} />
+              <span data-testid="label" className={label()}>
+                {host.children}
+              </span>
+            </>
+          ),
+        });
+      },
+    });
+
+    render(<Button tone="primary">Save</Button>);
+
+    expect(screen.getByTestId('icon').className).toBe('size-4 text-slate-500');
+    expect(screen.getByTestId('label').className).toBe('truncate');
+  });
+
+  it('normalizes className arrays passed to host.render overrides', () => {
+    const buttonRecipe = recipe({
+      base: 'inline-flex items-center',
+      variants: {
+        tone: {
+          primary: 'bg-blue text-white',
+        },
+      },
+    });
+
+    const Button = styled('button', buttonRecipe, {
+      view({ host }) {
+        return host.render({
+          className: ['rounded-md', 'px-4'],
+          children: host.children,
+        });
+      },
+    });
+
+    render(<Button tone="primary">Save</Button>);
+
+    expect(screen.getByRole('button', { name: 'Save' }).className).toBe(
+      'inline-flex items-center bg-blue text-white rounded-md px-4'
+    );
+  });
+
+  it('keeps view-based components stable across rerenders', () => {
+    const buttonRecipe = recipe({
+      base: 'inline-flex items-center',
+      variants: {
+        tone: {
+          primary: 'bg-blue text-white',
+          ghost: 'bg-transparent text-slate-900',
+        },
+      },
+    });
+    let mounts = 0;
+    let unmounts = 0;
+
+    function Probe() {
+      useEffect(() => {
+        mounts += 1;
+        return () => {
+          unmounts += 1;
+        };
+      }, []);
+
+      return <span data-testid="probe" />;
+    }
+
+    const Button = styled('button', buttonRecipe, {
+      view({ host }) {
+        return host.render({
+          children: (
+            <>
+              <Probe />
+              {host.children}
+            </>
+          ),
+        });
+      },
+    });
+
+    const view = render(<Button tone="primary">Save</Button>);
+    const firstButton = screen.getByRole('button', { name: 'Save' });
+
+    view.rerender(<Button tone="primary">Save</Button>);
+    expect(screen.getByRole('button', { name: 'Save' })).toBe(firstButton);
+
+    view.rerender(<Button tone="ghost">Save</Button>);
+    const rerenderedButton = screen.getByRole('button', { name: 'Save' });
+    expect(rerenderedButton).toBe(firstButton);
+    expect(rerenderedButton.className).toBe(
+      'inline-flex items-center bg-transparent text-slate-900'
+    );
+    expect(mounts).toBe(1);
+    expect(unmounts).toBe(0);
+
+    view.unmount();
+    expect(unmounts).toBe(1);
   });
 });

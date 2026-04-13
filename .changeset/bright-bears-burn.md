@@ -8,6 +8,9 @@ Replace the v2 alpha API with the RFC-backed root React surface:
 - remove the public `react-class-variants/react` subpath from package exports
 - make `recipe()` adapt from config shape into root or slotted recipes
 - require explicit slot maps for slotted variant and compound class values
-- make slotted `styled()` composition explicit through required `compose`
-- keep render polymorphism opt-in through `withRender`
+- make `styled()` accept intrinsic tags and custom React component bases
+- replace `compose` with hook-safe `view` components and `host` / `classes` view models
+- keep render polymorphism opt-in through `withRender` for intrinsic bases only
+- rename `nativeAliases` to `propAliases`
+- improve editor typing and navigation for slotted recipes and `view`-based styled components
 - add reproducible overhead tooling for bundle size, runtime, retained memory, and synthetic TypeScript diagnostics

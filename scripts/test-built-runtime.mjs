@@ -45,7 +45,7 @@ assert.deepEqual(
     },
     {
       forwardProps: ['disabled'],
-      nativeAliases: { size: 'htmlSize' },
+      propAliases: { size: 'htmlSize' },
     }
   ),
   {
@@ -140,8 +140,8 @@ assert.match(
 assert.match(buttonMarkup, /type="button"/);
 
 const Badge = packageRoot.styled('span', rootRecipe, {
-  compose: ({ Root, variants }, props) =>
-    React.createElement(Root, { ...props, 'data-tone': variants.tone }),
+  view: ({ host, variants }) =>
+    host.render({ 'data-tone': variants.tone, children: host.children }),
 });
 const badgeMarkup = renderToStaticMarkup(
   React.createElement(Badge, { tone: 'ghost' }, 'Info')
@@ -153,26 +153,24 @@ assert.match(
 );
 
 const SlotButton = packageRoot.styled('button', slotRecipe, {
-  compose: ({ Root, slots, variants }, { children, className, ...props }) =>
-    React.createElement(
-      Root,
-      {
-        ...props,
-        'aria-busy': variants.loading || undefined,
-        className: slots.root({ className }),
-      },
-      variants.loading
-        ? React.createElement('span', {
-            className: slots.spinner(),
-            'data-slot': 'spinner',
-          })
-        : null,
-      React.createElement(
-        'span',
-        { className: slots.label(), 'data-slot': 'label' },
-        children
-      )
-    ),
+  view: ({ host, classes, variants }) =>
+    host.render({
+      'aria-busy': variants.loading || undefined,
+      children: [
+        variants.loading
+          ? React.createElement('span', {
+              className: classes.spinner(),
+              'data-slot': 'spinner',
+              key: 'spinner',
+            })
+          : null,
+        React.createElement(
+          'span',
+          { className: classes.label(), 'data-slot': 'label', key: 'label' },
+          host.children
+        ),
+      ],
+    }),
 });
 const slotButtonMarkup = renderToStaticMarkup(
   React.createElement(

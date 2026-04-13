@@ -1,4 +1,8 @@
-import type { HTMLInputTypeAttribute, ReactNode } from 'react';
+import type {
+  ComponentPropsWithoutRef,
+  HTMLInputTypeAttribute,
+  ReactNode,
+} from 'react';
 import {
   expectAssignable,
   expectError,
@@ -10,7 +14,9 @@ import {
   styled,
   type RecipeResolved,
   type ResolvedVariantProps,
+  type RootStyledViewProps,
   type SlotNames,
+  type SlotStyledViewProps,
   type VariantProps,
 } from '../../../dist';
 
@@ -210,16 +216,19 @@ expectError(
 );
 
 const Badge = styled('button', badge, {
-  compose: ({ Root, variants }, { className, children, ...props }) => {
+  view: ({
+    host,
+    variants,
+  }: RootStyledViewProps<'button', typeof badge, false>) => {
     expectType<'info' | 'danger'>(variants.tone);
     expectType<boolean>(variants.disabled);
-    expectType<string>(className);
+    expectType<string>(host.className);
+    expectType<'button' | 'submit' | 'reset' | undefined>(host.props.type);
 
-    return (
-      <Root {...props} className={className} data-tone={variants.tone}>
-        {children}
-      </Root>
-    );
+    return host.render({
+      'data-tone': variants.tone,
+      children: host.children,
+    });
   },
 });
 
@@ -229,7 +238,13 @@ expectType<ReactNode>(
 expectError(Badge({ children: 'Missing tone' }));
 expectError(Badge({ tone: 'info', render: <a href="/" /> }));
 
-const LinkBadge = styled('button', badge, { withRender: true });
+const LinkBadge = styled('button', badge, {
+  withRender: true,
+  view: ({ host }: RootStyledViewProps<'button', typeof badge, true>) =>
+    host.render({
+      children: host.children,
+    }),
+});
 expectType<ReactNode>(
   LinkBadge({
     tone: 'danger',
@@ -248,6 +263,31 @@ expectType<ReactNode>(
   })
 );
 
+const RouterLink = (props: { to: string } & ComponentPropsWithoutRef<'a'>) =>
+  null;
+
+const RoutedBadge = styled(RouterLink, badge);
+
+expectType<ReactNode>(
+  RoutedBadge({
+    tone: 'info',
+    to: '/docs',
+    children: 'Docs',
+  })
+);
+expectError(
+  styled(RouterLink, badge, {
+    withRender: true,
+  })
+);
+expectError(
+  RoutedBadge({
+    tone: 'info',
+    to: '/docs',
+    render: <a href="/" />,
+  })
+);
+
 const Input = styled(
   'input',
   recipe({
@@ -263,44 +303,54 @@ const Input = styled(
   }),
   {
     forwardProps: ['disabled'],
-    nativeAliases: {
+    propAliases: {
       size: 'htmlSize',
     },
   }
 );
 
-const ComposedInput = styled(
-  'input',
-  recipe({
-    variants: {
-      tone: {
-        info: 'text-sky-700',
-        danger: 'text-rose-700',
-      },
-      disabled: {
-        true: 'opacity-50',
-      },
+const viewedInputRecipe = recipe({
+  variants: {
+    tone: {
+      info: 'text-sky-700',
+      danger: 'text-rose-700',
     },
-    defaultVariants: {
-      disabled: false,
+    size: {
+      sm: 'text-sm',
+      md: 'text-base',
     },
-  }),
-  {
-    withRender: true,
-    forwardProps: ['disabled'],
-    nativeAliases: {
-      size: 'htmlSize',
+    disabled: {
+      true: 'opacity-50',
     },
-    compose: ({ Root }, props) => {
-      expectType<HTMLInputTypeAttribute | undefined>(props.type);
-      expectType<number | undefined>(props.size);
-      expectType<boolean>(props.disabled);
-      expectError(props.htmlSize);
+  },
+  defaultVariants: {
+    disabled: false,
+  },
+});
 
-      return <Root {...props} />;
-    },
-  }
-);
+const ViewedInput = styled('input', viewedInputRecipe, {
+  withRender: true,
+  forwardProps: ['disabled'],
+  propAliases: {
+    size: 'htmlSize',
+  },
+  view: ({
+    host,
+  }: RootStyledViewProps<
+    'input',
+    typeof viewedInputRecipe,
+    true,
+    { size: 'htmlSize' },
+    'disabled'
+  >) => {
+    expectType<HTMLInputTypeAttribute | undefined>(host.props.type);
+    expectType<number | undefined>(host.props.size);
+    expectType<boolean>(host.props.disabled);
+    expectError(host.props.htmlSize);
+
+    return host.render();
+  },
+});
 
 expectError(
   styled(
@@ -313,7 +363,7 @@ expectError(
       },
     }),
     {
-      nativeAliases: {
+      propAliases: {
         className: 'htmlClass',
       },
     }
@@ -330,8 +380,9 @@ expectType<ReactNode>(
   })
 );
 expectType<ReactNode>(
-  ComposedInput({
+  ViewedInput({
     tone: 'info',
+    size: 'sm',
     disabled: true,
     htmlSize: 12,
     type: 'number',
@@ -351,27 +402,34 @@ expectError(
 const SlottedButton = styled('button', buttonRecipe, {
   withRender: true,
   forwardProps: ['loading'],
-  compose: ({ Root, slots: buttonSlots, variants }, props) => {
-    const { className, children, ...resolvedProps } = props;
-
+  view: ({
+    host,
+    classes,
+    variants,
+  }: SlotStyledViewProps<
+    'button',
+    typeof buttonRecipe,
+    true,
+    {},
+    'loading'
+  >) => {
     expectType<'primary' | 'ghost'>(variants.tone);
     expectType<boolean>(variants.loading);
-    expectType<boolean>(props.loading);
-    expectType<string>(buttonSlots.root({ className }));
-    expectType<string>(buttonSlots.icon({ tone: 'ghost' }));
-    expectError(buttonSlots.icon({ tone: 'danger' }));
+    expectType<boolean>(host.props.loading);
+    expectType<string>(host.className);
+    expectType<string>(classes.root());
+    expectType<string>(classes.icon({ tone: 'ghost' }));
+    expectError(classes.icon({ tone: 'danger' }));
 
-    return (
-      <Root
-        {...resolvedProps}
-        className={buttonSlots.root({ className })}
-        aria-busy={variants.loading || undefined}
-        disabled={variants.loading}
-      >
-        <span className={buttonSlots.icon()} />
-        <span className={buttonSlots.label()}>{children}</span>
-      </Root>
-    );
+    return host.render({
+      'aria-busy': variants.loading || undefined,
+      children: (
+        <>
+          <span className={classes.icon()} />
+          <span className={classes.label()}>{host.children}</span>
+        </>
+      ),
+    });
   },
 });
 
@@ -400,12 +458,29 @@ const fieldRecipe = recipe({
   },
 });
 
-styled('label', fieldRecipe, {
-  compose: ({ Root, slots: fieldSlots }) => {
-    expectType<string>(fieldSlots.label());
-    expectType<string>(fieldSlots.input());
-    expectError(fieldSlots.root());
+expectError(
+  styled('label', fieldRecipe, {
+    view: ({ host }) => host.render({ children: host.children }),
+  })
+);
 
-    return <Root className={fieldSlots.label()} />;
+styled('label', fieldRecipe, {
+  hostSlot: 'label',
+  view: ({
+    host,
+    classes: fieldClasses,
+  }: SlotStyledViewProps<'label', typeof fieldRecipe, false>) => {
+    expectType<string>(fieldClasses.label());
+    expectType<string>(fieldClasses.input());
+    expectError(fieldClasses.root());
+
+    return host.render({
+      children: (
+        <>
+          <input className={fieldClasses.input()} />
+          {host.children}
+        </>
+      ),
+    });
   },
 });

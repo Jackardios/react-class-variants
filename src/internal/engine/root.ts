@@ -262,6 +262,29 @@ export function resolveRootComponentProps(
   };
 }
 
+export function resolveRootViewState(
+  compiled: RootCompiledRecipe,
+  input: Record<string, unknown> | undefined,
+  options: NormalizedResolveOptions | undefined
+) {
+  const resolved = resolveRootClassName(compiled, input, true);
+  const resolvedProps = createResolvedProps(
+    compiled,
+    input,
+    options,
+    resolved.selection
+  );
+  resolvedProps.className = resolved.className;
+
+  return {
+    resolvedProps: resolvedProps as Record<string, unknown> & {
+      className: string;
+    },
+    selection: resolved.selection,
+    variants: materializeSelection(compiled, resolved.selection),
+  };
+}
+
 export function createStrictRootRecipe(
   compiled: StrictRootCompiledRecipe
 ): AnyRecipe {

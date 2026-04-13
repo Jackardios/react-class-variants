@@ -14,26 +14,68 @@ import type {
   ClassNameValue,
   ResolveOptions,
 } from './core-types';
-import {
-  type AnyIntrinsicElement,
-  type NativeAliases,
-  type RenderProp,
-  type RootComponentOptions,
-  type RootHelperProps,
-  type SlotComponentOptions,
-  type StyledComponentProps,
+import type {
+  AnyElementType,
+  AnyIntrinsicElement,
+  PropAliases,
+  RenderProp,
+  RootStyledOptions,
+  SlotStyledOptions,
+  StyledComponentProps,
+  StyledComponentType,
 } from './react-types';
 import {
   getCompiledRecipe,
   normalizeResolveOptions,
-  type RootCompiledRecipe,
   resolveRootComponentProps,
+  resolveRootViewState,
+  resolveSlotClassNameForRender,
+  resolveSlotViewState,
+  type RootCompiledRecipe,
 } from './recipe';
-import { getRefProperty, mergeTwoRefs } from './react-utils';
+import type {
+  CompiledSelectionValue,
+  SlotCompiledRecipe,
+} from './engine/shared';
 import { flattenClassName } from './class-name';
+import { getRefProperty, mergeTwoRefs } from './react-utils';
 import { mergeProps } from '../utils';
 
-function splitReactProps(props: Record<string, unknown>) {
+const hostStateSymbol = Symbol('react-class-variants.host-state');
+const slotCompiledSymbol = Symbol('react-class-variants.slot-compiled');
+const slotSelectionSymbol = Symbol('react-class-variants.slot-selection');
+
+type HostRuntimeState = {
+  base: AnyElementType;
+  children: ReactNode;
+  className: string;
+  forwardedRef: ForwardedRef<unknown> | undefined;
+  props: Record<string, unknown>;
+  render: RenderProp | undefined;
+  withRender: boolean;
+};
+
+type HostViewObject = {
+  props: Record<string, unknown>;
+  className: string;
+  children?: ReactNode;
+  render(overrides?: Record<string, unknown>): ReactNode;
+  [hostStateSymbol]: HostRuntimeState;
+};
+
+type SlotClassesObject = Record<
+  string,
+  (input?: Record<string, unknown>) => string
+> & {
+  [slotCompiledSymbol]: SlotCompiledRecipe;
+  [slotSelectionSymbol]: readonly CompiledSelectionValue[];
+};
+
+function isIntrinsicBase(base: AnyElementType): base is AnyIntrinsicElement {
+  return typeof base === 'string';
+}
+
+function splitResolvedProps(props: Record<string, unknown>) {
   const {
     className,
     children,
@@ -45,12 +87,12 @@ function splitReactProps(props: Record<string, unknown>) {
   return {
     className: className as ClassNameValue | undefined,
     children: children as ReactNode,
-    render: render as RenderProp | undefined,
     otherResolvedProps,
+    render: render as RenderProp | undefined,
   };
 }
 
-function renderPolymorphic(
+function renderIntrinsic(
   tag: AnyIntrinsicElement,
   props: Record<string, unknown>,
   forwardedRef: ForwardedRef<unknown> | undefined,
@@ -85,213 +127,444 @@ function renderPolymorphic(
   });
 }
 
-function createRootHelper<Tag extends AnyIntrinsicElement>(
-  tag: Tag,
-  ref: ForwardedRef<unknown>,
+function renderBase(
+  base: AnyElementType,
+  props: Record<string, unknown>,
+  forwardedRef: ForwardedRef<unknown> | undefined,
+  render: RenderProp | undefined
+) {
+  if (isIntrinsicBase(base)) {
+    return renderIntrinsic(base, props, forwardedRef, render);
+  }
+
+  const { ref: _ignoredRef, render: _ignoredRender, ...restProps } = props;
+  return createElement(base as any, { ...restProps, ref: forwardedRef });
+}
+
+function renderHostView(
+  this: HostViewObject,
+  overrides?: Record<string, unknown>
+): ReactNode {
+  const state = this[hostStateSymbol];
+  const overrideSource = { ...(overrides ?? {}) };
+  if ('className' in overrideSource) {
+    overrideSource.className = flattenClassName(
+      overrideSource.className as ClassNameValue | undefined
+    );
+  }
+  const {
+    ref: localRef,
+    render: overrideRender,
+    ...overrideProps
+  } = overrideSource;
+  const mergedRef = mergeTwoRefs(
+    state.forwardedRef,
+    localRef as ForwardedRef<unknown> | undefined
+  );
+
+  const mergedProps = mergeProps(
+    {
+      ...state.props,
+      children: state.children,
+      className: state.className,
+    },
+    overrideProps
+  ) as Record<string, unknown>;
+
+  return renderBase(
+    state.base,
+    mergedProps,
+    mergedRef,
+    state.withRender
+      ? (overrideRender as RenderProp | undefined) ?? state.render
+      : undefined
+  );
+}
+
+const hostViewPrototype: Pick<HostViewObject, 'render'> = {
+  render: renderHostView,
+};
+
+function createHostView(
+  base: AnyElementType,
+  props: Record<string, unknown>,
+  className: string,
+  children: ReactNode,
+  forwardedRef: ForwardedRef<unknown> | undefined,
+  render: RenderProp | undefined,
   withRender: boolean
 ) {
-  return function Root(props: RootHelperProps<Tag, boolean>) {
-    const {
-      render,
-      ref: localRef,
-      ...restProps
-    } = props as RootHelperProps<Tag, true>;
-    const mergedRef = mergeTwoRefs(ref, localRef);
+  const host = Object.create(hostViewPrototype) as HostViewObject;
+  host[hostStateSymbol] = {
+    base,
+    children,
+    className,
+    forwardedRef,
+    props,
+    render,
+    withRender,
+  };
+  host.props = props;
+  host.className = className;
+  host.children = children;
+  return host;
+}
 
-    return renderPolymorphic(
-      tag,
-      restProps as Record<string, unknown>,
-      mergedRef,
+function createSlotClassesPrototype(slotNames: readonly string[]) {
+  const prototype = Object.create(null) as Record<string, unknown>;
+
+  for (let slotIndex = 0; slotIndex < slotNames.length; slotIndex += 1) {
+    const slotName = slotNames[slotIndex];
+    Object.defineProperty(prototype, slotName, {
+      configurable: true,
+      enumerable: true,
+      get(this: SlotClassesObject) {
+        const renderSlot = (input?: Record<string, unknown>) =>
+          resolveSlotClassNameForRender(
+            this[slotCompiledSymbol],
+            slotIndex,
+            this[slotSelectionSymbol],
+            input
+          );
+
+        Object.defineProperty(this, slotName, {
+          configurable: true,
+          enumerable: true,
+          value: renderSlot,
+          writable: false,
+        });
+
+        return renderSlot;
+      },
+    });
+  }
+
+  return prototype;
+}
+
+function createSlotClasses(
+  prototype: object,
+  compiled: SlotCompiledRecipe,
+  selection: readonly CompiledSelectionValue[]
+) {
+  const classes = Object.create(prototype) as SlotClassesObject;
+  classes[slotCompiledSymbol] = compiled;
+  classes[slotSelectionSymbol] = selection;
+  return classes;
+}
+
+function getHostSlotIndex(
+  compiled: SlotCompiledRecipe,
+  hostSlot: string | undefined
+) {
+  const resolvedHostSlot = hostSlot ?? 'root';
+  const slotIndex = compiled.slotNames.indexOf(resolvedHostSlot);
+
+  if (slotIndex >= 0) {
+    return slotIndex;
+  }
+
+  if (hostSlot) {
+    throw new Error(
+      `react-class-variants: hostSlot "${hostSlot}" is not declared in recipe.slots.`
+    );
+  }
+
+  throw new Error(
+    'react-class-variants: slotted recipes without a "root" slot require hostSlot.'
+  );
+}
+
+function ensureRenderSupported(
+  validate: boolean,
+  withRender: boolean,
+  rawProps: Record<string, unknown>
+) {
+  if (validate && !withRender && 'render' in rawProps) {
+    throw new Error(
+      'react-class-variants: render prop requires withRender: true.'
+    );
+  }
+}
+
+function createIntrinsicRootFastStyled<
+  Base extends AnyIntrinsicElement,
+  TRecipe extends AnyRootRecipe,
+  Aliases extends PropAliases<Base>
+>(
+  base: Base,
+  compiled: RootCompiledRecipe,
+  resolveOptions: ReturnType<typeof normalizeResolveOptions> | undefined,
+  displayName: string
+) {
+  const Component = forwardRef<
+    unknown,
+    StyledComponentProps<Base, TRecipe, false, Aliases>
+  >(function StyledIntrinsicRootComponent(rawProps, ref) {
+    ensureRenderSupported(
+      compiled.validate,
+      false,
+      rawProps as Record<string, unknown>
+    );
+
+    const resolvedProps = resolveRootComponentProps(
+      compiled,
+      rawProps as Record<string, unknown>,
+      resolveOptions
+    ) as Record<string, unknown> & {
+      className: string;
+      ref?: unknown;
+      render?: RenderProp;
+    };
+    const {
+      ref: _ignoredResolvedRef,
+      render: _ignoredRender,
+      ...elementProps
+    } = resolvedProps;
+
+    return createElement(base as any, { ...elementProps, ref });
+  });
+
+  Component.displayName = displayName;
+  return Component;
+}
+
+function createRootRenderStyled<
+  Base extends AnyElementType,
+  TRecipe extends AnyRootRecipe,
+  WithRender extends boolean,
+  Aliases extends PropAliases<Base>
+>(
+  base: Base,
+  compiled: RootCompiledRecipe,
+  resolveOptions: ReturnType<typeof normalizeResolveOptions> | undefined,
+  withRender: WithRender,
+  displayName: string
+) {
+  const Component = forwardRef<
+    unknown,
+    StyledComponentProps<Base, TRecipe, WithRender, Aliases>
+  >(function StyledRootRenderComponent(rawProps, ref) {
+    ensureRenderSupported(
+      compiled.validate,
+      withRender === true,
+      rawProps as Record<string, unknown>
+    );
+
+    const resolvedProps = resolveRootComponentProps(
+      compiled,
+      rawProps as Record<string, unknown>,
+      resolveOptions
+    );
+    const { children, className, otherResolvedProps, render } =
+      splitResolvedProps(resolvedProps);
+
+    return renderBase(
+      base,
+      {
+        ...otherResolvedProps,
+        children,
+        className,
+      },
+      ref,
       withRender ? render : undefined
     );
-  };
+  });
+
+  Component.displayName = displayName;
+  return Component;
+}
+
+function createRootViewStyled<
+  Base extends AnyElementType,
+  TRecipe extends AnyRootRecipe,
+  WithRender extends boolean,
+  Aliases extends PropAliases<Base>,
+  Forwarded extends string
+>(
+  base: Base,
+  compiled: RootCompiledRecipe,
+  options: RootStyledOptions<Base, TRecipe, WithRender, Aliases, Forwarded>,
+  resolveOptions: ReturnType<typeof normalizeResolveOptions> | undefined,
+  withRender: WithRender,
+  displayName: string
+) {
+  const View = options.view!;
+
+  const Component = forwardRef<
+    unknown,
+    StyledComponentProps<Base, TRecipe, WithRender, Aliases>
+  >(function StyledRootViewComponent(rawProps, ref) {
+    ensureRenderSupported(
+      compiled.validate,
+      withRender === true,
+      rawProps as Record<string, unknown>
+    );
+
+    const resolved = resolveRootViewState(
+      compiled,
+      rawProps as Record<string, unknown>,
+      resolveOptions
+    );
+    const { children, className, otherResolvedProps, render } =
+      splitResolvedProps(resolved.resolvedProps);
+
+    return createElement(View as any, {
+      host: createHostView(
+        base,
+        otherResolvedProps,
+        flattenClassName(className),
+        children,
+        ref,
+        render,
+        withRender === true
+      ),
+      variants: resolved.variants,
+    });
+  });
+
+  Component.displayName = displayName;
+  return Component;
+}
+
+function createSlotViewStyled<
+  Base extends AnyElementType,
+  TRecipe extends AnySlotRecipe,
+  WithRender extends boolean,
+  Aliases extends PropAliases<Base>,
+  Forwarded extends string
+>(
+  base: Base,
+  recipe: TRecipe,
+  options: SlotStyledOptions<Base, TRecipe, WithRender, Aliases, Forwarded>,
+  resolveOptions: ReturnType<typeof normalizeResolveOptions> | undefined,
+  withRender: WithRender,
+  displayName: string
+) {
+  const compiled = getCompiledRecipe(recipe) as SlotCompiledRecipe;
+  const View = options.view;
+  const hostSlotIndex = getHostSlotIndex(compiled, options.hostSlot);
+  const slotClassesPrototype = createSlotClassesPrototype(compiled.slotNames);
+
+  const Component = forwardRef<
+    unknown,
+    StyledComponentProps<Base, TRecipe, WithRender, Aliases>
+  >(function StyledSlotViewComponent(rawProps, ref) {
+    ensureRenderSupported(
+      compiled.validate,
+      withRender === true,
+      rawProps as Record<string, unknown>
+    );
+
+    const resolved = resolveSlotViewState(
+      compiled,
+      rawProps as Record<string, unknown>,
+      resolveOptions
+    );
+    const { children, className, otherResolvedProps, render } =
+      splitResolvedProps(resolved.resolvedProps);
+
+    return createElement(View as any, {
+      classes: createSlotClasses(
+        slotClassesPrototype,
+        compiled,
+        resolved.selection
+      ),
+      host: createHostView(
+        base,
+        otherResolvedProps,
+        resolveSlotClassNameForRender(
+          compiled,
+          hostSlotIndex,
+          resolved.selection,
+          className ? { className } : undefined
+        ),
+        children,
+        ref,
+        render,
+        withRender === true
+      ),
+      variants: resolved.variants,
+    });
+  });
+
+  Component.displayName = displayName;
+  return Component;
 }
 
 export function createRootStyled<
-  Tag extends AnyIntrinsicElement,
+  Base extends AnyElementType,
   TRecipe extends AnyRootRecipe,
   WithRender extends boolean,
-  Aliases extends NativeAliases<Tag>,
+  Aliases extends PropAliases<Base>,
   Forwarded extends string
 >(
-  tag: Tag,
+  base: Base,
   recipe: TRecipe,
-  options?: RootComponentOptions<Tag, TRecipe, WithRender, Aliases, Forwarded>
-): (
-  props: StyledComponentProps<Tag, TRecipe, WithRender, Aliases>
-) => ReactNode {
+  options?: RootStyledOptions<Base, TRecipe, WithRender, Aliases, Forwarded>
+): StyledComponentType<Base, TRecipe, WithRender, Aliases> {
   const compiled = getCompiledRecipe(recipe) as RootCompiledRecipe;
   const withRender = options?.withRender === true;
   const resolveOptions = normalizeResolveOptions(
     compiled,
     options as ResolveOptions | undefined
   );
+  const displayName = options?.displayName ?? `Styled(${String(base)})`;
 
-  if (!options?.compose && !withRender) {
-    const Component = forwardRef<
-      unknown,
-      StyledComponentProps<Tag, TRecipe, WithRender, Aliases>
-    >(function StyledRootComponent(rawProps, ref) {
-      if (compiled.validate && 'render' in rawProps) {
-        throw new Error(
-          'react-class-variants: render prop requires withRender: true.'
-        );
-      }
-
-      const resolvedProps = resolveRootComponentProps(
-        compiled,
-        rawProps as Record<string, unknown>,
-        resolveOptions
-      ) as Record<string, unknown> & {
-        className: string;
-        ref?: unknown;
-        render?: RenderProp;
-      };
-      const {
-        ref: _ignoredResolvedRef,
-        render: _ignoredRender,
-        ...elementProps
-      } = resolvedProps;
-
-      return createElement(tag as any, { ...elementProps, ref });
-    });
-
-    Component.displayName = options?.displayName ?? `Styled(${String(tag)})`;
-    return Component as unknown as (
-      props: StyledComponentProps<Tag, TRecipe, WithRender, Aliases>
-    ) => ReactNode;
+  if (!options?.view && isIntrinsicBase(base) && !withRender) {
+    return createIntrinsicRootFastStyled(
+      base,
+      compiled,
+      resolveOptions,
+      displayName
+    ) as StyledComponentType<Base, TRecipe, WithRender, Aliases>;
   }
 
-  if (!options?.compose) {
-    const Component = forwardRef<
-      unknown,
-      StyledComponentProps<Tag, TRecipe, WithRender, Aliases>
-    >(function StyledRootComponent(rawProps, ref) {
-      const resolvedProps = resolveRootComponentProps(
-        compiled,
-        rawProps as Record<string, unknown>,
-        resolveOptions
-      );
-      const { children, render, otherResolvedProps } =
-        splitReactProps(resolvedProps);
-
-      return renderPolymorphic(
-        tag,
-        {
-          ...otherResolvedProps,
-          className: resolvedProps.className,
-          children,
-        },
-        ref,
-        render
-      );
-    });
-
-    Component.displayName = options?.displayName ?? `Styled(${String(tag)})`;
-    return Component as unknown as (
-      props: StyledComponentProps<Tag, TRecipe, WithRender, Aliases>
-    ) => ReactNode;
+  if (!options?.view) {
+    return createRootRenderStyled(
+      base,
+      compiled,
+      resolveOptions,
+      withRender as WithRender,
+      displayName
+    ) as StyledComponentType<Base, TRecipe, WithRender, Aliases>;
   }
 
-  const compose = options.compose;
-
-  const Component = forwardRef<
-    unknown,
-    StyledComponentProps<Tag, TRecipe, WithRender, Aliases>
-  >(function StyledRootComponent(rawProps, ref) {
-    if (compiled.validate && !withRender && 'render' in rawProps) {
-      throw new Error(
-        'react-class-variants: render prop requires withRender: true.'
-      );
-    }
-
-    const resolved = recipe.resolve(
-      rawProps as Record<string, unknown>,
-      resolveOptions
-    );
-    const { children, render, otherResolvedProps } = splitReactProps(
-      resolved.resolvedProps
-    );
-    const Root = createRootHelper(tag, ref, withRender);
-
-    return compose(
-      {
-        Root: Root as any,
-        variants: resolved.variants as any,
-      },
-      {
-        ...otherResolvedProps,
-        className: resolved.resolvedProps.className,
-        children,
-        ref,
-        ...(withRender ? { render } : {}),
-      } as any
-    );
-  });
-
-  Component.displayName = options?.displayName ?? `Styled(${String(tag)})`;
-  return Component as unknown as (
-    props: StyledComponentProps<Tag, TRecipe, WithRender, Aliases>
-  ) => ReactNode;
+  return createRootViewStyled(
+    base,
+    compiled,
+    options,
+    resolveOptions,
+    withRender as WithRender,
+    displayName
+  ) as StyledComponentType<Base, TRecipe, WithRender, Aliases>;
 }
 
 export function createSlotStyled<
-  Tag extends AnyIntrinsicElement,
+  Base extends AnyElementType,
   TRecipe extends AnySlotRecipe,
   WithRender extends boolean,
-  Aliases extends NativeAliases<Tag>,
+  Aliases extends PropAliases<Base>,
   Forwarded extends string
 >(
-  tag: Tag,
+  base: Base,
   recipe: TRecipe,
-  options: SlotComponentOptions<Tag, TRecipe, WithRender, Aliases, Forwarded>
-): (
-  props: StyledComponentProps<Tag, TRecipe, WithRender, Aliases>
-) => ReactNode {
-  const compiled = getCompiledRecipe(recipe);
+  options: SlotStyledOptions<Base, TRecipe, WithRender, Aliases, Forwarded>
+): StyledComponentType<Base, TRecipe, WithRender, Aliases> {
+  const compiled = getCompiledRecipe(recipe) as SlotCompiledRecipe;
   const withRender = options.withRender === true;
   const resolveOptions = normalizeResolveOptions(
     compiled,
     options as ResolveOptions
   );
+  const displayName = options.displayName ?? `Styled(${String(base)})`;
 
-  const Component = forwardRef<
-    unknown,
-    StyledComponentProps<Tag, TRecipe, WithRender, Aliases>
-  >(function StyledSlotComponent(rawProps, ref) {
-    if (compiled.validate && !withRender && 'render' in rawProps) {
-      throw new Error(
-        'react-class-variants: render prop requires withRender: true.'
-      );
-    }
-
-    const resolved = recipe.resolve(
-      rawProps as Record<string, unknown>,
-      resolveOptions
-    );
-    const { className, children, render, otherResolvedProps } = splitReactProps(
-      resolved.resolvedProps
-    );
-    const Root = createRootHelper(tag, ref, withRender);
-
-    return options.compose(
-      {
-        Root: Root as any,
-        variants: resolved.variants as any,
-        slots: resolved.slots as any,
-      },
-      {
-        ...otherResolvedProps,
-        className,
-        children,
-        ref,
-        ...(withRender ? { render } : {}),
-      } as any
-    );
-  });
-
-  Component.displayName = options.displayName ?? `Styled(${String(tag)})`;
-  return Component as unknown as (
-    props: StyledComponentProps<Tag, TRecipe, WithRender, Aliases>
-  ) => ReactNode;
+  return createSlotViewStyled(
+    base,
+    recipe,
+    options,
+    resolveOptions,
+    withRender as WithRender,
+    displayName
+  ) as StyledComponentType<Base, TRecipe, WithRender, Aliases>;
 }

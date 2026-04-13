@@ -106,7 +106,7 @@ export type CompiledRecipe = RootCompiledRecipe | SlotCompiledRecipe;
 export type NormalizedResolveOptions = {
   readonly [normalizedResolveOptionsSymbol]: true;
   readonly forwardPropEntries?: readonly ForwardPropEntry[];
-  readonly nativeAliasEntries?: readonly (readonly [string, string])[];
+  readonly propAliasEntries?: readonly (readonly [string, string])[];
 };
 
 export type RuntimeSystemOptions = Omit<SystemOptions, 'validate'> & {
@@ -750,12 +750,12 @@ export function createResolvedProps(
     resolvedProps[key] = source[key];
   }
 
-  for (const [nativeKey, aliasKey] of options?.nativeAliasEntries ?? []) {
+  for (const [nativeKey, aliasKey] of options?.propAliasEntries ?? []) {
     if (!(aliasKey in resolvedProps)) continue;
 
     if (compiled.validate && nativeKey in resolvedProps) {
       throw new Error(
-        `react-class-variants: nativeAliases target "${nativeKey}" would overwrite an existing resolved prop.`
+        `react-class-variants: propAliases target "${nativeKey}" would overwrite an existing resolved prop.`
       );
     }
 
@@ -793,50 +793,50 @@ export function normalizeResolveOptions(
     options.forwardProps && options.forwardProps.length > 0
       ? options.forwardProps
       : undefined;
-  const rawNativeAliases = options.nativeAliases;
+  const rawPropAliases = options.propAliases;
 
   let forwardPropEntries: ForwardPropEntry[] | undefined;
-  let nativeAliasEntries: Array<readonly [string, string]> | undefined;
+  let propAliasEntries: Array<readonly [string, string]> | undefined;
   let variantIndex: Readonly<VariantIndex> | undefined;
   const seenAliases: Record<string, true> = {};
 
-  if (rawNativeAliases) {
-    for (const nativeKey in rawNativeAliases) {
-      if (!hasOwnKey(rawNativeAliases, nativeKey)) continue;
+  if (rawPropAliases) {
+    for (const nativeKey in rawPropAliases) {
+      if (!hasOwnKey(rawPropAliases, nativeKey)) continue;
 
-      const aliasKey = rawNativeAliases[nativeKey];
+      const aliasKey = rawPropAliases[nativeKey];
       if (!aliasKey) continue;
 
       if (compiled.validate) {
         if (reservedPublicProps.has(nativeKey)) {
           throw new Error(
-            `react-class-variants: native alias target "${nativeKey}" conflicts with a reserved public prop.`
+            `react-class-variants: prop alias target "${nativeKey}" conflicts with a reserved public prop.`
           );
         }
 
         if (reservedPublicProps.has(aliasKey)) {
           throw new Error(
-            `react-class-variants: native alias "${aliasKey}" conflicts with a reserved public prop.`
+            `react-class-variants: prop alias "${aliasKey}" conflicts with a reserved public prop.`
           );
         }
 
         variantIndex ??= ensureVariantIndex(compiled);
         if (getVariantIndex(variantIndex, aliasKey) !== undefined) {
           throw new Error(
-            `react-class-variants: native alias "${aliasKey}" conflicts with a declared variant key.`
+            `react-class-variants: prop alias "${aliasKey}" conflicts with a declared variant key.`
           );
         }
 
         if (hasOwnKey(seenAliases, aliasKey)) {
           throw new Error(
-            `react-class-variants: native alias "${aliasKey}" cannot be reused.`
+            `react-class-variants: prop alias "${aliasKey}" cannot be reused.`
           );
         }
       }
 
       seenAliases[aliasKey] = true;
-      nativeAliasEntries ??= [];
-      nativeAliasEntries.push([nativeKey, aliasKey]);
+      propAliasEntries ??= [];
+      propAliasEntries.push([nativeKey, aliasKey]);
     }
   }
 
@@ -854,10 +854,10 @@ export function normalizeResolveOptions(
 
       if (
         compiled.validate &&
-        nativeAliasEntries?.some(([nativeKey]) => nativeKey === key)
+        propAliasEntries?.some(([nativeKey]) => nativeKey === key)
       ) {
         throw new Error(
-          `react-class-variants: forwardProps key "${key}" conflicts with nativeAliases target "${key}".`
+          `react-class-variants: forwardProps key "${key}" conflicts with propAliases target "${key}".`
         );
       }
 
@@ -867,14 +867,14 @@ export function normalizeResolveOptions(
     }
   }
 
-  if (!forwardPropEntries && !nativeAliasEntries) {
+  if (!forwardPropEntries && !propAliasEntries) {
     return undefined;
   }
 
   return {
     [normalizedResolveOptionsSymbol]: true,
     forwardPropEntries,
-    nativeAliasEntries,
+    propAliasEntries,
   };
 }
 

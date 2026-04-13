@@ -1,6 +1,6 @@
 # Recipes and Components Guide
 
-This guide shows how to use the current v2 alpha API in real code, from simple class strings to fully composed slotted components.
+This guide shows the current v2 alpha API in real code.
 
 ## Choose the Right Primitive
 
@@ -9,13 +9,11 @@ This guide shows how to use the current v2 alpha API in real code, from simple c
 | compute one class string                 | `recipe(input)`                  |
 | compute many slot-specific class strings | `recipe(input).slotName()`       |
 | split variant props from a full prop bag | `recipe.resolve(input, options)` |
-| build an intrinsic React component       | `styled(tag, recipe, options?)`  |
+| build a React component from a recipe    | `styled(base, recipe, options?)` |
 | share merge and validation behavior      | `defineConfig(options)`          |
 | keep recipe modules React-free           | `react-class-variants/core`      |
 
 ## 1. Start with a Root Recipe
-
-Root recipes are the simplest entry point and the best mental model for the whole package.
 
 ```ts
 import { recipe } from 'react-class-variants/core';
@@ -40,13 +38,6 @@ export const badgeRecipe = recipe({
     size: 'md',
     outlined: false,
   },
-  compoundVariants: [
-    {
-      tone: ['info', 'success'],
-      outlined: true,
-      className: 'ring-current/20',
-    },
-  ],
 });
 ```
 
@@ -57,16 +48,7 @@ badgeRecipe({ tone: 'info' });
 badgeRecipe({ tone: 'danger', outlined: true, className: 'uppercase' });
 ```
 
-What this gives you:
-
-- `tone` is required because it has no default
-- `size` is optional because it has a default
-- `outlined` is optional because it is boolean
-- direct calls return one final class string
-
-## 2. Turn It into an Intrinsic Component
-
-When you want a regular DOM component, pass the recipe into `styled()`.
+## 2. Turn It into a Component
 
 ```tsx
 import { styled } from 'react-class-variants';
@@ -84,17 +66,15 @@ Usage:
 </Badge>
 ```
 
-This simple path is the default for root recipes:
+For root recipes this is the default fast path:
 
-- no `compose` required
+- no `view` required
 - the resolved `className` is applied automatically
 - variant props stay fully typed
 
-## 3. Use `resolve()` Inside Your Own Wrapper
+## 3. Use `resolve()` in a Wrapper
 
-The current alpha API intentionally does not support `styled(CustomComponent, recipe)`.
-
-When you want a custom wrapper, use `resolve()` manually:
+When you want total control over markup or prop routing, use `resolve()` manually.
 
 ```tsx
 import type { ComponentPropsWithoutRef } from 'react';
@@ -118,8 +98,8 @@ const inputRecipe = recipe({
 
 type InputFieldProps = Omit<ComponentPropsWithoutRef<'input'>, 'size'> &
   VariantProps<typeof inputRecipe> & {
-    label: string;
     htmlSize?: number;
+    label: string;
   };
 
 export function InputField({ label, htmlSize, ...props }: InputFieldProps) {
@@ -130,7 +110,7 @@ export function InputField({ label, htmlSize, ...props }: InputFieldProps) {
     },
     {
       forwardProps: ['invalid'],
-      nativeAliases: {
+      propAliases: {
         size: 'htmlSize',
       },
     }
@@ -145,11 +125,9 @@ export function InputField({ label, htmlSize, ...props }: InputFieldProps) {
 }
 ```
 
-This pattern is the escape hatch for headless wrappers, design-system wrappers, and situations where you want total control over markup.
-
 ## 4. Build a Slotted Component
 
-Slotted recipes are for components where different parts need different classes.
+Use slot recipes when different parts of the component need different classes.
 
 ```tsx
 import { recipe, styled } from 'react-class-variants';
@@ -193,39 +171,41 @@ const buttonRecipe = recipe({
   },
 });
 
+function ButtonView({ host, classes, variants }) {
+  const { spinner, label } = classes;
+
+  return host.render({
+    'aria-busy': variants.loading || undefined,
+    disabled: variants.loading,
+    children: (
+      <>
+        {variants.loading ? (
+          <span aria-hidden="true" className={spinner()} />
+        ) : null}
+        <span className={label()}>{host.children}</span>
+      </>
+    ),
+  });
+}
+
 export const Button = styled('button', buttonRecipe, {
   withRender: true,
   forwardProps: ['loading'],
-  compose: (
-    { Root, slots, variants },
-    { className, children, render, ...props }
-  ) => (
-    <Root
-      {...props}
-      render={render}
-      className={slots.root({ className })}
-      aria-busy={variants.loading || undefined}
-      disabled={variants.loading}
-    >
-      {variants.loading ? (
-        <span aria-hidden="true" className={slots.spinner()} />
-      ) : null}
-      <span className={slots.label()}>{children}</span>
-    </Root>
-  ),
+  view: ButtonView,
 });
 ```
 
 Key ideas:
 
-- `compose` is required for slot recipes
-- external `className` stays at the component level until you route it
-- `slots.root({ className })` is just one possible routing choice
-- slot render functions may be called many times with different local overrides
+- `view` is required for slot recipes
+- `classes` exists only for slotted recipes
+- `classes` may be safely destructured inside `view`
+- external `className` is routed automatically to the host slot
+- slot render functions can still be called many times with local overrides
 
 ## 5. Slot Recipes Do Not Need `root`
 
-You can model multipart structure without a canonical root slot.
+If the actual wrapper corresponds to a different slot, provide `hostSlot`.
 
 ```tsx
 const fieldRecipe = recipe({
@@ -243,19 +223,58 @@ const fieldRecipe = recipe({
   },
 });
 
+function FieldView({ host, classes }) {
+  return host.render({
+    children: (
+      <>
+        <input aria-label="field" className={classes.input()} />
+        {host.children}
+      </>
+    ),
+  });
+}
+
 const Field = styled('label', fieldRecipe, {
-  compose: ({ Root, slots }, { className, children, ...props }) => (
-    <Root {...props} className={slots.label({ className })}>
-      <input aria-label="field" className={slots.input()} />
-      {children}
-    </Root>
-  ),
+  hostSlot: 'label',
+  view: FieldView,
 });
 ```
 
-This is the intended pattern when your actual wrapper tag is only one part of the whole recipe and you do not want the recipe runtime to pretend there is a special `root`.
+## 6. `view` Is a Real React Component
 
-## 6. Local Slot Overrides
+`view` is not a callback DSL. It is a normal React component surface:
+
+- hooks are allowed
+- prefer a named component reference such as `view: ButtonView` when you plan to use hooks so hook linting stays happy
+- `host.render()` is the canonical way to render the base element or component
+- `host.props` exposes normalized forwarded props and aliased base props
+- `host.className` is already the resolved host class string
+- `host.render()` keeps `host.children` unless you override `children`
+
+## 7. Custom Component Bases
+
+You can pass custom React components as the base:
+
+```tsx
+import { forwardRef, type ComponentPropsWithoutRef } from 'react';
+
+const RouterLink = forwardRef<
+  HTMLAnchorElement,
+  { to: string } & ComponentPropsWithoutRef<'a'>
+>(function RouterLink({ to, ...props }, ref) {
+  return <a {...props} ref={ref} href={to} />;
+});
+
+const LinkBadge = styled(RouterLink, badgeRecipe);
+```
+
+Rules:
+
+- custom bases do not support `withRender`
+- custom bases should accept and forward `className`, `children`, and `ref` when those behaviors matter
+- use custom bases when you already own the host component contract
+
+## 8. Local Slot Overrides
 
 Slot renderers can override variants locally without changing the parent selection.
 
@@ -264,123 +283,37 @@ const slots = buttonRecipe({ tone: 'primary', loading: true });
 
 slots.spinner();
 slots.spinner({ tone: 'ghost' });
-slots.spinner({ tone: 'ghost', className: 'text-red-500' });
+slots.label({ className: 'uppercase' });
 ```
 
-This is useful when:
+Local override rules:
 
-- one slot needs a slightly different tone
-- one slot needs an extra class override
-- you want to reuse the same recipe selection but render parts differently
+- they are merged on top of the parent selection
+- `undefined` means "do not override"
+- they affect only that one slot render call
+- compounds are recomputed against the merged selection
+- slot render functions are plain functions and may be safely destructured
 
-## 7. Opt In to Polymorphism with `render`
+When you are inside `view`, `host.props` follows the resolved shape:
 
-`render` is available only when `withRender: true`.
+- `propAliases` change the public prop name, but `host.props` uses the resolved base prop key
+- `forwardProps` re-add selected variant keys to `host.props` with their resolved values
 
-Element form:
+## 9. `render`
+
+`render` remains opt-in through `withRender: true` and only exists for intrinsic bases.
 
 ```tsx
-<Button tone="primary" render={<a href="/docs" />}>
-  Docs
-</Button>
-```
-
-Function form:
-
-```tsx
-<Button tone="primary" render={props => <a {...props} href="/docs" />}>
-  Docs
-</Button>
-```
-
-Use `render` when:
-
-- the default tag is usually correct
-- a few call sites need a different element
-- you want to preserve the rest of the component contract
-
-Do not reach for it when you need a fully separate component abstraction. In that case, prefer a wrapper component plus `resolve()`.
-
-## 8. Keep Recipe Modules React-Free with `/core`
-
-A good default structure for design systems is:
-
-```ts
-// button.recipe.ts
-import { recipe } from 'react-class-variants/core';
-
-export const buttonRecipe = recipe({
-  base: 'inline-flex items-center justify-center rounded-md font-medium',
-  variants: {
-    tone: {
-      primary: 'bg-blue-600 text-white',
-      ghost: 'bg-transparent text-slate-900',
-    },
-  },
+const LinkButton = styled('button', badgeRecipe, {
+  withRender: true,
 });
+
+<LinkButton tone="info" render={<a href="/docs" />}>
+  Docs
+</LinkButton>;
 ```
 
-```tsx
-// button.tsx
-import { styled } from 'react-class-variants';
-import { buttonRecipe } from './button.recipe';
-
-export const Button = styled('button', buttonRecipe);
-```
-
-Why this split is useful:
-
-- recipe modules stay usable outside React
-- root-only recipe modules do not need React helper imports
-- component modules stay thin
-
-## 9. Tailwind Merge and Validation Modes
-
-Tailwind merge is explicit:
-
-```ts
-import { defineConfig } from 'react-class-variants';
-import { twMerge } from 'tailwind-merge';
-
-export const { recipe, styled } = defineConfig({
-  merge: twMerge,
-});
-```
-
-Validation is also explicit when you need it:
-
-```ts
-const strict = defineConfig({ validate: 'always' });
-const productionLike = defineConfig({ validate: 'never' });
-```
-
-Use cases:
-
-- `validate: 'always'` when debugging config mistakes or test invariants
-- `validate: 'never'` when you want the lean path during local benchmarking or production-like checks
-
-## 10. Things That Do Not Exist in v2
-
-If you are coming from `react-tailwind-variants` v1, these absences are intentional:
-
-- no `variants()` helper
-- no `variantProps()` helper
-- no `styled(CustomComponent, ...)`
-- no `asChild`
-- no implicit `tailwind-merge`
-- no public recipe-instance `.extend()`, `.defaults`, `.values`, or `.config`
-- no automatic routing of component-level `className` into a slot
-
-What to do instead:
-
-- use `recipe()` for class resolution
-- use `recipe.resolve()` for wrapper components
-- use `styled(tag, recipe, options)` for intrinsic React components
-- use `render` for opt-in polymorphism
-- use `defineConfig({ merge: twMerge })` for Tailwind conflict handling
-
-## See Also
+## Related Docs
 
 - [API reference](./api-reference.md)
-- [Migration from v1](./migration-from-react-tailwind-variants.md)
-- [Legacy v1 reference](./react-tailwind-variants-v1.md)
+- [Migration guide](./migration-from-react-tailwind-variants.md)

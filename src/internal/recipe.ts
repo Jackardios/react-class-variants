@@ -11,12 +11,15 @@ import {
   createLeanRootRecipe,
   createStrictRootRecipe,
   resolveRootComponentProps,
+  resolveRootViewState,
 } from './engine/root';
 import {
   compileLeanSlotRecipe,
   compileStrictSlotRecipe,
   createLeanSlotRecipe,
   createStrictSlotRecipe,
+  resolveSlotClassNameForRender,
+  resolveSlotViewState,
 } from './engine/slot';
 import {
   getCompiledRecipe,
@@ -35,6 +38,11 @@ export {
   type RootCompiledRecipe,
 };
 export { resolveRootComponentProps };
+export {
+  resolveRootViewState,
+  resolveSlotClassNameForRender,
+  resolveSlotViewState,
+};
 
 declare const process: {
   env: {

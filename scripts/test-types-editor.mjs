@@ -68,20 +68,40 @@ const buttonRecipe = recipe({
 const resolvedButton = buttonRecipe.resolve({ tone: 'primary' });
 const slotFns = buttonRecipe({ tone: 'primary' });
 
-const ComposedInput = styled(
+const inputRecipe = recipe({
+  variants: {
+    tone: {
+      info: 'text-sky-700',
+      danger: 'text-rose-700',
+    },
+    size: {
+      sm: 'text-sm',
+      md: 'text-base',
+    },
+    disabled: {
+      true: 'opacity-50',
+    },
+  },
+  defaultVariants: {
+    size: 'sm',
+    disabled: false,
+  },
+});
+
+const ViewedInput = styled(
   'input',
-  badge,
+  inputRecipe,
   {
     withRender: true,
     forwardProps: ['disabled'],
-    nativeAliases: {
+    propAliases: {
       size: 'htmlSize',
     },
-    compose: ({ Root }, props) => {
-      props.type;
-      props.size;
-      props.disabled;
-      return <Root {...props} />;
+    view: ({ host }) => {
+      host.props.type;
+      host.props.size;
+      host.props.disabled;
+      return host.render();
     },
   }
 );
@@ -89,17 +109,17 @@ const ComposedInput = styled(
 const SlottedButton = styled('button', buttonRecipe, {
   withRender: true,
   forwardProps: ['loading'],
-  compose: ({ Root, slots, variants }, props) => {
+  view: ({ host, classes, variants }) => {
     variants.tone;
-    slots.icon({ tone: 'ghost' });
+    classes.icon({ tone: 'ghost' });
     resolvedButton.slots.icon();
     slotFns.icon();
-    return <Root {...props} className={slots.root({ className: props.className })} />;
+    return host.render({ children: <span className={classes.icon()} /> });
   },
 });
 
 badge({ tone: 'info' });
-ComposedInput({ tone: 'danger', htmlSize: 12, disabled: true, type: 'number' });
+ViewedInput({ tone: 'danger', htmlSize: 12, disabled: true, type: 'number' });
 SlottedButton({ tone: 'primary', render: <a href="/" /> });
 `;
 
@@ -157,8 +177,8 @@ const buttonRecipe = recipe({
 styled('button', buttonRecipe, {
   withRender: true,
   forwardProps: ['loading'],
-  compose: ({ slots, variants }) => {
-    slots.
+  view: ({ classes, variants }) => {
+    classes.
     variants.
     return null;
   },
@@ -313,48 +333,48 @@ const completionLanguageService = createLanguageService(
   new Map([[completionProbeFile, completionProbeSource]])
 );
 
-const composeTypeQuickInfo = quickInfoText(
+const viewTypeQuickInfo = quickInfoText(
   exactLanguageService,
   exactProbeFile,
   exactProbeSource,
-  'props.type;\n      props.size;',
+  'host.props.type;\n      host.props.size;',
   'type'
 );
-const composeSizeQuickInfo = quickInfoText(
+const viewSizeQuickInfo = quickInfoText(
   exactLanguageService,
   exactProbeFile,
   exactProbeSource,
-  'props.size;\n      props.disabled;',
+  'host.props.size;\n      host.props.disabled;',
   'size'
 );
-const composeDisabledQuickInfo = quickInfoText(
+const viewDisabledQuickInfo = quickInfoText(
   exactLanguageService,
   exactProbeFile,
   exactProbeSource,
-  'props.disabled;\n      return <Root',
+  'host.props.disabled;\n      return host.render',
   'disabled'
 );
 
 assert.match(
-  composeTypeQuickInfo,
+  viewTypeQuickInfo,
   /HTMLInputTypeAttribute/,
-  'compose props.type should keep the intrinsic input type union.'
+  'view host.props.type should keep the intrinsic input type union.'
 );
 assert.equal(
-  composeSizeQuickInfo,
+  viewSizeQuickInfo,
   '(property) size?: number | undefined',
-  'compose props.size should resolve to the native input size prop.'
+  'view host.props.size should resolve to the native input size prop.'
 );
 assert.equal(
-  composeDisabledQuickInfo,
+  viewDisabledQuickInfo,
   '(property) disabled: boolean',
-  'compose props.disabled should reflect the forwarded resolved variant.'
+  'view host.props.disabled should reflect the forwarded resolved variant.'
 );
 
 for (const [label, snippet, token, expectedText] of [
-  ['styled variant prop', `ComposedInput({ tone: 'danger'`, 'tone', 'tone'],
-  ['compose variant', 'variants.tone', 'tone', 'tone'],
-  ['compose slot', 'slots.icon', 'icon', 'icon'],
+  ['styled variant prop', `ViewedInput({ tone: 'danger'`, 'tone', 'tone'],
+  ['view variant', 'variants.tone', 'tone', 'tone'],
+  ['view slot', 'classes.icon', 'icon', 'icon'],
   ['resolved slot', 'resolvedButton.slots.icon', 'icon', 'icon'],
   ['recipe call slot', 'slotFns.icon', 'icon', 'icon'],
 ]) {
@@ -379,7 +399,7 @@ for (const [label, snippet, expected] of [
   ['slot variant values', 'buttonRecipe({ tone: ', [`'ghost'`, `'primary'`]],
   ['slot override values', `.icon({ tone: `, [`'ghost'`, `'primary'`]],
   ['forwardProps values', `forwardProps: ['`, ['loading']],
-  ['compose slot keys', 'slots.', ['icon', 'label', 'root']],
+  ['view slot keys', 'classes.', ['icon', 'label', 'root']],
 ]) {
   const names = completionNames(
     completionLanguageService,
@@ -417,14 +437,14 @@ const timedQueries = [
       completionLanguageService,
       completionProbeFile,
       completionProbeSource,
-      'slots.'
+      'classes.'
     ),
   () =>
     definitionSpans(
       exactLanguageService,
       exactProbeFile,
       exactProbeSource,
-      'slots.icon',
+      'classes.icon',
       'icon'
     ),
 ];

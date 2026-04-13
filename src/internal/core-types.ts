@@ -157,10 +157,10 @@ export type RecipeConfig = AnyRootRecipeConfig | AnySlotRecipeConfig;
 
 export type ResolveOptions<
   VariantKeys extends string = string,
-  NativeAliases extends Record<string, string> = Record<string, string>
+  PropAliases extends Record<string, string> = Record<string, string>
 > = {
   forwardProps?: readonly VariantKeys[];
-  nativeAliases?: NativeAliases;
+  propAliases?: PropAliases;
 };
 
 export type RootRecipeInput<TRecipe> = VariantProps<TRecipe> & {

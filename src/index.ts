@@ -42,19 +42,16 @@ export type {
 } from './internal/core-types';
 
 export type {
-  AnyIntrinsicElement,
-  NativeAliases,
+  AnyElementType,
+  HostRenderOverrides,
+  HostView,
+  PropAliases,
   RenderFunctionProps,
   RenderProp,
-  RootComponentOptions,
-  RootCompose,
-  RootComposeContext,
-  RootComposeInput,
-  RootHelperProps,
-  SlotComponentOptions,
-  SlotCompose,
-  SlotComposeContext,
-  SlotComposeInput,
+  RootStyledOptions,
+  RootStyledViewProps,
+  SlotStyledOptions,
+  SlotStyledViewProps,
   StyledComponentProps,
 } from './internal/react-types';
 

@@ -11,7 +11,7 @@ This report compares `react-class-variants` against `class-variance-authority`, 
 - Bundle size numbers are minimal synthetic consumer bundles built with esbuild, with explicit production defines and React marked external when relevant.
 - Ratios near `1.0x` should be interpreted together with `RME`; near-parity results are not strong claims without stability headroom.
 
-Generated at: 2026-04-13T01:52:37.663Z
+Generated at: 2026-04-13T16:52:41.377Z
 Node: v22.17.0
 Mode: production
 Platform: darwin arm64
@@ -20,141 +20,141 @@ Platform: darwin arm64
 
 ### Resolver only: complexExplicit
 
-| Library                  | Median ops/sec |    RME | Relative to baseline |
-| ------------------------ | -------------: | -----: | -------------------: |
-| react-class-variants     |   5,212,233.21 |  1.68% |                   1x |
-| classname-variants       |   2,365,402.59 |  3.66% |                0.45x |
-| class-variance-authority |     670,752.26 | 10.64% |                0.13x |
-| tailwind-variants/lite   |     517,794.35 | 12.46% |                 0.1x |
+| Library                  | Median ops/sec |   RME | Relative to baseline |
+| ------------------------ | -------------: | ----: | -------------------: |
+| react-class-variants     |   5,081,018.77 | 4.36% |                   1x |
+| classname-variants       |   2,521,846.17 | 0.76% |                 0.5x |
+| class-variance-authority |     720,879.57 | 1.94% |                0.14x |
+| tailwind-variants/lite   |     543,990.01 | 0.46% |                0.11x |
 
 ### Resolver only: complexNoCompound
 
 | Library                  | Median ops/sec |   RME | Relative to baseline |
 | ------------------------ | -------------: | ----: | -------------------: |
-| react-class-variants     |   7,433,869.91 | 1.98% |                   1x |
-| classname-variants       |   2,789,964.66 | 1.15% |                0.38x |
-| class-variance-authority |     855,341.12 | 1.43% |                0.12x |
-| tailwind-variants/lite   |     737,362.79 | 4.07% |                 0.1x |
+| react-class-variants     |   7,482,865.76 | 1.55% |                   1x |
+| classname-variants       |   2,855,251.05 | 1.41% |                0.38x |
+| class-variance-authority |     912,379.36 | 1.11% |                0.12x |
+| tailwind-variants/lite   |     739,471.06 | 2.43% |                 0.1x |
 
 ### Resolver only: complexWithCompound
 
 | Library                  | Median ops/sec |   RME | Relative to baseline |
 | ------------------------ | -------------: | ----: | -------------------: |
-| react-class-variants     |   5,575,364.18 | 1.49% |                   1x |
-| classname-variants       |   2,445,460.61 | 3.61% |                0.44x |
-| class-variance-authority |     736,746.09 | 6.22% |                0.13x |
-| tailwind-variants/lite   |     593,648.56 | 1.53% |                0.11x |
+| react-class-variants     |   6,231,156.57 | 1.53% |                   1x |
+| classname-variants       |   2,726,343.19 | 1.81% |                0.44x |
+| class-variance-authority |     868,505.86 | 1.41% |                0.14x |
+| tailwind-variants/lite   |     666,676.88 | 1.43% |                0.11x |
 
 ### Resolver only: simpleDefaults
 
 | Library                  | Median ops/sec |   RME | Relative to baseline |
 | ------------------------ | -------------: | ----: | -------------------: |
-| react-class-variants     |  14,253,536.76 |  1.5% |                   1x |
-| class-variance-authority |    7,047,469.1 | 2.66% |                0.49x |
-| classname-variants       |    5,466,537.7 | 1.41% |                0.38x |
-| tailwind-variants/lite   |   1,720,353.73 | 2.01% |                0.12x |
+| react-class-variants     |   14,597,654.5 | 2.64% |                   1x |
+| class-variance-authority |   6,988,450.23 | 6.32% |                0.48x |
+| classname-variants       |   5,787,413.55 |  2.6% |                 0.4x |
+| tailwind-variants/lite   |   1,836,540.56 |  2.2% |                0.13x |
 
 ### Resolver only: simpleExplicit
 
 | Library                  | Median ops/sec |   RME | Relative to baseline |
 | ------------------------ | -------------: | ----: | -------------------: |
-| react-class-variants     |  14,312,262.92 | 4.03% |                   1x |
-| classname-variants       |   5,852,696.64 | 1.14% |                0.41x |
-| class-variance-authority |    5,807,324.4 | 0.73% |                0.41x |
-| tailwind-variants/lite   |    1,610,504.5 | 1.93% |                0.11x |
+| react-class-variants     |  16,542,586.44 | 6.47% |                   1x |
+| classname-variants       |   6,411,747.79 | 2.29% |                0.39x |
+| class-variance-authority |   6,173,304.47 |  1.1% |                0.37x |
+| tailwind-variants/lite   |   1,777,802.66 | 2.09% |                0.11x |
 
 ### Tailwind-aware: complexExplicit
 
 | Library                            | Median ops/sec |   RME | Relative to baseline |
 | ---------------------------------- | -------------: | ----: | -------------------: |
-| react-class-variants + twMerge     |   1,910,165.05 | 6.98% |                   1x |
-| classname-variants + twMerge       |   1,406,732.03 |  0.9% |                0.74x |
-| class-variance-authority + twMerge |     563,388.26 | 0.72% |                0.29x |
-| tailwind-variants                  |     438,678.27 | 1.09% |                0.23x |
+| react-class-variants + twMerge     |   2,005,138.51 | 1.51% |                   1x |
+| classname-variants + twMerge       |   1,485,549.49 | 1.05% |                0.74x |
+| class-variance-authority + twMerge |     601,013.58 | 0.81% |                 0.3x |
+| tailwind-variants                  |     479,502.02 | 0.56% |                0.24x |
 
 ### Tailwind-aware: complexNoCompound
 
 | Library                            | Median ops/sec |   RME | Relative to baseline |
 | ---------------------------------- | -------------: | ----: | -------------------: |
-| react-class-variants + twMerge     |   3,549,409.08 | 0.73% |                   1x |
-| classname-variants + twMerge       |   2,056,438.28 | 1.48% |                0.58x |
-| class-variance-authority + twMerge |     725,303.78 | 2.22% |                 0.2x |
-| tailwind-variants                  |      650,927.1 | 7.24% |                0.18x |
+| react-class-variants + twMerge     |   3,653,046.27 | 7.47% |                   1x |
+| classname-variants + twMerge       |   2,106,484.85 | 1.18% |                0.58x |
+| class-variance-authority + twMerge |     782,174.34 | 1.58% |                0.21x |
+| tailwind-variants                  |     652,056.33 | 15.3% |                0.18x |
 
 ### Tailwind-aware: complexWithCompound
 
 | Library                            | Median ops/sec |   RME | Relative to baseline |
 | ---------------------------------- | -------------: | ----: | -------------------: |
-| react-class-variants + twMerge     |   2,369,662.72 | 1.88% |                   1x |
-| classname-variants + twMerge       |   1,603,892.64 | 1.36% |                0.68x |
-| class-variance-authority + twMerge |     680,953.13 | 2.01% |                0.29x |
-| tailwind-variants                  |     531,264.15 | 8.04% |                0.22x |
+| react-class-variants + twMerge     |   2,488,945.35 | 0.33% |                   1x |
+| classname-variants + twMerge       |   1,697,117.14 | 1.19% |                0.68x |
+| class-variance-authority + twMerge |     710,627.75 | 0.66% |                0.29x |
+| tailwind-variants                  |     579,809.59 | 0.78% |                0.23x |
 
 ### Tailwind-aware: simpleDefaults
 
 | Library                            | Median ops/sec |   RME | Relative to baseline |
 | ---------------------------------- | -------------: | ----: | -------------------: |
-| react-class-variants + twMerge     |   5,400,810.97 | 0.21% |                   1x |
-| class-variance-authority + twMerge |    3,852,401.6 | 2.22% |                0.71x |
-| classname-variants + twMerge       |   3,634,223.48 | 0.56% |                0.67x |
-| tailwind-variants                  |    1,350,583.8 | 2.66% |                0.25x |
+| react-class-variants + twMerge     |      5,588,804 | 1.22% |                   1x |
+| class-variance-authority + twMerge |   4,121,694.32 | 1.53% |                0.74x |
+| classname-variants + twMerge       |   3,753,779.77 | 4.49% |                0.67x |
+| tailwind-variants                  |   1,415,221.16 | 2.34% |                0.25x |
 
 ### Tailwind-aware: simpleExplicit
 
 | Library                            | Median ops/sec |   RME | Relative to baseline |
 | ---------------------------------- | -------------: | ----: | -------------------: |
-| react-class-variants + twMerge     |   5,571,310.07 | 0.97% |                   1x |
-| classname-variants + twMerge       |   3,754,200.99 | 0.76% |                0.67x |
-| class-variance-authority + twMerge |   3,491,724.74 | 1.09% |                0.63x |
-| tailwind-variants                  |   1,337,582.45 | 1.28% |                0.24x |
+| react-class-variants + twMerge     |   5,865,773.18 | 1.22% |                   1x |
+| class-variance-authority + twMerge |   3,736,973.84 | 0.42% |                0.64x |
+| classname-variants + twMerge       |    3,625,732.9 |  7.9% |                0.62x |
+| tailwind-variants                  |   1,437,268.67 | 1.96% |                0.25x |
 
 ### Resolver creation: plain (fresh unique complex config)
 
 | Library                  | Median ops/sec |   RME | Relative to baseline |
 | ------------------------ | -------------: | ----: | -------------------: |
-| class-variance-authority |  13,908,719.72 | 9.25% |                10.7x |
-| classname-variants       |  12,969,566.06 |  6.2% |                9.98x |
-| tailwind-variants/lite   |   7,218,281.83 | 1.27% |                5.55x |
-| react-class-variants     |    1,299,884.4 | 9.92% |                   1x |
+| classname-variants       |  13,844,739.62 |  6.2% |                 9.8x |
+| class-variance-authority |  12,645,338.25 | 14.5% |                8.95x |
+| tailwind-variants/lite   |   7,869,296.48 | 0.45% |                5.57x |
+| react-class-variants     |   1,412,238.81 | 0.79% |                   1x |
 
 ### Resolver creation: plain (diagnostic reused complex config)
 
 | Library                  | Median ops/sec |    RME | Relative to baseline |
 | ------------------------ | -------------: | -----: | -------------------: |
-| class-variance-authority |  142,741,257.1 | 53.99% |              107.33x |
-| classname-variants       |  71,608,538.04 | 70.63% |               53.84x |
-| tailwind-variants/lite   |  11,708,229.13 |  0.64% |                 8.8x |
-| react-class-variants     |   1,329,966.64 |  3.83% |                   1x |
+| class-variance-authority | 150,353,937.09 | 53.31% |               96.65x |
+| classname-variants       |   79,022,624.5 | 69.05% |                50.8x |
+| tailwind-variants/lite   |   12,614,450.7 |  0.99% |                8.11x |
+| react-class-variants     |   1,555,674.32 |   2.7% |                   1x |
 
 ### Resolver creation: tailwind-aware (fresh unique complex config)
 
 | Library                            | Median ops/sec |    RME | Relative to baseline |
 | ---------------------------------- | -------------: | -----: | -------------------: |
-| class-variance-authority + twMerge |  12,802,143.98 | 12.13% |                9.49x |
-| classname-variants + twMerge       |  11,069,419.34 |  1.73% |                8.21x |
-| tailwind-variants                  |    7,196,725.6 |  5.22% |                5.34x |
-| react-class-variants + twMerge     |   1,348,914.66 |  0.35% |                   1x |
+| class-variance-authority + twMerge |  13,741,133.04 | 12.25% |                9.59x |
+| classname-variants + twMerge       |  12,023,371.31 |  2.27% |                8.39x |
+| tailwind-variants                  |   7,821,224.66 |  9.39% |                5.46x |
+| react-class-variants + twMerge     |   1,432,278.21 |  4.95% |                   1x |
 
 ### Resolver creation: tailwind-aware (diagnostic reused complex config)
 
-| Library                            | Median ops/sec |    RME | Relative to baseline |
-| ---------------------------------- | -------------: | -----: | -------------------: |
-| class-variance-authority + twMerge |  69,254,719.33 | 71.28% |               49.61x |
-| classname-variants + twMerge       |  46,953,547.83 | 119.7% |               33.64x |
-| tailwind-variants                  |  11,667,759.79 |   0.5% |                8.36x |
-| react-class-variants + twMerge     |   1,395,942.81 |   0.6% |                   1x |
+| Library                            | Median ops/sec |     RME | Relative to baseline |
+| ---------------------------------- | -------------: | ------: | -------------------: |
+| class-variance-authority + twMerge |  70,733,651.65 |  72.28% |               47.36x |
+| classname-variants + twMerge       |  48,953,015.97 | 120.73% |               32.78x |
+| tailwind-variants                  |  11,927,986.15 |   2.11% |                7.99x |
+| react-class-variants + twMerge     |   1,493,587.16 |   2.95% |                   1x |
 
 ## Bundle Size
 
 ### Minimal synthetic consumer bundle size: plain recipe
 
-| Minimal synthetic consumer |    gzip |     raw |  brotli | Relative gzip |
-| -------------------------- | ------: | ------: | ------: | ------------: |
-| classname-variants         |   511 B |   850 B |   451 B |         0.16x |
-| class-variance-authority   |   707 B | 1,364 B |   633 B |         0.22x |
-| tailwind-variants/lite     | 2,199 B | 5,225 B | 2,019 B |         0.69x |
-| react-class-variants/core  | 3,191 B | 9,765 B | 2,895 B |            1x |
-| react-class-variants       | 3,261 B | 9,934 B | 2,959 B |         1.02x |
+| Minimal synthetic consumer |    gzip |      raw |  brotli | Relative gzip |
+| -------------------------- | ------: | -------: | ------: | ------------: |
+| classname-variants         |   511 B |    850 B |   451 B |         0.16x |
+| class-variance-authority   |   707 B |  1,364 B |   633 B |         0.22x |
+| tailwind-variants/lite     | 2,199 B |  5,225 B | 2,019 B |         0.69x |
+| react-class-variants/core  | 3,186 B |  9,747 B | 2,895 B |            1x |
+| react-class-variants       | 3,289 B | 10,062 B | 2,989 B |         1.03x |
 
 ### Minimal synthetic consumer bundle size: tailwind-aware recipe
 
@@ -163,14 +163,14 @@ Platform: darwin arm64
 | classname-variants + twMerge        |  8,630 B | 26,995 B |  7,546 B |         0.71x |
 | class-variance-authority + twMerge  |  8,797 B | 27,517 B |  7,679 B |         0.72x |
 | tailwind-variants                   | 10,660 B | 32,701 B |  9,341 B |         0.87x |
-| react-class-variants/core + twMerge | 12,239 B | 41,140 B | 10,771 B |            1x |
+| react-class-variants/core + twMerge | 12,237 B | 41,122 B | 10,783 B |            1x |
 
 ### Minimal synthetic consumer bundle size: React/styled
 
 | Minimal synthetic consumer |    gzip |      raw |  brotli | Relative gzip |
 | -------------------------- | ------: | -------: | ------: | ------------: |
-| classname-variants/react   |   828 B |  1,647 B |   744 B |         0.17x |
-| react-class-variants       | 4,816 B | 15,183 B | 4,333 B |            1x |
+| classname-variants/react   |   828 B |  1,647 B |   744 B |         0.15x |
+| react-class-variants       | 5,423 B | 17,681 B | 4,880 B |            1x |
 
 ## Retained Memory
 
@@ -187,7 +187,7 @@ Platform: darwin arm64
 
 | Library                  | Median bytes/instance |   RME | Relative to baseline |
 | ------------------------ | --------------------: | ----: | -------------------: |
-| class-variance-authority |              320.02 B | 0.55% |                0.37x |
+| class-variance-authority |              320.02 B | 0.25% |                0.37x |
 | classname-variants       |              360.02 B | 0.22% |                0.42x |
 | tailwind-variants/lite   |              704.02 B | 0.21% |                0.81x |
 | react-class-variants     |              864.02 B | 0.28% |                   1x |
@@ -205,7 +205,7 @@ Platform: darwin arm64
 
 | Library                            | Median bytes/instance |   RME | Relative to baseline |
 | ---------------------------------- | --------------------: | ----: | -------------------: |
-| class-variance-authority + twMerge |              416.02 B |  0.2% |                0.48x |
+| class-variance-authority + twMerge |              416.02 B | 0.43% |                0.48x |
 | classname-variants + twMerge       |              456.02 B |  0.4% |                0.53x |
 | tailwind-variants                  |              704.02 B | 0.21% |                0.81x |
-| react-class-variants + twMerge     |              864.02 B | 0.28% |                   1x |
+| react-class-variants + twMerge     |              864.02 B | 0.27% |                   1x |

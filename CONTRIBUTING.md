@@ -1,47 +1,39 @@
 # Contributing
 
-This repository is currently maintained around the `react-class-variants` v2 alpha line.
+This repository currently centers on the `react-class-variants` v2 alpha line.
 
 ## Branch Model
 
-- Open v2 feature and fix PRs against `next`
-- Treat `main` as stable-ready during the alpha period
-- Keep legacy v1 work isolated to `v1-maintenance`
+- Open v2 feature and fix PRs against `next`.
+- Treat `main` as the stable-ready branch during the alpha period.
+- Keep legacy v1 work isolated to `v1-maintenance`.
 
-Do not treat `main` as the day-to-day v2 development branch while v2 remains in alpha.
+Do not use `main` as the day-to-day v2 development branch while v2 remains in alpha.
 
-## Environment
+## Local Setup
 
 - Node.js `20.19+`
 - `pnpm`
 - React `19` for local test expectations
 
-Install dependencies with:
+Install dependencies:
 
 ```bash
 pnpm install
 ```
 
-## Release Intent and Changesets
+CI currently runs `pnpm run verify` on Node `20.x`, `22.x`, and `24.x`. Local development only needs to satisfy the package minimum in `package.json`, but it is useful to keep CI coverage in mind when touching runtime or packaging behavior.
 
-Add a changeset for any:
+## Typical Contributor Flow
 
-- source change
-- public type change
-- package metadata change
-- build or release-affecting change
+1. Branch from `next`.
+2. Make the change and run the smallest relevant checks while iterating.
+3. Add a changeset if the branch carries release intent.
+4. Run `pnpm run verify` before opening or updating a PR.
+5. Run `pnpm run ci` when the branch should be fully release-ready.
+6. Open or update the PR against `next`.
 
-Use:
-
-```bash
-pnpm run check:changeset
-```
-
-Notes:
-
-- documentation-only changes usually do not need a changeset
-- if a PR intentionally touches release-affecting files but should not ship a version, use an empty changeset
-- if a prerelease redesign replaces an unreleased API, rewrite or delete the stale pending `.changeset/*.md` files before the next alpha so `pre exit` does not carry obsolete notes into stable
+PRs to `next` also run the changeset coverage check in CI.
 
 ## Command Guide
 
@@ -50,43 +42,51 @@ Notes:
 ```bash
 pnpm dev
 pnpm test
+pnpm test:coverage
 pnpm lint
 pnpm lint:all
 pnpm lint:eslint
+pnpm lint:format
 pnpm build
 ```
 
-What they cover:
+What they do:
 
 - `pnpm dev`: Vitest in watch mode
 - `pnpm test`: runtime tests once
+- `pnpm test:coverage`: runtime tests with coverage
 - `pnpm lint`: TypeScript publish-surface check for `src/`
-- `pnpm lint:all`: TypeScript check for `src/` plus runtime tests
+- `pnpm lint:all`: TypeScript check for `src/` plus runtime test files
 - `pnpm lint:eslint`: ESLint for `src/` and `test/`
+- `pnpm lint:format`: Prettier check
 - `pnpm build`: ESM + declaration build through `tsup`
 
-### Type and package surface validation
+### Type, packaging, and consumer validation
 
 ```bash
+pnpm test:built
 pnpm test:types
 pnpm test:types:contracts
+pnpm test:types:editor
 pnpm test:types:exports
 pnpm test:types:consumers
 pnpm lint:pkg
 ```
 
-What they cover:
+What they do:
 
-- `pnpm test:types`: full type gate
-- `pnpm test:types:contracts`: `tsd` tests against the built package root
-- `pnpm test:types:exports`: packed export validation with `attw`
-- `pnpm test:types:consumers`: packed Bundler and NodeNext ESM consumer fixtures
-- `pnpm lint:pkg`: `publint` against the packed package metadata and publish surface
+- `pnpm test:built`: built runtime smoke test
+- `pnpm test:types`: full type gate: build + built runtime + contracts + editor + exports + consumers
+- `pnpm test:types:contracts`: `tsd` contract tests against the built package
+- `pnpm test:types:editor`: editor/types tooling validation
+- `pnpm test:types:exports`: packed export validation
+- `pnpm test:types:consumers`: packaged Bundler and NodeNext ESM consumer fixtures
+- `pnpm lint:pkg`: `publint` package-surface validation
 
-When to run them:
+When to use them:
 
 - always run `pnpm test:types` when you change public types, exports, or package metadata
-- prefer the full `pnpm test:types` umbrella command over trying to guess which sub-check matters
+- use the focused subcommands only when you are investigating a specific failure or iterating on a narrow packaging issue
 
 ### Benchmarks and overhead
 
@@ -101,8 +101,8 @@ pnpm check:overhead
 Use these when:
 
 - a change touches hot paths
-- you are evaluating a bundle-size regression
-- you are changing entrypoints, React adapter behavior, or the core recipe engine
+- you are investigating a bundle-size regression
+- you are changing entry points, the React adapter, or the recipe engine
 
 Benchmark tooling is documented in [docs/benchmarks.md](./docs/benchmarks.md).
 
@@ -110,38 +110,68 @@ Benchmark tooling is documented in [docs/benchmarks.md](./docs/benchmarks.md).
 
 ```bash
 pnpm run verify
+pnpm run check:changeset
 pnpm run ci
 ```
 
-- `pnpm run verify`: reusable package gate
-- `pnpm run ci`: `verify` plus release-intent changeset validation
+- `pnpm run verify`: reusable package gate covering linting, runtime tests, type gates, formatting, and package validation
+- `pnpm run check:changeset`: verifies that release-affecting changes include a changeset
+- `pnpm run ci`: `check:changeset` plus `verify`
+
+Useful Vitest shortcuts:
+
+- run one file: `pnpm vitest run test/recipe.spec.ts`
+- run by test name: `pnpm vitest run -t "compound variants"`
+
+## Changesets and Release Intent
+
+Add a changeset for any:
+
+- source change
+- public type change
+- package metadata change
+- build or release-affecting change
+
+Notes:
+
+- documentation-only changes usually do not need a changeset
+- if a PR intentionally touches release-affecting files but should not ship a version, use an empty changeset
+- if a prerelease redesign replaces an unreleased API, rewrite or delete stale pending `.changeset/*.md` files before the next alpha so `changeset pre exit` does not carry obsolete notes into the stable release plan
+
+Use:
+
+```bash
+pnpm run check:changeset
+```
 
 ## Expectations for Public-Surface Changes
 
-The published package surface is currently ESM-only. When you change anything in this area, make sure documentation and tests stay aligned.
+The published v2 package surface is ESM-only. When you change anything user-visible, keep code, tests, fixtures, and docs aligned.
 
 For changes that touch:
 
 - recipe resolution
 - `styled()` behavior
-- React prop merging
-- overloads and types
-- exports and package metadata
+- React prop routing or class merging
+- overloads and public types
+- exports or package metadata
 
-update:
+update the relevant:
 
 - runtime tests in `test/`
 - type contract tests in `test/types/contracts/`
-- consumer fixtures in `test/types/consumers/` when relevant
-- the corresponding docs and examples
+- consumer fixtures in `test/types/consumers/`
+- docs and examples
+
+Do not treat any one of those layers as authoritative on its own. The shipped contract is the combination of runtime behavior, types, package exports, and documentation.
 
 ## Release Notes for Contributors
 
-- Alpha releases publish from `next`
-- Publishing is handled by GitHub Actions via npm trusted publishing
-- Avoid manual `npm publish` unless it is explicitly required
-- `changeset publish` produces the canonical `v*` git tag
-- After a successful alpha publish, verify npm dist-tags explicitly because prerelease tagging policy affects install behavior
-- Keep already-published alpha history in `CHANGELOG.md`; do not rely on superseded pending changesets to document a redesign that has since been replaced
+- Alpha releases publish from `next`.
+- Publishing is handled by GitHub Actions via npm trusted publishing.
+- Avoid manual `npm publish` unless it is explicitly required.
+- `changeset publish` produces the canonical `v*` git tag.
+- After a successful alpha publish, verify npm dist-tags explicitly because prerelease tagging affects install behavior.
+- Keep already-published alpha history in `CHANGELOG.md`; do not rely on superseded pending changesets to document a redesign that has since been replaced.
 
-The release workflow and post-publish checks are documented in [docs/release-process.md](./docs/release-process.md).
+The release workflow, version-package PR behavior, and post-publish checks are documented in [docs/release-process.md](./docs/release-process.md).

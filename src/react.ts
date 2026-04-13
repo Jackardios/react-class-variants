@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- public styled overloads intentionally erase recipe generics in the implementation signature. */
-import type { ReactNode } from 'react';
 import { createRootStyled, createSlotStyled } from './internal/builders';
 import { createRecipeFactory, getCompiledRecipe } from './internal/recipe';
 import type {
@@ -8,11 +7,12 @@ import type {
   SystemOptions,
 } from './internal/core-types';
 import type {
+  AnyElementType,
   AnyIntrinsicElement,
-  NativeAliases,
-  RootComponentOptions,
-  SlotComponentOptions,
-  StyledComponentProps,
+  PropAliases,
+  RootStyledOptions,
+  SlotStyledOptions,
+  StyledComponentType,
 } from './internal/react-types';
 
 export { defineRecipeConfig, recipe } from './core';
@@ -51,86 +51,99 @@ export type {
 } from './internal/core-types';
 
 export type {
-  AnyIntrinsicElement,
-  NativeAliases,
+  AnyElementType,
+  HostRenderOverrides,
+  HostView,
+  PropAliases,
   RenderFunctionProps,
   RenderProp,
-  RootComponentOptions,
-  RootCompose,
-  RootComposeContext,
-  RootComposeInput,
-  RootHelperProps,
-  SlotComponentOptions,
-  SlotCompose,
-  SlotComposeContext,
-  SlotComposeInput,
+  RootStyledOptions,
+  RootStyledViewProps,
+  SlotStyledOptions,
+  SlotStyledViewProps,
   StyledComponentProps,
 } from './internal/react-types';
 
 export function styled<
-  Tag extends AnyIntrinsicElement,
+  Base extends AnyIntrinsicElement,
   TRecipe extends AnyRootRecipe,
   const WithRender extends boolean = false,
-  const Aliases extends NativeAliases<Tag> = {},
+  const Aliases extends PropAliases<Base> = {},
   const Forwarded extends string = never
 >(
-  tag: Tag,
+  base: Base,
   inputRecipe: TRecipe,
-  options?: RootComponentOptions<Tag, TRecipe, WithRender, Aliases, Forwarded>
-): (
-  props: StyledComponentProps<Tag, TRecipe, WithRender, Aliases>
-) => ReactNode;
+  options?: RootStyledOptions<Base, TRecipe, WithRender, Aliases, Forwarded>
+): StyledComponentType<Base, TRecipe, WithRender, Aliases>;
 
 export function styled<
-  Tag extends AnyIntrinsicElement,
-  TRecipe extends AnySlotRecipe,
-  const WithRender extends boolean = false,
-  const Aliases extends NativeAliases<Tag> = {},
+  Base extends Exclude<AnyElementType, AnyIntrinsicElement>,
+  TRecipe extends AnyRootRecipe,
+  const Aliases extends PropAliases<Base> = {},
   const Forwarded extends string = never
 >(
-  tag: Tag,
+  base: Base,
   inputRecipe: TRecipe,
-  options: SlotComponentOptions<Tag, TRecipe, WithRender, Aliases, Forwarded>
-): (
-  props: StyledComponentProps<Tag, TRecipe, WithRender, Aliases>
-) => ReactNode;
+  options?: RootStyledOptions<Base, TRecipe, false, Aliases, Forwarded>
+): StyledComponentType<Base, TRecipe, false, Aliases>;
+
+export function styled<
+  Base extends AnyIntrinsicElement,
+  TRecipe extends AnySlotRecipe,
+  const WithRender extends boolean = false,
+  const Aliases extends PropAliases<Base> = {},
+  const Forwarded extends string = never
+>(
+  base: Base,
+  inputRecipe: TRecipe,
+  options: SlotStyledOptions<Base, TRecipe, WithRender, Aliases, Forwarded>
+): StyledComponentType<Base, TRecipe, WithRender, Aliases>;
+
+export function styled<
+  Base extends Exclude<AnyElementType, AnyIntrinsicElement>,
+  TRecipe extends AnySlotRecipe,
+  const Aliases extends PropAliases<Base> = {},
+  const Forwarded extends string = never
+>(
+  base: Base,
+  inputRecipe: TRecipe,
+  options: SlotStyledOptions<Base, TRecipe, false, Aliases, Forwarded>
+): StyledComponentType<Base, TRecipe, false, Aliases>;
 
 export function styled(
-  tag: AnyIntrinsicElement,
+  base: AnyElementType,
   inputRecipe: AnyRootRecipe | AnySlotRecipe,
   options?:
-    | RootComponentOptions<any, any, any, any, any>
-    | SlotComponentOptions<any, any, any, any, any>
+    | RootStyledOptions<any, any, any, any, any>
+    | SlotStyledOptions<any, any, any, any, any>
 ) {
-  const isSlotRecipe =
-    getCompiledRecipe(inputRecipe as AnyRootRecipe).mode === 'slot';
+  const compiled = getCompiledRecipe(inputRecipe as AnyRootRecipe);
+  const isSlotRecipe = compiled.mode === 'slot';
 
-  if (options?.compose) {
-    if (isSlotRecipe) {
-      return createSlotStyled(
-        tag,
-        inputRecipe as AnySlotRecipe,
-        options as SlotComponentOptions<any, any, any, any, any>
-      );
-    }
-
-    return createRootStyled(
-      tag,
-      inputRecipe as AnyRootRecipe,
-      options as RootComponentOptions<any, any, any, any, any>
+  if (typeof base !== 'string' && options?.withRender) {
+    throw new Error(
+      'react-class-variants: withRender is only supported for intrinsic base elements.'
     );
   }
 
   if (isSlotRecipe) {
-    throw new Error(
-      'react-class-variants: slotted recipes require a compose callback.'
+    if (!options?.view) {
+      throw new Error(
+        'react-class-variants: slotted recipes require a view component.'
+      );
+    }
+
+    return createSlotStyled(
+      base,
+      inputRecipe as AnySlotRecipe,
+      options as SlotStyledOptions<any, any, any, any, any>
     );
   }
 
   return createRootStyled(
-    tag,
+    base,
     inputRecipe as AnyRootRecipe,
-    options as RootComponentOptions<any, any, any, any, any> | undefined
+    options as RootStyledOptions<any, any, any, any, any> | undefined
   );
 }
 

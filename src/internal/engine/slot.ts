@@ -31,11 +31,12 @@ import {
   readVariantClassName,
   type CompiledSelectionValue,
   type LeanSlotClassTable,
+  type NormalizedResolveOptions,
   type RuntimeSystemOptions,
   type SlotClassTable,
   type SlotCompiledRecipe,
-  type StrictSlotCompiledRecipe,
   type LeanSlotCompiledRecipe,
+  type StrictSlotCompiledRecipe,
 } from './shared';
 
 const emptySlotClassTable: SlotClassTable = [];
@@ -442,6 +443,56 @@ function resolveLeanSlotClassName(
   );
 
   return compiled.merge ? compiled.merge(output) : output;
+}
+
+export function resolveSlotClassNameForRender(
+  compiled: SlotCompiledRecipe,
+  slotIndex: number,
+  parentSelection: readonly CompiledSelectionValue[],
+  input?: Record<string, unknown>
+) {
+  if (compiled.runtime === 'lean') {
+    const selection = resolveLeanSlotSelection(
+      compiled,
+      parentSelection,
+      input
+    );
+    return resolveLeanSlotClassName(
+      compiled,
+      slotIndex,
+      selection,
+      input?.className as ClassNameValue | undefined
+    );
+  }
+
+  const selection = resolveStrictSlotSelection(
+    compiled,
+    parentSelection,
+    input
+  );
+  return resolveStrictSlotClassName(
+    compiled,
+    slotIndex,
+    selection,
+    input?.className as ClassNameValue | undefined
+  );
+}
+
+export function resolveSlotViewState(
+  compiled: SlotCompiledRecipe,
+  input: Record<string, unknown> | undefined,
+  options: NormalizedResolveOptions | undefined
+) {
+  const selection =
+    compiled.runtime === 'lean'
+      ? buildSlotSelectionLean(compiled, input)
+      : buildSelection(compiled, input, 'recipe', true, false);
+
+  return {
+    resolvedProps: createResolvedProps(compiled, input, options, selection),
+    selection,
+    variants: materializeSelection(compiled, selection),
+  };
 }
 
 function createStrictSlotRenderers(

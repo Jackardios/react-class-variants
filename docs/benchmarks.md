@@ -111,7 +111,7 @@ Repository-specific paths such as:
 - slot recipes
 - slot render overrides
 - `resolve()`
-- React `styled()` composition
+- React `styled()` simple and `view` paths
 - `withRender`
 
 are measured separately in the local benches and the package-overhead pipeline.
