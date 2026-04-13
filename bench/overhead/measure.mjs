@@ -72,9 +72,15 @@ function parseArgs(argv) {
   return options;
 }
 
-async function measureTarget(target, options) {
+export async function measureTarget(target, options) {
   buildTarget(target.dir);
 
+  // Measure retained memory before any general surface detection so the first
+  // built-runtime import happens under the production env that memory probes
+  // intentionally force.
+  const memory = options.sizeOnly
+    ? null
+    : await measureRetainedMemory(target.dir);
   const layout = getEntryLayout(target.dir);
   const surface = await detectSurface(target.dir);
 
@@ -96,7 +102,7 @@ async function measureTarget(target, options) {
       reactMjs: measureFile(layout.reactRuntime),
       rootImportGraph: collectImportGraph(layout.rootRuntime),
     },
-    memory: options.sizeOnly ? null : await measureRetainedMemory(target.dir),
+    memory,
     runtime: options.sizeOnly
       ? null
       : measureRuntime({

@@ -6,18 +6,25 @@ import type {
   SystemOptions,
 } from './core-types';
 import {
-  compileRootRecipe,
-  createRootRecipe,
+  compileLeanRootRecipe,
+  compileStrictRootRecipe,
+  createLeanRootRecipe,
+  createStrictRootRecipe,
   resolveRootComponentProps,
 } from './engine/root';
-import { compileSlotRecipe, createSlotRecipe } from './engine/slot';
+import {
+  compileLeanSlotRecipe,
+  compileStrictSlotRecipe,
+  createLeanSlotRecipe,
+  createStrictSlotRecipe,
+} from './engine/slot';
 import {
   getCompiledRecipe,
   normalizeResolveOptions,
-  resolveRuntimeSystemOptions,
   type CompiledRecipe,
   type NormalizedResolveOptions,
   type RootCompiledRecipe,
+  type RuntimeSystemOptions,
 } from './engine/shared';
 
 export {
@@ -29,20 +36,66 @@ export {
 };
 export { resolveRootComponentProps };
 
-export function createRecipeFactory(
-  options: SystemOptions = {}
-): RecipeFactory {
-  const runtimeOptions = resolveRuntimeSystemOptions(options);
+declare const process: {
+  env: {
+    NODE_ENV?: string;
+  };
+};
+
+function createLeanRecipeFactory(options: SystemOptions): RecipeFactory {
+  const runtimeOptions: RuntimeSystemOptions = {
+    freeze: 'none',
+    merge: options.merge,
+    mode: 'lean',
+    validate: false,
+  };
 
   return ((config: RecipeConfig) => {
     if ('slots' in config) {
-      return createSlotRecipe(
-        compileSlotRecipe(config as AnySlotRecipeConfig, runtimeOptions)
+      return createLeanSlotRecipe(
+        compileLeanSlotRecipe(config as AnySlotRecipeConfig, runtimeOptions)
       );
     }
 
-    return createRootRecipe(
-      compileRootRecipe(config as AnyRootRecipeConfig, runtimeOptions)
+    return createLeanRootRecipe(
+      compileLeanRootRecipe(config as AnyRootRecipeConfig, runtimeOptions)
     );
   }) as RecipeFactory;
+}
+
+function createStrictRecipeFactory(options: SystemOptions): RecipeFactory {
+  const runtimeOptions: RuntimeSystemOptions = {
+    freeze: options.validate === 'always' ? 'deep' : 'shallow',
+    merge: options.merge,
+    mode: 'strict',
+    validate: true,
+  };
+
+  return ((config: RecipeConfig) => {
+    if ('slots' in config) {
+      return createStrictSlotRecipe(
+        compileStrictSlotRecipe(config as AnySlotRecipeConfig, runtimeOptions)
+      );
+    }
+
+    return createStrictRootRecipe(
+      compileStrictRootRecipe(config as AnyRootRecipeConfig, runtimeOptions)
+    );
+  }) as RecipeFactory;
+}
+
+export function createRecipeFactory(
+  options: SystemOptions = {}
+): RecipeFactory {
+  if (options.validate === 'never') {
+    return createLeanRecipeFactory(options);
+  }
+
+  if (options.validate === 'always') {
+    return createStrictRecipeFactory(options);
+  }
+
+  return process.env.NODE_ENV === 'production'
+    ? createLeanRecipeFactory(options)
+    : createStrictRecipeFactory(options);
 }

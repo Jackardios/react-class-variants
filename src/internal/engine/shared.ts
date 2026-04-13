@@ -22,6 +22,7 @@ type RecipeWithCompiled = AnyRecipe & {
   [compiledRecipeSymbol]: CompiledRecipe;
 };
 
+export type RuntimeMode = 'lean' | 'strict';
 export type CompiledSelectionValue = string | boolean | undefined;
 export type CompiledExpected =
   | CompiledSelectionValue
@@ -29,6 +30,7 @@ export type CompiledExpected =
 export type VariantIndex = Record<string, number>;
 export type ForwardPropEntry = readonly [key: string, index: number];
 export type SlotClassTable = readonly (string | undefined)[];
+export type LeanSlotClassTable = SlotClassTable;
 
 export type CompiledVariant<TClassName> = {
   key: string;
@@ -44,26 +46,60 @@ export type CompiledCompound<TClassName> = {
   selectors: readonly (readonly [index: number, expected: CompiledExpected])[];
 };
 
+export type LeanCompiledCompounds<TClassName> = {
+  classNames: readonly TClassName[];
+  offsets: readonly number[];
+  selectorPairs: readonly (number | CompiledExpected)[];
+};
+
 type SharedCompiledRecipe = {
   merge?: (className: string) => string;
+  runtime: RuntimeMode;
   validate: boolean;
   variantIndex?: VariantIndex;
 };
 
-export type RootCompiledRecipe = SharedCompiledRecipe & {
+export type StrictRootCompiledRecipe = SharedCompiledRecipe & {
   base: string;
   compounds: readonly CompiledCompound<string>[];
   mode: 'root';
+  runtime: 'strict';
   variantTable: readonly CompiledVariant<string>[];
 };
 
-export type SlotCompiledRecipe = SharedCompiledRecipe & {
+export type LeanRootCompiledRecipe = SharedCompiledRecipe & {
+  base: string;
+  compounds: LeanCompiledCompounds<string>;
+  mode: 'root';
+  runtime: 'lean';
+  variantTable: readonly CompiledVariant<string>[];
+};
+
+export type RootCompiledRecipe =
+  | LeanRootCompiledRecipe
+  | StrictRootCompiledRecipe;
+
+export type StrictSlotCompiledRecipe = SharedCompiledRecipe & {
   base: SlotClassTable;
   compounds: readonly CompiledCompound<SlotClassTable>[];
   mode: 'slot';
+  runtime: 'strict';
   slotNames: readonly string[];
   variantTable: readonly CompiledVariant<SlotClassTable>[];
 };
+
+export type LeanSlotCompiledRecipe = SharedCompiledRecipe & {
+  base: LeanSlotClassTable;
+  compounds: LeanCompiledCompounds<LeanSlotClassTable>;
+  mode: 'slot';
+  runtime: 'lean';
+  slotNames: readonly string[];
+  variantTable: readonly CompiledVariant<LeanSlotClassTable>[];
+};
+
+export type SlotCompiledRecipe =
+  | LeanSlotCompiledRecipe
+  | StrictSlotCompiledRecipe;
 
 export type CompiledRecipe = RootCompiledRecipe | SlotCompiledRecipe;
 
@@ -75,6 +111,7 @@ export type NormalizedResolveOptions = {
 
 export type RuntimeSystemOptions = Omit<SystemOptions, 'validate'> & {
   freeze: 'deep' | 'none' | 'shallow';
+  mode: RuntimeMode;
   validate: boolean;
 };
 
@@ -90,13 +127,15 @@ export function isPlainObject(
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
+function isProductionEnvironment() {
+  const runtime = globalThis as { process?: { env?: { NODE_ENV?: string } } };
+  return runtime.process?.env?.NODE_ENV === 'production';
+}
+
 function isValidateEnabled(mode: ValidateMode | undefined): boolean {
   if (mode === 'always') return true;
   if (mode === 'never') return false;
-
-  const env = (globalThis as { process?: { env?: { NODE_ENV?: string } } })
-    .process?.env?.NODE_ENV;
-  return env !== 'production';
+  return !isProductionEnvironment();
 }
 
 export function resolveRuntimeSystemOptions(
@@ -108,6 +147,7 @@ export function resolveRuntimeSystemOptions(
     freeze:
       options.validate === 'always' ? 'deep' : validate ? 'shallow' : 'none',
     merge: options.merge,
+    mode: validate ? 'strict' : 'lean',
     validate,
   };
 }
@@ -174,6 +214,19 @@ export function getVariantIndex(
     : undefined;
 }
 
+function findVariantIndexByKey(
+  variantTable: readonly { key: string }[],
+  key: string
+) {
+  for (let index = 0; index < variantTable.length; index += 1) {
+    if (variantTable[index].key === key) {
+      return index;
+    }
+  }
+
+  return undefined;
+}
+
 export function ensureVariantIndex(
   compiled: CompiledRecipe
 ): Readonly<VariantIndex> {
@@ -206,6 +259,7 @@ export function readVariantClassName<TClassName>(
   if (variant.isBoolean) {
     return value === true ? variant.trueClass : variant.falseClass;
   }
+
   return variant.options[value as string];
 }
 
@@ -366,7 +420,6 @@ export function compileCompounds<TClassName>(params: {
   }
 
   const compiledCompounds: Array<CompiledCompound<TClassName>> = [];
-  const variantIndex = createVariantIndex(variantTable);
 
   for (const compound of compounds) {
     const selectors: Array<readonly [number, CompiledExpected]> = [];
@@ -374,7 +427,7 @@ export function compileCompounds<TClassName>(params: {
     for (const key in compound) {
       if (!hasOwnKey(compound, key) || key === 'className') continue;
 
-      const index = getVariantIndex(variantIndex, key);
+      const index = findVariantIndexByKey(variantTable, key);
       if (index === undefined) {
         if (validate) {
           throw new Error(
@@ -428,6 +481,89 @@ export function compileCompounds<TClassName>(params: {
   }
 
   return compiledCompounds;
+}
+
+export function compileLeanCompounds<TClassName>(params: {
+  compileClassName: (context: string, value: unknown) => TClassName;
+  compounds: RecipeConfig['compoundVariants'];
+  validate: boolean;
+  variantTable: readonly CompiledVariant<TClassName>[];
+}): LeanCompiledCompounds<TClassName> {
+  const { compileClassName, compounds, validate, variantTable } = params;
+  if (!compounds || compounds.length === 0) {
+    return {
+      classNames: [],
+      offsets: [0],
+      selectorPairs: [],
+    };
+  }
+
+  const classNames: TClassName[] = [];
+  const offsets = [0];
+  const selectorPairs: Array<number | CompiledExpected> = [];
+
+  for (const compound of compounds) {
+    for (const key in compound) {
+      if (!hasOwnKey(compound, key) || key === 'className') continue;
+
+      const index = findVariantIndexByKey(variantTable, key);
+      if (index === undefined) {
+        if (validate) {
+          throw new Error(
+            `react-class-variants: compoundVariants key "${key}" is not declared in variants.`
+          );
+        }
+        continue;
+      }
+
+      const variant = variantTable[index];
+      const value = (compound as Record<string, unknown>)[key];
+
+      if (Array.isArray(value)) {
+        if (validate) {
+          for (const candidate of value) {
+            if (!isAllowedVariantValue(variant, candidate)) {
+              throw new Error(
+                `react-class-variants: invalid compoundVariants value "${String(
+                  candidate
+                )}" for variant "${key}".`
+              );
+            }
+          }
+        }
+
+        selectorPairs.push(index, compileCompoundSelection(variant, value));
+        continue;
+      }
+
+      if (validate && !isAllowedVariantValue(variant, value)) {
+        throw new Error(
+          `react-class-variants: invalid compoundVariants value "${String(
+            value
+          )}" for variant "${key}".`
+        );
+      }
+
+      selectorPairs.push(
+        index,
+        normalizeSelectionValue(variant.isBoolean, value)
+      );
+    }
+
+    classNames.push(
+      compileClassName(
+        'compoundVariants.className',
+        (compound as { className?: unknown }).className
+      )
+    );
+    offsets.push(selectorPairs.length / 2);
+  }
+
+  return {
+    classNames,
+    offsets,
+    selectorPairs,
+  };
 }
 
 function validateKnownRecipeProps(
@@ -529,6 +665,38 @@ function matchesCompound(
   return true;
 }
 
+function matchesLeanCompoundRange(
+  selection: readonly CompiledSelectionValue[],
+  compounds: LeanCompiledCompounds<unknown>,
+  compoundIndex: number
+) {
+  const start = compounds.offsets[compoundIndex] * 2;
+  const end = compounds.offsets[compoundIndex + 1] * 2;
+
+  for (let index = start; index < end; index += 2) {
+    const actual = selection[compounds.selectorPairs[index] as number];
+    const expected = compounds.selectorPairs[index + 1] as CompiledExpected;
+
+    if (Array.isArray(expected)) {
+      let matched = false;
+      for (const candidate of expected) {
+        if (candidate === actual) {
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) return false;
+      continue;
+    }
+
+    if (expected !== actual) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export function forEachMatchingCompound<TClassName>(
   compounds: readonly CompiledCompound<TClassName>[],
   selection: readonly CompiledSelectionValue[],
@@ -537,6 +705,18 @@ export function forEachMatchingCompound<TClassName>(
   for (const compound of compounds) {
     if (matchesCompound(selection, compound.selectors)) {
       callback(compound.className);
+    }
+  }
+}
+
+export function forEachMatchingLeanCompound<TClassName>(
+  compounds: LeanCompiledCompounds<TClassName>,
+  selection: readonly CompiledSelectionValue[],
+  callback: (className: TClassName) => void
+) {
+  for (let index = 0; index < compounds.classNames.length; index += 1) {
+    if (matchesLeanCompoundRange(selection, compounds, index)) {
+      callback(compounds.classNames[index]);
     }
   }
 }

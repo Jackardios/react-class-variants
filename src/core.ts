@@ -1,4 +1,5 @@
 import { createRecipeFactory } from './internal/recipe';
+import { defaultRecipeFactory } from './internal/recipe-default';
 import type {
   ClassNameValue,
   RecipeConfig,
@@ -43,7 +44,7 @@ export type {
   VariantProps,
 } from './internal/core-types';
 
-export const recipe = createRecipeFactory();
+export const recipe = defaultRecipeFactory;
 
 export function defineRecipeConfig<
   const SlotDefs extends Record<string, ClassNameValue>,
