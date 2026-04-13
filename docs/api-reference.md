@@ -2,18 +2,16 @@
 
 This document describes the current v2 alpha surface.
 
-## Package Root
+Use this page as a reference, not as a tutorial. For guided examples and recommended patterns, start with the [recipes and components guide](./recipes-and-components.md).
+
+## Primary Package Root APIs
 
 ```ts
 import {
   defineConfig,
   defineRecipeConfig,
-  hasOwnProperty,
-  mergeProps,
-  mergeRefs,
   recipe,
   styled,
-  useMergeRefs,
 } from 'react-class-variants';
 ```
 
@@ -22,7 +20,6 @@ The `react-class-variants/core` subpath exposes:
 - `recipe()`
 - `defineConfig()`
 - `defineRecipeConfig()`
-- `hasOwnProperty()`
 - core recipe types
 
 ## `recipe(config)`
@@ -43,6 +40,31 @@ const badgeRecipe = recipe({
 });
 ```
 
+Root compound variants use a flat selector object plus one final `className`:
+
+```ts
+const badgeRecipe = recipe({
+  base: 'inline-flex rounded-full',
+  variants: {
+    tone: {
+      info: 'bg-sky-100',
+      danger: 'bg-rose-100',
+    },
+    size: {
+      sm: 'px-2 py-1 text-xs',
+      md: 'px-3 py-1.5 text-sm',
+    },
+  },
+  compoundVariants: [
+    {
+      tone: ['info', 'danger'],
+      size: 'sm',
+      className: 'tracking-wide',
+    },
+  ],
+});
+```
+
 Use `slots` for slotted recipes:
 
 ```ts
@@ -55,11 +77,55 @@ const buttonRecipe = recipe({
   variants: {
     tone: {
       primary: {
-        root: 'bg-blue text-white',
+        root: 'bg-blue-600 text-white',
         icon: 'text-blue-100',
+      },
+      ghost: {
+        root: 'bg-transparent text-slate-900',
+        icon: 'text-slate-500',
       },
     },
   },
+  defaultVariants: {
+    tone: 'primary',
+  },
+});
+```
+
+Slot compound variants use the same selectors, but `className` becomes a slot map:
+
+```ts
+const fieldRecipe = recipe({
+  slots: {
+    label: 'text-sm',
+    input: 'rounded-md border',
+  },
+  variants: {
+    invalid: {
+      true: {
+        label: 'text-red-700',
+        input: 'border-red-500',
+      },
+    },
+    size: {
+      sm: {
+        input: 'h-9 px-3 text-sm',
+      },
+      md: {
+        input: 'h-10 px-4 text-base',
+      },
+    },
+  },
+  compoundVariants: [
+    {
+      invalid: true,
+      size: 'sm',
+      className: {
+        input: 'pr-9',
+        label: 'font-semibold',
+      },
+    },
+  ],
 });
 ```
 
@@ -167,6 +233,16 @@ type ResolveOptions = {
 - forwarded values reflect the effective resolved selection
 - forwarded values include defaults and boolean fallbacks
 
+Example:
+
+```tsx
+const NavLink = styled(NavLinkBase, navLinkRecipe, {
+  forwardProps: ['active'],
+});
+```
+
+Use this when the host base needs a resolved variant value in its own props.
+
 #### `propAliases`
 
 `propAliases` maps:
@@ -189,6 +265,16 @@ This means:
 - `host.props` inside `view` also receives `size`
 - variant props are not renamed; `propAliases` only solve collisions with base props
 
+Typical styled usage:
+
+```tsx
+const Input = styled('input', inputRecipe, {
+  propAliases: {
+    size: 'htmlSize',
+  },
+});
+```
+
 ## `styled(base, recipe, options?)`
 
 `styled()` is the only high-level React builder.
@@ -208,7 +294,7 @@ Rules:
 ### Root recipe, simple path
 
 ```tsx
-const Button = styled('button', buttonRecipe);
+const Badge = styled('span', badgeRecipe);
 ```
 
 Behavior:
@@ -239,7 +325,7 @@ function ButtonView({ host, classes, variants }) {
   const { icon, label } = classes;
 
   return host.render({
-    'aria-busy': variants.loading || undefined,
+    'data-tone': variants.tone,
     children: (
       <>
         <span className={icon()} />
@@ -250,8 +336,6 @@ function ButtonView({ host, classes, variants }) {
 }
 
 const Button = styled('button', buttonRecipe, {
-  withRender: true,
-  forwardProps: ['loading'],
   view: ButtonView,
 });
 ```
@@ -361,6 +445,24 @@ Behavior:
 - `host.render()` reuses the current `host.children` unless you override `children`
 - for slotted recipes, external component `className` is routed automatically to the host slot
 
+Example:
+
+```tsx
+function ActionView({ host }) {
+  return host.render({
+    className: 'justify-between gap-2',
+    children: (
+      <>
+        <span>{host.children}</span>
+        {host.props['data-shortcut'] ? (
+          <kbd>{String(host.props['data-shortcut'])}</kbd>
+        ) : null}
+      </>
+    ),
+  });
+}
+```
+
 For slotted views:
 
 - `classes` is a readonly slot render map
@@ -370,6 +472,39 @@ For slotted views:
 ## `render`
 
 `render` is available only when `withRender: true` and the base is intrinsic.
+
+```tsx
+import { recipe, styled } from 'react-class-variants';
+
+const linkRecipe = recipe({
+  base: 'inline-flex items-center rounded-md font-medium',
+  variants: {
+    tone: {
+      primary: 'bg-blue-600 text-white',
+      ghost: 'bg-transparent text-slate-900',
+    },
+  },
+});
+
+const LinkButton = styled('button', linkRecipe, {
+  withRender: true,
+});
+
+<LinkButton tone="primary" render={<a href="/docs" />}>
+  Docs
+</LinkButton>;
+```
+
+Function form:
+
+```tsx
+<LinkButton
+  tone="ghost"
+  render={props => <a {...props} href="/docs/api-reference" />}
+>
+  API
+</LinkButton>
+```
 
 It accepts:
 
@@ -394,6 +529,16 @@ When the render target is a function:
 const { recipe, styled } = defineConfig(options);
 ```
 
+Core-only usage:
+
+```ts
+import { defineConfig } from 'react-class-variants/core';
+
+const { recipe } = defineConfig({
+  validate: 'always',
+});
+```
+
 Supported options:
 
 ```ts
@@ -415,6 +560,15 @@ type SystemOptions = {
 - `'always'`: strict validation everywhere
 - `'never'`: lean runtime with no validation
 
+Example:
+
+```ts
+const strict = defineConfig({ validate: 'always' });
+const lean = defineConfig({ validate: 'never' });
+```
+
+Use `'always'` in strict test fixtures or shared packages, and use `'never'` for production-like benchmarks when you want the lean path.
+
 ## `defineRecipeConfig(config)`
 
 `defineRecipeConfig()` is a typed identity helper:
@@ -431,26 +585,6 @@ const buttonConfig = defineRecipeConfig({
 ```
 
 It returns the original config reference unchanged.
-
-## Utilities
-
-### `mergeProps(base, overrides)`
-
-- concatenates `className`
-- shallow-merges `style`
-- composes event handlers with override first
-
-### `mergeRefs(...refs)`
-
-Creates one merged ref callback without hooks.
-
-### `useMergeRefs(...refs)`
-
-Hook version of `mergeRefs()`.
-
-### `hasOwnProperty(object, prop)`
-
-Type-narrowed own-property guard.
 
 ## React Type Exports
 

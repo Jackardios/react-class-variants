@@ -1,85 +1,47 @@
-# Migration from `react-tailwind-variants`
+# Migrating from `react-tailwind-variants` v1 to `react-class-variants` v2 alpha
 
-This guide covers the current v2 alpha API of `react-class-variants`.
+This guide is for teams moving from the frozen v1 line of
+`react-tailwind-variants` to the current v2 alpha surface of
+`react-class-variants`.
+
+It reflects the current public API and behavior in the `v1-maintenance` and
+`next` branches. It does not describe older intermediate v2 alpha designs. If
+you see examples that mention `compose`, `Root`, `nativeAliases`, or a tag-only
+`styled()` API, treat them as obsolete.
+
+If you are learning v2 from scratch, start with the [README](../README.md), the
+[recipes and components guide](./recipes-and-components.md), and the
+[API reference](./api-reference.md).
+
+## Before You Start
+
+- The package name changed from `react-tailwind-variants` to
+  `react-class-variants`.
+- The recommended install target is `react-class-variants@alpha`.
+- v2 is ESM-only.
+- v2 expects Node.js `20.19+` and React `19`.
+- If you cannot move to those runtime requirements yet, stay on v1 for now.
 
 ## High-Level Mapping
 
-| v1 export or pattern                 | v2 replacement                                                                     | Notes                                      |
-| ------------------------------------ | ---------------------------------------------------------------------------------- | ------------------------------------------ |
-| `variants(config)`                   | `recipe(config)`                                                                   | one canonical styling primitive            |
-| `variantProps(config)`               | `recipe.resolve(input, options)`                                                   | explicit prop routing                      |
-| `styled(tag, config)`                | `const r = recipe(config)` then `styled(tag, r)`                                   | config and component creation are separate |
-| `styled(CustomComponent, config)`    | `const r = recipe(config)` then `styled(CustomComponent, r)`                       | supported again in v2 alpha                |
-| `styled(StyledComponent, config)`    | usually `styled(StyledComponent, recipe)` or a wrapper around `recipe.resolve()`   | depends on your layering model             |
-| `asChild`                            | `withRender: true` + `render`                                                      | intrinsic bases only                       |
-| `VariantPropsOf<typeof Component>`   | `VariantProps<typeof recipe>`                                                      | types derive from recipes                  |
-| `VariantsConfigOf<typeof Component>` | keep the config with `defineRecipeConfig()` or use `RecipeConfigOf<typeof recipe>` | no runtime config extraction               |
+| v1 export or pattern                 | v2 replacement                                              | Notes                                                   |
+| ------------------------------------ | ----------------------------------------------------------- | ------------------------------------------------------- |
+| `react-tailwind-variants`            | `react-class-variants@alpha`                                | package rename and new runtime requirements             |
+| `variants(config)`                   | `recipe(config)`                                            | use `react-class-variants/core` in recipe-only modules  |
+| `styled(base, config)`               | `const r = recipe(config)` then `styled(base, r, options?)` | config definition and component creation are separate   |
+| `variantProps(config)`               | `recipe.resolve(input, options?)`                           | returns structured output, not one merged prop object   |
+| `extractVariantsConfig(Component)`   | keep the config explicitly with `defineRecipeConfig()`      | no runtime extraction helper in v2                      |
+| `VariantPropsOf<typeof Component>`   | `VariantProps<typeof recipe>`                               | types are recipe-first                                  |
+| `VariantsConfigOf<typeof Component>` | `RecipeConfigOf<typeof recipe>`                             | the recipe carries the config type, not the config data |
+| `asChild`                            | `withRender: true` plus `render`, or a wrapper component    | intrinsic bases only                                    |
+| `cx()`                               | your own `clsx` or `tailwind-merge` utility                 | no v2 export                                            |
+| `tw`                                 | plain strings or your own tagged template                   | no v2 export                                            |
+| automatic `tailwind-merge`           | `defineConfig({ merge: twMerge })`                          | merge is explicit in v2                                 |
 
-## The Biggest Conceptual Shifts
+## A Pragmatic First Step
 
-### 1. v2 is recipe-first
-
-In v1 the public API was spread across:
-
-- `variants()`
-- `variantProps()`
-- `styled()`
-
-In v2 everything starts from one recipe:
-
-- call it directly
-- call `.resolve()`
-- pass it into `styled()`
-
-### 2. `styled()` accepts real React bases again
-
-The current v2 alpha supports:
-
-- intrinsic tags such as `'button'`
-- custom React components
-
-This is different from the earlier tag-only alpha surface.
-
-Rule:
-
-- only intrinsic bases support `withRender`
-- custom bases should accept and forward `className`, `children`, and `ref` when those behaviors matter
-
-### 3. Custom structure moved to `view`
-
-The old alpha used `compose` and a `Root` helper. The current surface uses a real React `view` component instead.
-
-This means:
-
-- hooks are allowed
-- there is no pseudo-component helper
-- slotted components receive `classes`
-- the rendered base is modeled through `host`
-- prefer a named component reference such as `view: ButtonView` when you plan to use hooks so hook linting stays happy
-
-### 4. `nativeAliases` became `propAliases`
-
-The aliasing model is no longer described as intrinsic-only because `styled()` accepts custom bases again.
-
-Before:
-
-```ts
-nativeAliases: {
-  size: 'htmlSize',
-}
-```
-
-After:
-
-```ts
-propAliases: {
-  size: 'htmlSize',
-}
-```
-
-### 5. Tailwind merging is still explicit
-
-v2 does not hide merge behavior inside the runtime. If you want Tailwind conflict resolution, configure it:
+If you want v2 to behave closer to v1 while you port code, start with a
+configured factory:
 
 ```ts
 import { defineConfig } from 'react-class-variants';
@@ -87,17 +49,24 @@ import { twMerge } from 'tailwind-merge';
 
 export const { recipe, styled } = defineConfig({
   merge: twMerge,
+  validate: 'never',
 });
 ```
 
-## Step-by-Step Migration
+This does two useful things during migration:
 
-### 1. Replace imports and package installation
+- restores automatic Tailwind conflict resolution
+- disables dev-time strict validation while you rename APIs and reshape inputs
+
+After the migration is stable, move back to the default validation behavior or
+to `validate: 'always'` if you want stricter checking everywhere.
+
+## 1. Replace the Package and Imports
 
 Before:
 
 ```ts
-import { styled, variants, variantProps } from 'react-tailwind-variants';
+import { styled, variantProps, variants } from 'react-tailwind-variants';
 ```
 
 After:
@@ -106,13 +75,15 @@ After:
 import { recipe, styled } from 'react-class-variants';
 ```
 
-If you want recipe-only files without React helpers:
+If you only need recipe creation in a non-React module:
 
 ```ts
 import { recipe } from 'react-class-variants/core';
 ```
 
-### 2. Replace `variants(config)` with `recipe(config)`
+## 2. Replace `variants(config)` with `recipe(config)`
+
+Most v1 `variants()` calls become root recipes.
 
 Before:
 
@@ -120,12 +91,18 @@ Before:
 import { variants } from 'react-tailwind-variants';
 
 export const button = variants({
-  base: 'inline-flex items-center',
+  base: 'inline-flex items-center rounded-md font-medium',
   variants: {
     tone: {
       primary: 'bg-blue-600 text-white',
       ghost: 'bg-transparent text-slate-900',
     },
+    disabled: {
+      true: 'opacity-50',
+    },
+  },
+  defaultVariants: {
+    tone: 'primary',
   },
 });
 ```
@@ -133,96 +110,297 @@ export const button = variants({
 After:
 
 ```ts
-import { recipe } from 'react-class-variants';
+import { recipe } from 'react-class-variants/core';
 
 export const buttonRecipe = recipe({
-  base: 'inline-flex items-center',
+  base: 'inline-flex items-center rounded-md font-medium',
+  variants: {
+    tone: {
+      primary: 'bg-blue-600 text-white',
+      ghost: 'bg-transparent text-slate-900',
+    },
+    disabled: {
+      true: 'opacity-50',
+    },
+  },
+  defaultVariants: {
+    tone: 'primary',
+  },
+});
+```
+
+What stays familiar:
+
+- variants without defaults are still required
+- boolean variants still use `"true"` and `"false"` keys and accept boolean
+  props
+- root recipe direct calls still accept an optional `className`
+
+What changed:
+
+- `recipe()` is now the canonical primitive, even when you later build a React
+  component from it
+- direct recipe calls are variant-only APIs, not arbitrary prop-bag APIs
+- mixing boolean options with named options in the same variant is now invalid
+
+## 3. Rewrite `compoundVariants`
+
+This is one of the most important syntax changes.
+
+In v1, each compound variant nested its selectors under `variants`:
+
+```ts
+compoundVariants: [
+  {
+    variants: {
+      tone: ['primary', 'ghost'],
+      size: 'sm',
+    },
+    className: 'tracking-wide',
+  },
+];
+```
+
+In v2, the selectors are flat and live next to `className`:
+
+```ts
+compoundVariants: [
+  {
+    tone: ['primary', 'ghost'],
+    size: 'sm',
+    className: 'tracking-wide',
+  },
+];
+```
+
+Rules:
+
+- arrays in selectors still mean “match any of these values”
+- root recipes still end with one `className`
+- slotted recipes use the same flat selector shape, but `className` becomes a
+  slot map
+
+Slotted example:
+
+```ts
+compoundVariants: [
+  {
+    tone: 'primary',
+    loading: true,
+    className: {
+      root: 'cursor-wait',
+      spinner: 'animate-spin',
+    },
+  },
+];
+```
+
+## 4. Replace `styled(base, config)` with `recipe(...)` plus `styled(base, recipe)`
+
+Before:
+
+```tsx
+import { styled } from 'react-tailwind-variants';
+
+export const Button = styled('button', {
+  base: 'inline-flex items-center rounded-md font-medium',
   variants: {
     tone: {
       primary: 'bg-blue-600 text-white',
       ghost: 'bg-transparent text-slate-900',
     },
   },
+  defaultVariants: {
+    tone: 'primary',
+  },
 });
 ```
 
-### 3. Replace `variantProps()` with `recipe.resolve()`
+After:
+
+```tsx
+import { recipe, styled } from 'react-class-variants';
+
+const buttonRecipe = recipe({
+  base: 'inline-flex items-center rounded-md font-medium',
+  variants: {
+    tone: {
+      primary: 'bg-blue-600 text-white',
+      ghost: 'bg-transparent text-slate-900',
+    },
+  },
+  defaultVariants: {
+    tone: 'primary',
+  },
+});
+
+export const Button = styled('button', buttonRecipe);
+```
+
+Current v2 `styled()` supports:
+
+- intrinsic bases such as `'button'`
+- custom React component bases
+
+What changed is the data flow:
+
+- v1 combined config definition and component creation in one call
+- v2 always creates a recipe first, then builds a component from that recipe
+
+Two new tools matter during migration:
+
+- use `propAliases` when a variant name would collide with a base prop like
+  `size` on `<input>`
+- use `forwardProps` when the base component must receive the resolved variant
+  value in its own props
+
+Example:
+
+```tsx
+const inputRecipe = recipe({
+  base: 'block rounded-md border',
+  variants: {
+    size: {
+      sm: 'h-9 px-3 text-sm',
+      md: 'h-10 px-4 text-base',
+    },
+    disabled: {
+      true: 'opacity-50',
+    },
+  },
+  defaultVariants: {
+    size: 'md',
+  },
+});
+
+const Input = styled('input', inputRecipe, {
+  propAliases: {
+    size: 'htmlSize',
+  },
+  forwardProps: ['disabled'],
+});
+```
+
+Usage:
+
+```tsx
+<Input size="sm" htmlSize={20} disabled />
+```
+
+## 5. Replace `variantProps(config)` with `recipe.resolve(input, options?)`
+
+v1 `variantProps()` returned a single prop object with unrelated props plus a
+merged `className`.
 
 Before:
 
 ```ts
-const resolveButtonProps = variantProps({
-  base: 'inline-flex items-center',
+import { variantProps } from 'react-tailwind-variants';
+
+const resolveInputProps = variantProps({
+  base: 'block rounded-md border',
   variants: {
-    tone: {
-      primary: 'bg-blue-600 text-white',
+    size: {
+      sm: 'text-sm',
+      md: 'text-base',
+    },
+    disabled: {
+      true: 'opacity-50',
     },
   },
+  defaultVariants: {
+    size: 'md',
+  },
+});
+
+const props = resolveInputProps({
+  size: 'sm',
+  type: 'text',
+  className: 'w-full',
 });
 ```
 
 After:
 
 ```ts
-const buttonRecipe = recipe({
-  base: 'inline-flex items-center',
+import { recipe } from 'react-class-variants/core';
+
+const inputRecipe = recipe({
+  base: 'block rounded-md border',
   variants: {
-    tone: {
-      primary: 'bg-blue-600 text-white',
+    size: {
+      sm: 'text-sm',
+      md: 'text-base',
     },
+    disabled: {
+      true: 'opacity-50',
+    },
+  },
+  defaultVariants: {
+    size: 'md',
   },
 });
 
-const resolved = buttonRecipe.resolve(
+const resolved = inputRecipe.resolve(
   {
-    tone: 'primary',
-    type: 'button',
+    size: 'sm',
+    htmlSize: 20,
+    disabled: true,
+    type: 'text',
     className: 'w-full',
   },
   {
-    forwardProps: ['tone'],
+    propAliases: {
+      size: 'htmlSize',
+    },
+    forwardProps: ['disabled'],
   }
 );
 ```
 
-Important difference:
+`resolved` has this shape for root recipes:
 
-- v1 returned one prop bag
-- v2 returns `variants` plus `resolvedProps`
-
-### 4. Replace `styled(tag, config)` with `recipe(...)` + `styled(...)`
-
-Before:
-
-```tsx
-const Button = styled('button', {
-  base: 'inline-flex items-center rounded-md',
+```ts
+{
   variants: {
-    tone: {
-      primary: 'bg-blue-600 text-white',
-      ghost: 'bg-transparent text-slate-900',
-    },
+    size: 'sm',
+    disabled: true,
   },
-});
+  resolvedProps: {
+    type: 'text',
+    size: 20,
+    disabled: true,
+    className: 'block rounded-md border text-sm opacity-50 w-full',
+  },
+}
 ```
 
-After:
+Important differences from v1:
 
-```tsx
-const buttonRecipe = recipe({
-  base: 'inline-flex items-center rounded-md',
-  variants: {
-    tone: {
-      primary: 'bg-blue-600 text-white',
-      ghost: 'bg-transparent text-slate-900',
-    },
-  },
-});
+- direct `recipe()` calls are not the full prop-bag API anymore
+- `resolve()` returns both the effective resolved variants and the resolved prop
+  bag
+- forwarded variant values reflect defaults and boolean fallbacks too
+- `propAliases` is how you avoid collisions between variant names and base props
 
-const Button = styled('button', buttonRecipe);
-```
+For slotted recipes, `resolve()` returns:
 
-### 5. Replace `asChild` with `render`
+- `variants`
+- `slots`
+- `resolvedProps`
+
+One important slot-specific rule:
+
+- `resolve()` does not decide which slot should receive a component-level
+  `className`
+- if you pass `className` into `slotRecipe.resolve(...)`, it stays in
+  `resolvedProps`
+- `styled(..., { view })` handles routing component-level `className` to the
+  host slot automatically
+
+## 6. Replace `asChild` with opt-in `render`
+
+v1 intrinsic components exposed `asChild` through Radix Slot.
 
 Before:
 
@@ -232,129 +410,207 @@ Before:
 </Button>
 ```
 
-After:
+In current v2, the equivalent surface is `render`, and it is opt-in:
 
 ```tsx
-const Button = styled('button', buttonRecipe, {
+const LinkButton = styled('button', buttonRecipe, {
   withRender: true,
 });
 
-<Button tone="primary" render={<a href="/docs" />}>
+<LinkButton tone="primary" render={<a href="/docs" />}>
   Docs
-</Button>;
+</LinkButton>;
 ```
 
-### 6. Replace old `compose`-based alpha code with `view`
+Rules:
 
-Old alpha:
+- `render` exists only when `withRender: true`
+- `withRender` is supported only for intrinsic bases
+- `render` may be either a React element or a render function
 
-```tsx
-const Button = styled('button', buttonRecipe, {
-  compose: ({ Root, slots }, { className, children, ...props }) => (
-    <Root {...props} className={slots.root({ className })}>
-      <span className={slots.icon()} />
-      <span className={slots.label()}>{children}</span>
-    </Root>
-  ),
-});
-```
+If your old component relied on `asChild` everywhere, do not assume every v2
+component must become render-polymorphic. A small wrapper is often the simpler
+migration path.
 
-Current alpha:
+## 7. Keep Configs Explicitly and Replace Extraction Helpers
 
-```tsx
-function ButtonView({ host, classes }) {
-  const { icon, label } = classes;
-
-  return host.render({
-    children: (
-      <>
-        <span className={icon()} />
-        <span className={label()}>{host.children}</span>
-      </>
-    ),
-  });
-}
-
-const Button = styled('button', buttonRecipe, {
-  view: ButtonView,
-});
-```
-
-This is the main mental-model shift:
-
-- old alpha `compose` was a callback DSL with a pseudo-component helper
-- current `view` is an actual React component surface
-- `classes` can be safely destructured
-
-### 7. Migrate slotted components without `root`
-
-Use `hostSlot` when the rendered wrapper corresponds to another slot:
-
-```tsx
-function FieldView({ host, classes }) {
-  return host.render({
-    children: (
-      <>
-        <input className={classes.input()} />
-        {host.children}
-      </>
-    ),
-  });
-}
-
-const Field = styled('label', fieldRecipe, {
-  hostSlot: 'label',
-  view: FieldView,
-});
-```
-
-### 8. Keep configs explicitly
-
-Before:
+v1 let you extract config and types from a styled component:
 
 ```ts
-const config = extractVariantsConfig(Button);
+import {
+  extractVariantsConfig,
+  type VariantPropsOf,
+  type VariantsConfigOf,
+} from 'react-tailwind-variants';
+
+type ButtonVariants = VariantPropsOf<typeof Button>;
+type ButtonConfig = VariantsConfigOf<typeof Button>;
+const buttonConfig = extractVariantsConfig(Button);
 ```
 
-After:
+That runtime extraction pattern does not exist in v2.
+
+The v2 migration path is:
 
 ```ts
-const buttonConfig = defineRecipeConfig({
-  base: 'inline-flex',
+import {
+  defineRecipeConfig,
+  recipe,
+  type RecipeConfigOf,
+  type VariantProps,
+} from 'react-class-variants';
+
+export const buttonConfig = defineRecipeConfig({
+  base: 'inline-flex items-center rounded-md font-medium',
   variants: {
     tone: {
-      primary: 'text-blue-600',
+      primary: 'bg-blue-600 text-white',
+      ghost: 'bg-transparent text-slate-900',
+    },
+  },
+  defaultVariants: {
+    tone: 'primary',
+  },
+});
+
+export const buttonRecipe = recipe(buttonConfig);
+
+type ButtonVariants = VariantProps<typeof buttonRecipe>;
+type ButtonConfig = RecipeConfigOf<typeof buttonRecipe>;
+```
+
+The important distinction is:
+
+- `RecipeConfigOf<typeof buttonRecipe>` gives you the config type
+- `buttonConfig` is still the runtime config value you keep explicitly
+- recipe instances do not expose a runtime `.config` property
+
+## 8. Use `slots` Only When the Component Really Has Multiple Styled Parts
+
+v1 had one class output per `variants()` or `styled()` call. v2 adds slot
+recipes for multipart components.
+
+Do not force every migrated v1 component into `slots`. Most v1 components should
+start as root recipes.
+
+Move to `slots` when you need separate classes for parts like:
+
+- root
+- label
+- icon
+- spinner
+- input
+- helper text
+
+Example:
+
+```tsx
+const fieldRecipe = recipe({
+  slots: {
+    label: 'block text-sm',
+    input: 'block rounded-md border',
+  },
+  variants: {
+    invalid: {
+      true: {
+        label: 'text-red-700',
+        input: 'border-red-500',
+      },
     },
   },
 });
 
-const buttonRecipe = recipe(buttonConfig);
+const Field = styled('label', fieldRecipe, {
+  hostSlot: 'label',
+  view({ host, classes }) {
+    return host.render({
+      children: (
+        <>
+          <input className={classes.input()} />
+          {host.children}
+        </>
+      ),
+    });
+  },
+});
 ```
 
-## Runtime Behavior Changes to Re-Test
+Slot-specific rules to remember:
 
-- direct recipe calls are variant-only APIs
-- missing required variants throw in validation modes
-- invalid variant values throw in validation modes
-- slotted recipe direct calls still do not accept top-level `className`
-- slotted components route component-level `className` automatically to the host slot
-- `withRender` works only for intrinsic bases
+- slotted recipes require `view`
+- if the recipe has no `root` slot, `hostSlot` is required
+- direct slot recipe calls do not accept top-level `className`
+- individual slot renderers do accept local overrides and `className`
+
+## 9. Removed v1 Utilities
+
+These v1 exports do not exist in v2:
+
+- `cx()`
+- `tw`
+- `variantProps()`
+- `extractVariantsConfig()`
+- `VariantPropsOf`
+- `VariantsConfigOf`
+
+There is no single replacement import for all of them.
+
+Use:
+
+- `recipe()` and `styled()` for the main API
+- `recipe.resolve()` for prop splitting
+- `defineRecipeConfig()` and `RecipeConfigOf` for config retention
+- your own class utility for standalone `cx()`-style merging
+
+## Behavior Changes to Re-Test
+
+Re-test these areas carefully after migration:
+
+- Tailwind conflict resolution is no longer implicit. Configure
+  `defineConfig({ merge: twMerge })` if you depended on v1's automatic merging.
+- Validation is stricter in the checked path. In development by default, v2
+  rejects unknown props in direct recipe calls, missing required variants,
+  invalid variant values, mixed boolean variants, invalid slot maps, and invalid
+  alias targets.
+- Direct recipe calls are variant-oriented. Use `resolve()` when you have a full
+  component prop bag.
+- Slotted direct calls do not accept top-level `className`.
+- `className` values are stricter on the validated path. Use strings, `null`, or
+  flat arrays of strings. Do not rely on deep flattening or non-string array
+  items.
+- Variant names are variant-first on component surfaces. If a base prop and a
+  variant share the same name, use `propAliases`.
+- `withRender` is intrinsic-only. Custom React component bases cannot use
+  `render`.
+- `styled(..., { view })` routes component-level `className` to the host slot,
+  but raw slot `resolve()` does not choose a host slot for you.
 
 ## Migration Checklist
 
-- [ ] package name changed to `react-class-variants`
-- [ ] install uses `react-class-variants@alpha`
-- [ ] `variants()` replaced with `recipe()`
-- [ ] `variantProps()` replaced with `recipe.resolve()`
-- [ ] `styled(tag, config)` replaced with `recipe(...)` + `styled(tag, recipe)`
-- [ ] old alpha `compose` usage replaced with `view`
-- [ ] `nativeAliases` renamed to `propAliases`
-- [ ] `asChild` replaced with `render` or wrapper components
-- [ ] `compoundVariants` rewritten to flat selectors
-- [ ] implicit Tailwind merge replaced with `defineConfig({ merge: twMerge })`
-- [ ] type helpers derive from recipes, not components
+- [ ] Replace the package with `react-class-variants@alpha`
+- [ ] Confirm the app can run with React `19`, Node.js `20.19+`, and ESM-only
+      package consumption
+- [ ] Replace `variants()` with `recipe()`
+- [ ] Rewrite every `compoundVariants` entry from `variants: { ... }` to flat
+      selectors
+- [ ] Replace `styled(base, config)` with `recipe(config)` plus
+      `styled(base, recipe)`
+- [ ] Replace `variantProps()` with `recipe.resolve()`
+- [ ] Replace `asChild` with `withRender: true` plus `render`, or with a wrapper
+- [ ] Replace `extractVariantsConfig()` by keeping the config explicitly with
+      `defineRecipeConfig()`
+- [ ] Replace `VariantPropsOf<typeof Component>` with `VariantProps<typeof recipe>`
+- [ ] Replace `VariantsConfigOf<typeof Component>` with
+      `RecipeConfigOf<typeof recipe>`
+- [ ] Add `propAliases` anywhere variant keys collide with base props
+- [ ] Add `forwardProps` anywhere the base component needs resolved variant
+      values
+- [ ] Decide whether you need `defineConfig({ merge: twMerge })`
+- [ ] Re-test any code that relied on permissive v1 runtime behavior
 
 ## Related Docs
 
-- [API reference](./api-reference.md)
+- [README](../README.md)
 - [Recipes and components guide](./recipes-and-components.md)
+- [API reference](./api-reference.md)
+- [Legacy v1 reference](./react-tailwind-variants-v1.md)

@@ -7,12 +7,12 @@
 
 `react-class-variants` is a recipe-first, type-safe API for composing CSS classes in React components.
 
-The v2 alpha surface is built around:
+The current v2 alpha surface is built around:
 
 - one adaptive `recipe()` primitive
 - one React builder, `styled()`
 - explicit `render` polymorphism
-- explicit `merge` configuration through `defineConfig()`
+- explicit merge configuration through `defineConfig()`
 - a dedicated `core` subpath for recipe-only modules
 
 ## Status
@@ -47,10 +47,12 @@ pnpm add tailwind-merge
 | Keep typed config objects around         | `defineRecipeConfig(config)`     |
 | Avoid React runtime imports              | `react-class-variants/core`      |
 
-Two rules explain most of the package:
+Four rules explain most of the package:
 
 1. `recipe()` becomes a root recipe when you use `base`, and a slotted recipe when you use `slots`.
-2. `styled()` accepts any React `ElementType`. Intrinsic bases may opt into `render`; slotted recipes must provide a `view` component.
+2. `resolve()` is the full-prop-bag API. Direct recipe calls stay variant-oriented.
+3. `styled()` accepts intrinsic bases and custom React component bases.
+4. Slotted recipes require `view`, and `render` is opt-in through `withRender: true` for intrinsic bases only.
 
 ## Quick Start
 
@@ -94,54 +96,13 @@ Direct recipe calls stay available when you only need a class string:
 buttonRecipe({ tone: 'primary', className: 'w-full' });
 ```
 
-## `resolve()` for Full Prop Bags
+## Slotted Components
 
-Use `resolve()` when you need class resolution plus prop routing.
+Use `slots` when different parts of the component need different classes, then render them through a `view` component:
 
-```ts
-const fieldRecipe = recipe({
-  base: 'block rounded-md border',
-  variants: {
-    size: {
-      sm: 'text-sm',
-      md: 'text-base',
-    },
-    disabled: {
-      true: 'opacity-50',
-    },
-  },
-  defaultVariants: {
-    size: 'md',
-  },
-});
+```tsx
+import { recipe, styled } from 'react-class-variants';
 
-const resolved = fieldRecipe.resolve(
-  {
-    size: 'sm',
-    htmlSize: 20,
-    disabled: true,
-    type: 'email',
-    className: 'w-full',
-  },
-  {
-    forwardProps: ['disabled'],
-    propAliases: { size: 'htmlSize' },
-  }
-);
-```
-
-`resolved` contains:
-
-- `resolved.variants`: the effective variant selection after defaults and boolean fallbacks
-- `resolved.resolvedProps`: the remaining prop bag with the final `className`
-
-`forwardProps` re-adds selected variant keys to `resolvedProps`. `propAliases` lets you expose an alternate public prop name when a variant key collides with a base prop such as `size`.
-
-## Slotted Recipes
-
-Slotted recipes use `slots` and return slot render functions.
-
-```ts
 const buttonRecipe = recipe({
   slots: {
     root: 'inline-flex items-center gap-2 rounded-md font-medium',
@@ -159,83 +120,19 @@ const buttonRecipe = recipe({
         icon: 'text-slate-500',
       },
     },
-    loading: {
-      true: {
-        icon: 'animate-spin',
-        label: 'opacity-0',
-      },
-    },
   },
   defaultVariants: {
     tone: 'primary',
-    loading: false,
   },
 });
 
-const slots = buttonRecipe({ tone: 'ghost' });
-
-slots.root({ className: 'px-4' });
-slots.icon({ loading: true });
-slots.label();
-```
-
-Slot render functions are plain functions:
-
-- they may be destructured safely
-- they may override variants locally
-- they recompute compounds against the merged local selection
-- they do not assign component-level `className` for you
-
-## `styled()` Basics
-
-### Root recipe, simple path
-
-```tsx
-const Badge = styled('span', badgeRecipe);
-```
-
-This path:
-
-- applies the resolved root class string automatically
-- keeps variant props typed
-- is the cheapest runtime path
-
-### Root recipe, custom `view`
-
-```tsx
-function BadgeView({ host, variants }) {
-  return host.render({
-    'data-tone': variants.tone,
-    children: host.children,
-  });
-}
-
-const Badge = styled('span', badgeRecipe, {
-  view: BadgeView,
-});
-```
-
-`view` is a real React component:
-
-- hooks are allowed
-- prefer a named component reference such as `view: BadgeView` when you plan to use hooks so hook linting stays happy
-- the `host` object models the rendered base element or component
-- `host.className` already contains the resolved root classes
-- `host.render()` renders the base with optional overrides
-
-### Slot recipe, `view`
-
-```tsx
-function ButtonView({ host, classes, variants }) {
+function ButtonView({ host, classes }) {
   const { icon, label } = classes;
 
   return host.render({
-    'aria-busy': variants.loading || undefined,
     children: (
       <>
-        {variants.loading ? (
-          <span aria-hidden="true" className={icon()} />
-        ) : null}
+        <span aria-hidden="true" className={icon()} />
         <span className={label()}>{host.children}</span>
       </>
     ),
@@ -243,99 +140,37 @@ function ButtonView({ host, classes, variants }) {
 }
 
 const Button = styled('button', buttonRecipe, {
-  withRender: true,
-  forwardProps: ['loading'],
   view: ButtonView,
 });
 ```
 
-Slot recipe rules:
+Usage:
 
-- `view` is required
-- `classes` exists only for slotted recipes
-- `classes` may be safely destructured inside `view`
+```tsx
+<Button tone="ghost" className="w-full">
+  Cancel
+</Button>
+```
+
+Key points:
+
+- `view` is required for slotted recipes
+- `classes` is a slot render map
 - external component `className` is routed automatically to the host slot
-- if the recipe does not declare a `root` slot, provide `hostSlot`
+- if the recipe has no `root` slot, provide `hostSlot`
 
-Example without a `root` slot:
+## `resolve()` and Wrappers
 
-```tsx
-function FieldView({ host, classes }) {
-  return host.render({
-    children: (
-      <>
-        <input className={classes.input()} />
-        {host.children}
-      </>
-    ),
-  });
-}
+Use `recipe.resolve()` when you need class resolution plus a full prop bag:
 
-const Field = styled('label', fieldRecipe, {
-  hostSlot: 'label',
-  view: FieldView,
-});
-```
-
-Useful `view` details:
-
-- `host.props` contains normalized pass-through props under their resolved base names, plus any `forwardProps` variant keys
-- `propAliases` change the public prop name, but `host.props` still uses the resolved base prop key such as `size`
-- `host.render()` reuses the current `host.children` unless you override `children`
-
-### Custom component bases
-
-`styled()` also accepts custom React components as the base:
-
-```tsx
-import { forwardRef, type ComponentPropsWithoutRef } from 'react';
-
-const RouterLink = forwardRef<
-  HTMLAnchorElement,
-  { to: string } & ComponentPropsWithoutRef<'a'>
->(function RouterLink({ to, ...props }, ref) {
-  return <a {...props} ref={ref} href={to} />;
-});
-
-const LinkBadge = styled(RouterLink, badgeRecipe);
-```
-
-Rules:
-
-- custom bases do not support `withRender`
-- custom bases should accept and forward `className`, `children`, and `ref` when those behaviors matter to your component
-- use custom bases when you want recipe-driven class resolution on top of an existing component contract
-
-## `render` Polymorphism
-
-`render` stays opt-in through `withRender: true` and is available only for intrinsic bases.
-
-```tsx
-const Button = styled('button', buttonRecipe, {
-  withRender: true,
-});
-
-<Button tone="primary" render={<a href="/docs" />}>
-  Docs
-</Button>;
-
-<Button tone="primary" render={props => <a {...props} href="/docs" />}>
-  Docs
-</Button>;
-```
-
-When `render` receives a React element:
-
-- `className` is concatenated
-- `style` is shallow-merged
-- event handlers are composed
-- refs are merged
-
-When `render` receives a function, its input is intentionally broad: you always get a resolved `className`, `children`, `ref`, and the normalized host prop bag.
+- wrapper components
+- headless abstractions
+- host prop aliasing such as `propAliases: { size: 'htmlSize' }`
+- explicit forwarding of resolved variant values with `forwardProps`
 
 ## Shared Configuration
 
-Use `defineConfig()` to share merge and validation behavior:
+Use `defineConfig()` when you want one configured factory for many recipes:
 
 ```ts
 import { defineConfig } from 'react-class-variants';
@@ -355,19 +190,36 @@ type SystemOptions = {
 };
 ```
 
-## Utilities
+## Main Package Surfaces
 
-The package root also exports:
+Package root: `react-class-variants`
 
-- `mergeProps()`
-- `mergeRefs()`
-- `useMergeRefs()`
-- `hasOwnProperty()`
+- `recipe()`
+- `styled()`
+- `defineConfig()`
+- `defineRecipeConfig()`
+- public core and React types
 
-## Docs
+Core subpath: `react-class-variants/core`
 
-- [API reference](./docs/api-reference.md)
-- [Recipes and components guide](./docs/recipes-and-components.md)
-- [Migration guide](./docs/migration-from-react-tailwind-variants.md)
+- `recipe()`
+- core `defineConfig()`
+- `defineRecipeConfig()`
+- core recipe types
+
+Use the `core` subpath when you want recipe modules without React runtime helpers.
+
+## Where to Read Next
+
+If you are new to the package, use this order:
+
+1. [Recipes and components guide](./docs/recipes-and-components.md) for the main usage patterns
+2. [API reference](./docs/api-reference.md) for exact shapes, options, and runtime rules
+3. [Migration guide](./docs/migration-from-react-tailwind-variants.md) if you are moving from `react-tailwind-variants`
+
+Other docs:
+
 - [Benchmarks guide](./docs/benchmarks.md)
 - [Legacy v1 reference](./docs/react-tailwind-variants-v1.md)
+- [Contributing](./CONTRIBUTING.md)
+- [Release process](./docs/release-process.md)

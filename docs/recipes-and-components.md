@@ -1,8 +1,10 @@
 # Recipes and Components Guide
 
-This guide shows the current v2 alpha API in real code.
+This guide is the best next read after the repository `README`. It focuses on the main usage patterns in real code.
 
-## Choose the Right Primitive
+If you want exact option shapes, exported types, or runtime rules, use the [API reference](./api-reference.md).
+
+## When to Use What
 
 | You need to...                           | Use                              |
 | ---------------------------------------- | -------------------------------- |
@@ -48,6 +50,56 @@ badgeRecipe({ tone: 'info' });
 badgeRecipe({ tone: 'danger', outlined: true, className: 'uppercase' });
 ```
 
+### When multiple variants interact
+
+Use `compoundVariants` when the final class depends on a combination of variant values.
+
+```ts
+const badgeRecipe = recipe({
+  base: 'inline-flex items-center rounded-full font-medium',
+  variants: {
+    tone: {
+      info: 'bg-sky-100 text-sky-900',
+      success: 'bg-emerald-100 text-emerald-900',
+      danger: 'bg-rose-100 text-rose-900',
+    },
+    size: {
+      sm: 'h-6 px-2 text-xs',
+      md: 'h-7 px-2.5 text-sm',
+    },
+    outlined: {
+      true: 'ring-1 ring-inset',
+      false: null,
+    },
+  },
+  defaultVariants: {
+    size: 'md',
+    outlined: false,
+  },
+  compoundVariants: [
+    {
+      tone: ['info', 'success'],
+      outlined: true,
+      className: 'ring-current/30',
+    },
+    {
+      tone: 'danger',
+      size: 'sm',
+      className: 'tracking-wide uppercase',
+    },
+  ],
+});
+```
+
+Usage:
+
+```ts
+badgeRecipe({ tone: 'info', outlined: true });
+badgeRecipe({ tone: 'danger', size: 'sm' });
+```
+
+Arrays in compound selectors mean “match any of these values”.
+
 ## 2. Turn It into a Component
 
 ```tsx
@@ -72,6 +124,41 @@ For root recipes this is the default fast path:
 - the resolved `className` is applied automatically
 - variant props stay fully typed
 
+### When a variant key collides with a host prop
+
+Use `propAliases` when the public variant name would otherwise collide with a host prop such as `size` on `<input>`.
+
+```tsx
+import { recipe, styled } from 'react-class-variants';
+
+const inputRecipe = recipe({
+  base: 'block rounded-md border',
+  variants: {
+    size: {
+      sm: 'h-9 px-3 text-sm',
+      md: 'h-10 px-4 text-base',
+    },
+  },
+  defaultVariants: {
+    size: 'md',
+  },
+});
+
+const Input = styled('input', inputRecipe, {
+  propAliases: {
+    size: 'htmlSize',
+  },
+});
+```
+
+Usage:
+
+```tsx
+<Input size="sm" htmlSize={20} />
+```
+
+This keeps `size` as the variant prop while still exposing the native input prop under a safe public name.
+
 ## 3. Use `resolve()` in a Wrapper
 
 When you want total control over markup or prop routing, use `resolve()` manually.
@@ -88,7 +175,7 @@ const inputRecipe = recipe({
       md: 'h-10 px-4 text-base',
     },
     invalid: {
-      true: 'border-red-500',
+      true: 'border-red-500 ring-1 ring-red-500',
     },
   },
   defaultVariants: {
@@ -109,7 +196,6 @@ export function InputField({ label, htmlSize, ...props }: InputFieldProps) {
       htmlSize,
     },
     {
-      forwardProps: ['invalid'],
       propAliases: {
         size: 'htmlSize',
       },
@@ -119,7 +205,10 @@ export function InputField({ label, htmlSize, ...props }: InputFieldProps) {
   return (
     <label className="grid gap-1">
       <span className="text-sm font-medium">{label}</span>
-      <input {...resolved.resolvedProps} />
+      <input
+        {...resolved.resolvedProps}
+        aria-invalid={resolved.variants.invalid || undefined}
+      />
     </label>
   );
 }
@@ -190,7 +279,6 @@ function ButtonView({ host, classes, variants }) {
 
 export const Button = styled('button', buttonRecipe, {
   withRender: true,
-  forwardProps: ['loading'],
   view: ButtonView,
 });
 ```
@@ -251,6 +339,61 @@ const Field = styled('label', fieldRecipe, {
 - `host.className` is already the resolved host class string
 - `host.render()` keeps `host.children` unless you override `children`
 
+### Reading `host.props` and extending host classes
+
+Use `host.props` when your `view` needs a pass-through prop, and use `host.render({ className })` when the wrapper needs extra host-level classes.
+
+```tsx
+import { recipe, styled } from 'react-class-variants';
+
+const actionRecipe = recipe({
+  base: 'inline-flex items-center rounded-md px-3 py-2 text-sm font-medium',
+  variants: {
+    tone: {
+      primary: 'bg-blue-600 text-white',
+      ghost: 'bg-transparent text-slate-900',
+    },
+    emphasized: {
+      true: 'font-semibold',
+      false: null,
+    },
+  },
+  defaultVariants: {
+    tone: 'primary',
+    emphasized: false,
+  },
+});
+
+function ActionView({ host, variants }) {
+  return host.render({
+    className: 'justify-between gap-2',
+    children: (
+      <>
+        <span className="truncate">{host.children}</span>
+        {host.props['data-shortcut'] ? (
+          <kbd className="text-xs opacity-70">
+            {String(host.props['data-shortcut'])}
+          </kbd>
+        ) : null}
+      </>
+    ),
+    title: variants.emphasized ? 'Important action' : host.props.title,
+  });
+}
+
+const ActionButton = styled('button', actionRecipe, {
+  view: ActionView,
+});
+```
+
+Usage:
+
+```tsx
+<ActionButton tone="ghost" emphasized data-shortcut="Ctrl+K">
+  Search
+</ActionButton>
+```
+
 ## 7. Custom Component Bases
 
 You can pass custom React components as the base:
@@ -267,6 +410,64 @@ const RouterLink = forwardRef<
 
 const LinkBadge = styled(RouterLink, badgeRecipe);
 ```
+
+Usage:
+
+```tsx
+<LinkBadge to="/docs" tone="info">
+  Docs
+</LinkBadge>
+```
+
+### When the base also needs the variant value
+
+Use `forwardProps` when the base component needs a resolved variant value in its own props.
+
+```tsx
+import { forwardRef, type ComponentPropsWithoutRef } from 'react';
+import { recipe, styled } from 'react-class-variants';
+
+const NavLinkBase = forwardRef<
+  HTMLAnchorElement,
+  { active?: boolean } & ComponentPropsWithoutRef<'a'>
+>(function NavLinkBase({ active, className, ...props }, ref) {
+  return (
+    <a
+      {...props}
+      ref={ref}
+      className={className}
+      data-active={active || undefined}
+    />
+  );
+});
+
+const navLinkRecipe = recipe({
+  base: 'inline-flex items-center rounded-md px-3 py-2 text-sm font-medium',
+  variants: {
+    active: {
+      true: 'bg-sky-100 text-sky-900',
+      false: 'text-slate-600 hover:text-slate-900',
+    },
+  },
+  defaultVariants: {
+    active: false,
+  },
+});
+
+const NavLink = styled(NavLinkBase, navLinkRecipe, {
+  forwardProps: ['active'],
+});
+```
+
+Usage:
+
+```tsx
+<NavLink href="/docs" active>
+  Docs
+</NavLink>
+```
+
+Without `forwardProps`, the recipe would still style the component, but `NavLinkBase` would not receive `active`.
 
 Rules:
 
@@ -304,7 +505,19 @@ When you are inside `view`, `host.props` follows the resolved shape:
 `render` remains opt-in through `withRender: true` and only exists for intrinsic bases.
 
 ```tsx
-const LinkButton = styled('button', badgeRecipe, {
+import { recipe, styled } from 'react-class-variants';
+
+const linkRecipe = recipe({
+  base: 'inline-flex items-center rounded-md font-medium',
+  variants: {
+    tone: {
+      info: 'bg-sky-100 text-sky-900',
+      danger: 'bg-rose-100 text-rose-900',
+    },
+  },
+});
+
+const LinkButton = styled('button', linkRecipe, {
   withRender: true,
 });
 
@@ -312,6 +525,49 @@ const LinkButton = styled('button', badgeRecipe, {
   Docs
 </LinkButton>;
 ```
+
+Function form:
+
+```tsx
+<LinkButton
+  tone="danger"
+  render={props => <a {...props} href="/docs/api-reference" />}
+>
+  API
+</LinkButton>
+```
+
+Use the function form when you want to derive the rendered element from the resolved host props instead of cloning a fixed element instance.
+
+## 10. Share Merge and Validation Rules
+
+Use `defineConfig()` when you want one factory to enforce the same merge and validation behavior across many recipes.
+
+```ts
+import { defineConfig } from 'react-class-variants/core';
+import { twMerge } from 'tailwind-merge';
+
+const { recipe } = defineConfig({
+  merge: twMerge,
+  validate: 'always',
+});
+
+export const badgeRecipe = recipe({
+  base: 'inline-flex items-center rounded-full',
+  variants: {
+    tone: {
+      info: 'bg-sky-100 text-sky-900',
+      danger: 'bg-rose-100 text-rose-900',
+    },
+  },
+});
+```
+
+This is useful when:
+
+- your recipe modules live in `react-class-variants/core`
+- you want Tailwind conflict resolution everywhere
+- you want strict validation in tests or shared design-system packages
 
 ## Related Docs
 
