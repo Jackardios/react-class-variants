@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { HTMLInputTypeAttribute, ReactNode } from 'react';
 import {
   expectAssignable,
   expectError,
@@ -269,6 +269,39 @@ const Input = styled(
   }
 );
 
+const ComposedInput = styled(
+  'input',
+  recipe({
+    variants: {
+      tone: {
+        info: 'text-sky-700',
+        danger: 'text-rose-700',
+      },
+      disabled: {
+        true: 'opacity-50',
+      },
+    },
+    defaultVariants: {
+      disabled: false,
+    },
+  }),
+  {
+    withRender: true,
+    forwardProps: ['disabled'],
+    nativeAliases: {
+      size: 'htmlSize',
+    },
+    compose: ({ Root }, props) => {
+      expectType<HTMLInputTypeAttribute | undefined>(props.type);
+      expectType<number | undefined>(props.size);
+      expectType<boolean>(props.disabled);
+      expectError(props.htmlSize);
+
+      return <Root {...props} />;
+    },
+  }
+);
+
 expectError(
   styled(
     'input',
@@ -296,6 +329,18 @@ expectType<ReactNode>(
     readOnly: true,
   })
 );
+expectType<ReactNode>(
+  ComposedInput({
+    tone: 'info',
+    disabled: true,
+    htmlSize: 12,
+    type: 'number',
+    render: props => {
+      expectType<string>(props.className);
+      return <a {...props} href="/" />;
+    },
+  })
+);
 expectError(
   Input({
     size: 12,
@@ -311,6 +356,7 @@ const SlottedButton = styled('button', buttonRecipe, {
 
     expectType<'primary' | 'ghost'>(variants.tone);
     expectType<boolean>(variants.loading);
+    expectType<boolean>(props.loading);
     expectType<string>(buttonSlots.root({ className }));
     expectType<string>(buttonSlots.icon({ tone: 'ghost' }));
     expectError(buttonSlots.icon({ tone: 'danger' }));

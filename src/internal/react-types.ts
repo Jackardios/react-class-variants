@@ -12,8 +12,7 @@ import type {
   ClassNameValue,
   ResolvedVariantProps,
   Simplify,
-  SlotNames,
-  SlotRenderFunction,
+  SlotRenderMap,
   VariantProps,
 } from './core-types';
 
@@ -53,13 +52,42 @@ type AliasProps<
     : unknown;
 };
 
+type VariantPropKeys<TRecipe> = [TRecipe] extends [never]
+  ? never
+  : keyof VariantProps<TRecipe>;
+
+type ResolvedForwardedVariantProps<TRecipe, Forwarded extends string> = Pick<
+  ResolvedVariantProps<TRecipe>,
+  Extract<Forwarded, keyof ResolvedVariantProps<TRecipe> & string>
+>;
+
+type ResolvedAliasTargetProps<
+  Tag extends AnyIntrinsicElement,
+  Aliases extends NativeAliases<Tag>
+> = {
+  [NativeKey in keyof Aliases]?: NativeKey extends keyof ComponentPropsWithRef<Tag>
+    ? ComponentPropsWithRef<Tag>[NativeKey]
+    : never;
+};
+
 type IntrinsicProps<
   Tag extends AnyIntrinsicElement,
   TRecipe,
   Aliases extends NativeAliases<Tag>
 > = Omit<
   ComponentPropsWithRef<Tag>,
-  keyof VariantProps<TRecipe> | keyof Aliases | 'className'
+  VariantPropKeys<TRecipe> | keyof Aliases | 'className'
+>;
+
+type ResolvedIntrinsicProps<
+  Tag extends AnyIntrinsicElement,
+  TRecipe,
+  Aliases extends NativeAliases<Tag>,
+  Forwarded extends string
+> = Simplify<
+  Omit<ComponentPropsWithRef<Tag>, VariantPropKeys<TRecipe> | 'className'> &
+    ResolvedAliasTargetProps<Tag, Aliases> &
+    ResolvedForwardedVariantProps<TRecipe, Forwarded>
 >;
 
 export type StyledComponentProps<
@@ -77,9 +105,12 @@ export type StyledComponentProps<
 
 export type RootHelperProps<
   Tag extends AnyIntrinsicElement,
-  WithRender extends boolean
+  WithRender extends boolean,
+  TRecipe extends AnyRootRecipe | AnySlotRecipe = never,
+  Aliases extends NativeAliases<Tag> = {},
+  Forwarded extends string = never
 > = Simplify<
-  Omit<ComponentPropsWithRef<Tag>, 'className'> & {
+  ResolvedIntrinsicProps<Tag, TRecipe, Aliases, Forwarded> & {
     className?: ClassNameValue;
   } & (WithRender extends true ? { render?: RenderProp } : {})
 >;
@@ -87,88 +118,102 @@ export type RootHelperProps<
 export type RootComposeContext<
   Tag extends AnyIntrinsicElement,
   TRecipe extends AnyRootRecipe,
-  WithRender extends boolean
+  WithRender extends boolean,
+  Aliases extends NativeAliases<Tag> = {},
+  Forwarded extends string = never
 > = {
-  Root: (props: RootHelperProps<Tag, WithRender>) => ReactNode;
+  Root: (
+    props: RootHelperProps<Tag, WithRender, TRecipe, Aliases, Forwarded>
+  ) => ReactNode;
   variants: ResolvedVariantProps<TRecipe>;
 };
 
 export type SlotComposeContext<
   Tag extends AnyIntrinsicElement,
   TRecipe extends AnySlotRecipe,
-  WithRender extends boolean
+  WithRender extends boolean,
+  Aliases extends NativeAliases<Tag> = {},
+  Forwarded extends string = never
 > = {
-  Root: (props: RootHelperProps<Tag, WithRender>) => ReactNode;
+  Root: (
+    props: RootHelperProps<Tag, WithRender, TRecipe, Aliases, Forwarded>
+  ) => ReactNode;
   variants: ResolvedVariantProps<TRecipe>;
-  slots: {
-    [Slot in SlotNames<TRecipe>]: SlotRenderFunction<TRecipe>;
-  };
+  slots: SlotRenderMap<TRecipe>;
 };
 
 export type RootComposeInput<
   Tag extends AnyIntrinsicElement,
-  WithRender extends boolean
+  WithRender extends boolean,
+  TRecipe extends AnyRootRecipe = never,
+  Aliases extends NativeAliases<Tag> = {},
+  Forwarded extends string = never
 > = Simplify<
-  {
+  ResolvedIntrinsicProps<Tag, TRecipe, Aliases, Forwarded> & {
     className: string;
-    children?: ReactNode;
-    ref?: ComponentPropsWithRef<Tag>['ref'];
-  } & Record<string, unknown> &
-    (WithRender extends true ? { render?: RenderProp } : {})
+  } & (WithRender extends true ? { render?: RenderProp } : {})
 >;
 
 export type SlotComposeInput<
   Tag extends AnyIntrinsicElement,
-  WithRender extends boolean
+  WithRender extends boolean,
+  TRecipe extends AnySlotRecipe = never,
+  Aliases extends NativeAliases<Tag> = {},
+  Forwarded extends string = never
 > = Simplify<
-  {
+  ResolvedIntrinsicProps<Tag, TRecipe, Aliases, Forwarded> & {
     className?: ClassNameValue;
-    children?: ReactNode;
-    ref?: ComponentPropsWithRef<Tag>['ref'];
-  } & Record<string, unknown> &
-    (WithRender extends true ? { render?: RenderProp } : {})
+  } & (WithRender extends true ? { render?: RenderProp } : {})
 >;
 
 export type RootCompose<
   Tag extends AnyIntrinsicElement,
   TRecipe extends AnyRootRecipe,
-  WithRender extends boolean
+  WithRender extends boolean,
+  Aliases extends NativeAliases<Tag> = {},
+  Forwarded extends string = never
 > = (
-  context: RootComposeContext<Tag, TRecipe, WithRender>,
-  input: RootComposeInput<Tag, WithRender>
+  context: RootComposeContext<Tag, TRecipe, WithRender, Aliases, Forwarded>,
+  input: RootComposeInput<Tag, WithRender, TRecipe, Aliases, Forwarded>
 ) => ReactNode;
 
 export type SlotCompose<
   Tag extends AnyIntrinsicElement,
   TRecipe extends AnySlotRecipe,
-  WithRender extends boolean
+  WithRender extends boolean,
+  Aliases extends NativeAliases<Tag> = {},
+  Forwarded extends string = never
 > = (
-  context: SlotComposeContext<Tag, TRecipe, WithRender>,
-  input: SlotComposeInput<Tag, WithRender>
+  context: SlotComposeContext<Tag, TRecipe, WithRender, Aliases, Forwarded>,
+  input: SlotComposeInput<Tag, WithRender, TRecipe, Aliases, Forwarded>
 ) => ReactNode;
 
 export type RootComponentOptions<
   Tag extends AnyIntrinsicElement,
   TRecipe extends AnyRootRecipe,
   WithRender extends boolean = false,
-  Aliases extends NativeAliases<Tag> = {}
+  Aliases extends NativeAliases<Tag> = {},
+  Forwarded extends string = never
 > = {
   displayName?: string;
   withRender?: WithRender;
-  forwardProps?: readonly (keyof VariantProps<TRecipe> & string)[];
+  forwardProps?: readonly Forwarded[] &
+    readonly (keyof VariantProps<TRecipe> & string)[];
   nativeAliases?: Aliases;
-  compose?: RootCompose<Tag, TRecipe, WithRender>;
+  compose?: RootCompose<Tag, TRecipe, WithRender, Aliases, Forwarded>;
 };
 
 export type SlotComponentOptions<
   Tag extends AnyIntrinsicElement,
   TRecipe extends AnySlotRecipe,
   WithRender extends boolean = false,
-  Aliases extends NativeAliases<Tag> = {}
+  Aliases extends NativeAliases<Tag> = {},
+  Forwarded extends string = never
 > = {
   displayName?: string;
   withRender?: WithRender;
-  forwardProps?: readonly (keyof VariantProps<TRecipe> & string)[];
+  forwardProps?: readonly Forwarded[] &
+    readonly (keyof VariantProps<TRecipe> & string)[];
   nativeAliases?: Aliases;
-  compose: SlotCompose<Tag, TRecipe, WithRender>;
+  compose: SlotCompose<Tag, TRecipe, WithRender, Aliases, Forwarded>;
 };

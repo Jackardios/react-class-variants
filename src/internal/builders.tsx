@@ -111,11 +111,12 @@ export function createRootStyled<
   Tag extends AnyIntrinsicElement,
   TRecipe extends AnyRootRecipe,
   WithRender extends boolean,
-  Aliases extends NativeAliases<Tag>
+  Aliases extends NativeAliases<Tag>,
+  Forwarded extends string
 >(
   tag: Tag,
   recipe: TRecipe,
-  options?: RootComponentOptions<Tag, TRecipe, WithRender, Aliases>
+  options?: RootComponentOptions<Tag, TRecipe, WithRender, Aliases, Forwarded>
 ): (
   props: StyledComponentProps<Tag, TRecipe, WithRender, Aliases>
 ) => ReactNode {
@@ -238,11 +239,12 @@ export function createSlotStyled<
   Tag extends AnyIntrinsicElement,
   TRecipe extends AnySlotRecipe,
   WithRender extends boolean,
-  Aliases extends NativeAliases<Tag>
+  Aliases extends NativeAliases<Tag>,
+  Forwarded extends string
 >(
   tag: Tag,
   recipe: TRecipe,
-  options: SlotComponentOptions<Tag, TRecipe, WithRender, Aliases>
+  options: SlotComponentOptions<Tag, TRecipe, WithRender, Aliases, Forwarded>
 ): (
   props: StyledComponentProps<Tag, TRecipe, WithRender, Aliases>
 ) => ReactNode {

@@ -177,6 +177,15 @@ export type SlotRenderFunction<TRecipe> = (
   input?: SlotRenderInput<TRecipe>
 ) => string;
 
+export type SlotDefinitions<TRecipe> =
+  RecipeConfigOf<TRecipe> extends SlotRecipeConfig<infer SlotDefs, any, any>
+    ? SlotDefs
+    : Record<SlotNames<TRecipe>, ClassNameValue>;
+
+export type SlotRenderMap<TRecipe> = {
+  [Slot in keyof SlotDefinitions<TRecipe>]: SlotRenderFunction<TRecipe>;
+};
+
 export type RecipeTypeMetadata<
   Mode extends 'root' | 'slot',
   Slots extends string,
@@ -218,9 +227,7 @@ export type RootResolveResult<TRecipe> = {
 
 export type SlotResolveResult<TRecipe> = {
   variants: ResolvedVariantProps<TRecipe>;
-  slots: {
-    [Slot in SlotNames<TRecipe>]: SlotRenderFunction<TRecipe>;
-  };
+  slots: SlotRenderMap<TRecipe>;
   resolvedProps: Record<string, unknown>;
 };
 
@@ -242,11 +249,9 @@ export type SlotRecipe<
   Defaults extends object = {},
   Config = SlotRecipeConfig<Record<Slots, ClassNameValue>, any, any>
 > = RecipeBrand<'slot', Slots, Variants, Defaults, Config> & {
-  (input?: SlotRecipeInput<SlotRecipe<Slots, Variants, Defaults, Config>>): {
-    [Slot in Slots]: SlotRenderFunction<
-      SlotRecipe<Slots, Variants, Defaults, Config>
-    >;
-  };
+  (
+    input?: SlotRecipeInput<SlotRecipe<Slots, Variants, Defaults, Config>>
+  ): SlotRenderMap<SlotRecipe<Slots, Variants, Defaults, Config>>;
   resolve(
     input?: Record<string, unknown>,
     options?: ResolveOptions<Extract<keyof Variants, string>>

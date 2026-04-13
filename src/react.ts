@@ -71,11 +71,12 @@ export function styled<
   Tag extends AnyIntrinsicElement,
   TRecipe extends AnyRootRecipe,
   const WithRender extends boolean = false,
-  const Aliases extends NativeAliases<Tag> = {}
+  const Aliases extends NativeAliases<Tag> = {},
+  const Forwarded extends string = never
 >(
   tag: Tag,
   inputRecipe: TRecipe,
-  options?: RootComponentOptions<Tag, TRecipe, WithRender, Aliases>
+  options?: RootComponentOptions<Tag, TRecipe, WithRender, Aliases, Forwarded>
 ): (
   props: StyledComponentProps<Tag, TRecipe, WithRender, Aliases>
 ) => ReactNode;
@@ -84,11 +85,12 @@ export function styled<
   Tag extends AnyIntrinsicElement,
   TRecipe extends AnySlotRecipe,
   const WithRender extends boolean = false,
-  const Aliases extends NativeAliases<Tag> = {}
+  const Aliases extends NativeAliases<Tag> = {},
+  const Forwarded extends string = never
 >(
   tag: Tag,
   inputRecipe: TRecipe,
-  options: SlotComponentOptions<Tag, TRecipe, WithRender, Aliases>
+  options: SlotComponentOptions<Tag, TRecipe, WithRender, Aliases, Forwarded>
 ): (
   props: StyledComponentProps<Tag, TRecipe, WithRender, Aliases>
 ) => ReactNode;
@@ -97,8 +99,8 @@ export function styled(
   tag: AnyIntrinsicElement,
   inputRecipe: AnyRootRecipe | AnySlotRecipe,
   options?:
-    | RootComponentOptions<any, any, any, any>
-    | SlotComponentOptions<any, any, any, any>
+    | RootComponentOptions<any, any, any, any, any>
+    | SlotComponentOptions<any, any, any, any, any>
 ) {
   const isSlotRecipe =
     getCompiledRecipe(inputRecipe as AnyRootRecipe).mode === 'slot';
@@ -108,14 +110,14 @@ export function styled(
       return createSlotStyled(
         tag,
         inputRecipe as AnySlotRecipe,
-        options as SlotComponentOptions<any, any, any, any>
+        options as SlotComponentOptions<any, any, any, any, any>
       );
     }
 
     return createRootStyled(
       tag,
       inputRecipe as AnyRootRecipe,
-      options as RootComponentOptions<any, any, any, any>
+      options as RootComponentOptions<any, any, any, any, any>
     );
   }
 
@@ -128,7 +130,7 @@ export function styled(
   return createRootStyled(
     tag,
     inputRecipe as AnyRootRecipe,
-    options as RootComponentOptions<any, any, any, any> | undefined
+    options as RootComponentOptions<any, any, any, any, any> | undefined
   );
 }
 
