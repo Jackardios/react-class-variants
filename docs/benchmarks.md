@@ -1,47 +1,97 @@
 # Benchmarks
 
-This repository tracks performance in three layers:
+This repository tracks performance in three distinct layers:
 
-1. `pnpm bench`
-   - Vitest microbenchmarks in [`bench/vitest/`](../bench/vitest)
-   - fast local iteration for resolver, component, and creation hot paths
-   - excludes optional competitor-local diagnostics, which live under `bench/vitest/diagnostics/`
-2. `pnpm bench:diagnostics:competitors`
-   - runs the local, non-authoritative cross-library diagnostics in [`bench/vitest/diagnostics/`](../bench/vitest/diagnostics)
-   - useful while iterating, but intentionally separate from the reproducible report pipeline
-3. `pnpm bench:competitors`
-   - builds the package
-   - runs reproducible runtime, retained-memory, and synthetic bundle-size comparisons
-   - writes reports to [`bench/competitors/reports/competitors.md`](../bench/competitors/reports/competitors.md) and [`bench/competitors/reports/competitors.json`](../bench/competitors/reports/competitors.json)
-   - runs with `NODE_ENV=production`
-   - isolates every runtime, creation, and retained-memory task in its own subprocess to avoid shared-process JIT / GC carryover bias
-4. `pnpm bench:overhead`
-   - measures bundle size, retained memory, runtime throughput, and synthetic TypeScript diagnostics for `react-class-variants` itself
-   - writes to [`bench/overhead/reports/current.json`](../bench/overhead/reports/current.json)
-   - uses the dedicated `react-class-variants/core` entrypoint together with the package root React surface, so recipe-only bundle measurements do not include React runtime code
+1. fast local iteration benches
+2. reproducible competitor reports
+3. package-overhead tracking for `react-class-variants` itself
 
-All performance tooling lives under [`bench/`](../bench): local Vitest suites in `bench/vitest/`, optional local diagnostics in `bench/vitest/diagnostics/`, reproducible competitor reporting in `bench/competitors/`, and package-overhead measurement/checking in `bench/overhead/`.
+All benchmark tooling lives under [`bench/`](../bench).
 
-## Competitor matrix
+## Benchmark Commands
 
-`pnpm bench:competitors` compares `react-class-variants` against:
+### `pnpm bench`
+
+Runs the local Vitest microbench suites under [`bench/vitest/`](../bench/vitest).
+
+Use this for:
+
+- quick feedback while changing resolver behavior
+- comparing hot paths locally
+- checking React adapter changes
+
+This command intentionally excludes the optional competitor diagnostics.
+
+### `pnpm bench:diagnostics:competitors`
+
+Runs the local, non-authoritative cross-library diagnostics under [`bench/vitest/diagnostics/`](../bench/vitest/diagnostics).
+
+Use this for:
+
+- local iteration while investigating a regression
+- rough competitor sanity checks before regenerating reports
+
+Do not treat this as the canonical comparison source.
+
+### `pnpm bench:competitors`
+
+Builds the package and regenerates the reproducible competitor reports:
+
+- [`bench/competitors/reports/competitors.md`](../bench/competitors/reports/competitors.md)
+- [`bench/competitors/reports/competitors.json`](../bench/competitors/reports/competitors.json)
+
+This pipeline:
+
+- runs with `NODE_ENV=production`
+- isolates each runtime, creation, and retained-memory task in its own subprocess
+- compares only common-denominator root-only scenarios across libraries
+
+### `pnpm bench:overhead`
+
+Measures package-specific overhead for `react-class-variants` and writes the output to:
+
+- [`bench/overhead/reports/current.json`](../bench/overhead/reports/current.json)
+
+This includes:
+
+- bundle size
+- runtime throughput
+- retained memory
+- synthetic TypeScript diagnostics
+
+The overhead pipeline measures both the package root React surface and the `react-class-variants/core` entrypoint so recipe-only consumers are represented separately.
+
+## Directory Layout
+
+- [`bench/vitest/`](../bench/vitest): local microbench suites
+- [`bench/vitest/diagnostics/`](../bench/vitest/diagnostics): optional local competitor diagnostics
+- [`bench/competitors/`](../bench/competitors): reproducible competitor reports
+- [`bench/overhead/`](../bench/overhead): package-overhead measurement and checks
+
+## Competitor Matrix
+
+`pnpm bench:competitors` currently compares against:
 
 - `class-variance-authority`
 - `classname-variants`
 - `tailwind-variants`
 
-It uses two common-denominator tracks:
+The report uses two tracks:
 
-- `resolver-only`
-  - root-only class resolver calls without Tailwind merge work
-  - uses `tailwind-variants/lite` to isolate raw resolver cost from built-in merge behavior
-- `tailwind-aware`
-  - `react-class-variants + twMerge`
-  - `class-variance-authority + twMerge`
-  - `classname-variants + twMerge`
-  - full `tailwind-variants`
+### `resolver-only`
 
-## Scenarios
+- raw root-only class resolution
+- no built-in Tailwind merge work
+- uses `tailwind-variants/lite` to keep the comparison on resolver cost
+
+### `tailwind-aware`
+
+- `react-class-variants + twMerge`
+- `class-variance-authority + twMerge`
+- `classname-variants + twMerge`
+- full `tailwind-variants`
+
+## Covered Scenarios
 
 The competitor report covers:
 
@@ -49,55 +99,76 @@ The competitor report covers:
 - simple resolver calls with explicit variants
 - complex resolver calls with matching compounds
 - complex resolver calls without compound matches
-- complex resolver calls with the full prop bag
-- resolver creation throughput for fresh unique complex configs
-- diagnostic resolver creation throughput for reused complex config objects
-- retained memory per created resolver instance for simple and complex configs
-- synthetic consumer bundle size for plain recipe imports, Tailwind-aware recipe imports, and React/styled imports
+- resolver creation throughput for fresh unique configs
+- diagnostic resolver creation throughput for reused config objects
+- retained memory per created resolver instance
+- synthetic consumer bundle size for root-only, Tailwind-aware, and React-component imports
 
-All competitor comparisons use root-only recipes because that is the shared API surface across all libraries.
-Package-specific runtime, slotted recipe creation cost, `resolve()`, and React composition paths are benchmarked separately inside the repository's own Vitest benches and overhead tooling. Local competitor diagnostics remain intentionally non-authoritative; the publishable comparison story lives only in `bench/competitors/`.
+All competitor comparisons use root-only recipes because that is the shared surface across all measured libraries.
 
-Creation is reported in two modes:
+Repository-specific paths such as:
 
-- `fresh unique config`
-  - a new complex config object graph is created on every iteration
-  - primary creation KPI and closer proxy for first-time compile cost
-- `reused config`
-  - the same complex config object identity is passed on every iteration
-  - diagnostic-only scenario for same-object config reuse versus fresh config
-    object setup cost
+- slot recipes
+- slot render overrides
+- `resolve()`
+- React `styled()` composition
+- `withRender`
 
-Retained-memory comparisons also use fresh unique config objects so per-instance
-bytes are not understated by shared config graphs.
+are measured separately in the local benches and the package-overhead pipeline.
 
-Bundle-size comparisons are reported separately from runtime because Tailwind
-merge support changes the dependency graph substantially. They use esbuild with
-`format=esm`, `platform=browser`, `target=es2018`, `minify`, tree-shaking, and
-`react` marked external. The generated JSON keeps raw, gzip, and brotli bytes;
-the generated markdown sorts and compares by gzip bytes.
+## Package-Overhead Profiles
 
-Runtime and creation metrics now serialize median `opsPerSec` for backward
-compatibility together with the sample set, min / max / mean throughput,
-standard deviation, and `relativeMarginOfErrorPct`. The markdown report exposes
-`RME` so ratios near `1.0x` are interpreted as near-parity unless the stability
-margin is clearly separated.
+The overhead report keeps named synthetic profiles instead of one aggregate number.
 
-The package-overhead report uses named synthetic profiles instead of a single
-aggregate bundle / TypeScript number:
+Bundle-oriented profiles include:
 
 - `bundles.recipeOnly`
 - `bundles.slottedRecipe`
 - `bundles.tailwindAwareRecipe`
 - `bundles.component`
 - `bundles.componentWithRender`
+
+TypeScript-oriented profiles include:
+
 - `typescript.profiles.bundlerRootOnly`
 - `typescript.profiles.bundlerReactSurface`
 - `typescript.profiles.bundlerSlottedRecipe`
 - `typescript.profiles.nodeNextReactSurface`
 
-## Notes
+## How to Read the Reports
 
-- Retained-memory measurements require `node --expose-gc`; the package script handles this automatically.
-- The generated markdown report is meant for humans. The JSON report is meant for CI diffing or custom visualization.
-- Benchmark numbers depend on CPU, Node version, and background load. Compare relative ratios within the same run, not absolute ops/sec across different machines.
+### Runtime tables
+
+- compare relative ratios inside the same run
+- prefer medians and stability metrics over one-off peak numbers
+- use `RME` to judge whether a reported ratio is actually distinguishable from noise
+
+### Creation throughput
+
+Two creation modes are reported:
+
+- `fresh unique config`: primary KPI and the closer proxy for real recipe creation cost
+- `reused config`: diagnostic scenario that isolates repeated compilation of the same object identity
+
+### Memory
+
+Retained-memory comparisons use fresh unique config objects so shared object graphs do not understate per-instance cost.
+
+### Bundles
+
+Bundle-size comparisons use minified synthetic consumers via esbuild with:
+
+- `format=esm`
+- `platform=browser`
+- `target=es2018`
+- tree-shaking enabled
+- `react` marked external
+
+The JSON report keeps raw, gzip, and brotli bytes. The markdown report is optimized for human comparison.
+
+## Notes and Caveats
+
+- Retained-memory measurements require `node --expose-gc`; the package scripts already do this.
+- Numbers depend on CPU, Node version, OS scheduling, and background load.
+- Compare ratios within the same run, not absolute ops/sec between machines.
+- Treat local diagnostics as exploratory. The canonical comparison story lives in `bench/competitors/`.

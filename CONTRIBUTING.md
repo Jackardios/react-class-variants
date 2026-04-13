@@ -1,59 +1,147 @@
 # Contributing
 
-## Branches
+This repository is currently maintained around the `react-class-variants` v2 alpha line.
 
-- Open v2 feature and fix pull requests against `next`
+## Branch Model
+
+- Open v2 feature and fix PRs against `next`
 - Treat `main` as stable-ready during the alpha period
-- Use a dedicated maintenance branch for legacy v1 work
+- Keep legacy v1 work isolated to `v1-maintenance`
 
-## Release intent
+Do not treat `main` as the day-to-day v2 development branch while v2 remains in alpha.
 
-- Add a changeset for any source, public type, package metadata, or build/release-affecting change
-- Use `pnpm run check:changeset` before opening a PR when the branch should carry release intent
-- For intentional no-release PRs that still touch release-affecting files, add an empty changeset
+## Environment
 
-## Local checks
+- Node.js `20.19+`
+- `pnpm`
+- React `19` for local test expectations
+
+Install dependencies with:
 
 ```bash
 pnpm install
+```
+
+## Release Intent and Changesets
+
+Add a changeset for any:
+
+- source change
+- public type change
+- package metadata change
+- build or release-affecting change
+
+Use:
+
+```bash
+pnpm run check:changeset
+```
+
+Notes:
+
+- documentation-only changes usually do not need a changeset
+- if a PR intentionally touches release-affecting files but should not ship a version, use an empty changeset
+- if a prerelease redesign replaces an unreleased API, rewrite or delete the stale pending `.changeset/*.md` files before the next alpha so `pre exit` does not carry obsolete notes into stable
+
+## Command Guide
+
+### Core development
+
+```bash
+pnpm dev
+pnpm test
 pnpm lint
 pnpm lint:all
-pnpm test
+pnpm lint:eslint
 pnpm build
-pnpm bench:competitors
-pnpm bench:overhead
-pnpm check:overhead
+```
+
+What they cover:
+
+- `pnpm dev`: Vitest in watch mode
+- `pnpm test`: runtime tests once
+- `pnpm lint`: TypeScript publish-surface check for `src/`
+- `pnpm lint:all`: TypeScript check for `src/` plus runtime tests
+- `pnpm lint:eslint`: ESLint for `src/` and `test/`
+- `pnpm build`: ESM + declaration build through `tsup`
+
+### Type and package surface validation
+
+```bash
+pnpm test:types
 pnpm test:types:contracts
 pnpm test:types:exports
 pnpm test:types:consumers
 pnpm lint:pkg
+```
+
+What they cover:
+
+- `pnpm test:types`: full type gate
+- `pnpm test:types:contracts`: `tsd` tests against the built package root
+- `pnpm test:types:exports`: packed export validation with `attw`
+- `pnpm test:types:consumers`: packed Bundler and NodeNext ESM consumer fixtures
+- `pnpm lint:pkg`: `publint` against the packed package metadata and publish surface
+
+When to run them:
+
+- always run `pnpm test:types` when you change public types, exports, or package metadata
+- prefer the full `pnpm test:types` umbrella command over trying to guess which sub-check matters
+
+### Benchmarks and overhead
+
+```bash
+pnpm bench
+pnpm bench:diagnostics:competitors
+pnpm bench:competitors
+pnpm bench:overhead
+pnpm check:overhead
+```
+
+Use these when:
+
+- a change touches hot paths
+- you are evaluating a bundle-size regression
+- you are changing entrypoints, React adapter behavior, or the core recipe engine
+
+Benchmark tooling is documented in [docs/benchmarks.md](./docs/benchmarks.md).
+
+### Full gates
+
+```bash
 pnpm run verify
-pnpm test:types
 pnpm run ci
 ```
 
-- `pnpm lint` checks the publish surface in `src/`
-- `pnpm lint:all` checks `src/` plus runtime tests and excludes `tsd` files, which are covered separately by `pnpm test:types`
-- `pnpm test:types:contracts` runs `tsd` against the built package root instead of importing `src/` directly
-- `pnpm test:types:exports` validates packed `types`, `main`, `module`, and `exports` wiring with `attw`
-- `pnpm test:types:consumers` compiles packed Bundler and NodeNext ESM fixtures to catch consumer-facing DX regressions for the current ESM-only package surface
-- `pnpm bench:overhead` records bundle, runtime, retained-memory, and named synthetic TypeScript / bundle profiles into `bench/overhead/reports/current.json`
-- `pnpm bench:competitors` rebuilds the package and writes common-denominator runtime + retained-memory comparisons against CVA, classname-variants, and tailwind-variants into `bench/competitors/reports/competitors.{md,json}` with `RME` in the markdown tables
-- `pnpm bench:diagnostics:competitors` runs the local non-authoritative competitor diagnostics under `bench/vitest/diagnostics/`
-- `pnpm check:overhead` re-measures the current tree and compares deterministic size checks against the baseline ref
-- All benchmark tooling lives under `bench/`: local Vitest suites in `bench/vitest/`, optional local diagnostics in `bench/vitest/diagnostics/`, competitor reporting in `bench/competitors/`, and package-overhead measurement in `bench/overhead/`
-- `pnpm lint:pkg` runs `publint` against the packed package metadata and publish surface
-- `pnpm run verify` is the reusable package gate: lint + tests + type checks + package linting
-- `pnpm test:types` runs the full type gate: build + contracts + packed export validation + packed Bundler/NodeNext ESM consumer fixtures
-- `pnpm run ci` adds the release-intent changeset check on top of `verify`
+- `pnpm run verify`: reusable package gate
+- `pnpm run ci`: `verify` plus release-intent changeset validation
 
-The published package is currently ESM-only. When a change affects public types, exports, or package metadata, run `pnpm test:types` locally before opening the PR. For the first release that changes the type-testing pipeline itself, do one manual VS Code / TS Server smoke-check against a Bundler or NodeNext ESM consumer fixture to confirm completions still match the automated guarantees.
+## Expectations for Public-Surface Changes
 
-## Release flow
+The published package surface is currently ESM-only. When you change anything in this area, make sure documentation and tests stay aligned.
 
-- Alpha releases are published from `next`
-- Keep the release workflow `commit` and `title` inputs as plain `Version Packages`; `changesets/action` appends the prerelease tag automatically while prerelease mode is active
-- The release workflow publishes via trusted publishing and then pushes the release tags / GitHub releases without an extra npm registry gate
-- Until `react-class-variants` has its first stable release, Changesets publishes prereleases under `latest`; do not assume `react-class-variants@alpha` advances automatically
-- Update the `alpha` dist-tag manually after publish if you want `react-class-variants@alpha` to resolve to the newest prerelease; trusted publishing only covers `npm publish`
-- Stable `2.0.0` should be published only after `changeset pre exit`
+For changes that touch:
+
+- recipe resolution
+- `styled()` behavior
+- React prop merging
+- overloads and types
+- exports and package metadata
+
+update:
+
+- runtime tests in `test/`
+- type contract tests in `test/types/contracts/`
+- consumer fixtures in `test/types/consumers/` when relevant
+- the corresponding docs and examples
+
+## Release Notes for Contributors
+
+- Alpha releases publish from `next`
+- Publishing is handled by GitHub Actions via npm trusted publishing
+- Avoid manual `npm publish` unless it is explicitly required
+- `changeset publish` produces the canonical `v*` git tag
+- After a successful alpha publish, verify npm dist-tags explicitly because prerelease tagging policy affects install behavior
+- Keep already-published alpha history in `CHANGELOG.md`; do not rely on superseded pending changesets to document a redesign that has since been replaced
+
+The release workflow and post-publish checks are documented in [docs/release-process.md](./docs/release-process.md).

@@ -1,18 +1,18 @@
-# `react-tailwind-variants` v1 legacy reference
+# `react-tailwind-variants` v1 Legacy Reference
 
-This page documents the frozen v1 line of `react-tailwind-variants` as it exists on `v1-maintenance`.
-
-Use this document if you still run the legacy package and need a stable reference without checking out the old branch. If you are planning new work, use `react-class-variants` instead and keep the migration guide nearby.
+This page documents the frozen v1 line of `react-tailwind-variants` for teams that still maintain legacy code while preparing a migration to `react-class-variants`.
 
 ## Status
 
-- Current legacy package: `react-tailwind-variants`
-- Current documented legacy release: `1.0.4`
+- Package name: `react-tailwind-variants`
+- Last documented legacy release: `1.0.4`
 - Status: frozen
-- Maintenance scope: metadata and documentation only
+- Maintenance scope: metadata, documentation, and migration guidance
 - Successor package: `react-class-variants`
 
-## Installation and compatibility
+If you are starting new work, use `react-class-variants` instead and keep the [migration guide](./migration-from-react-tailwind-variants.md) close by.
+
+## Installation and Compatibility
 
 Install the legacy package together with its required peer dependencies:
 
@@ -28,9 +28,9 @@ v1 compatibility:
 
 `@radix-ui/react-slot` is bundled by the package and powers the intrinsic-element `asChild` pattern.
 
-## What v1 exports
+## Public Surface
 
-Runtime exports:
+### Runtime exports
 
 - `styled()`
 - `variants()`
@@ -39,7 +39,7 @@ Runtime exports:
 - `cx()`
 - `tw`
 
-Type exports:
+### Type exports
 
 - `StyledComponent`
 - `VariantsConfig`
@@ -50,25 +50,28 @@ Type exports:
 - `CxOptions`
 - `CxReturn`
 
-## Core behavior
+## Config Model
 
 The v1 API is centered on a Stitches-like variants config:
 
-- `base`: classes always applied
+- `base`: classes that always apply
 - `variants`: named variant groups
 - `defaultVariants`: default values for optional variants
 - `compoundVariants`: extra classes applied when multiple variants match
 
-Class values may be:
+Accepted class values:
 
 - strings
 - arrays of strings
 - `null`
 - nested arrays of those values
 
-Boolean variants use `"true"` and `"false"` keys and become optional props automatically. Non-boolean variants are required unless they are given a default in `defaultVariants`.
+Behavior summary:
 
-One important v1 behavior: class strings are automatically merged through `tailwind-merge` because `variants()`, `variantProps()`, and `styled()` all rely on `cx()` internally.
+- boolean variants use `"true"` and `"false"` keys
+- boolean variants become optional automatically
+- non-boolean variants are required unless they have defaults
+- classes are automatically merged through `tailwind-merge`
 
 ## `styled()`
 
@@ -78,7 +81,7 @@ One important v1 behavior: class strings are automatically merged through `tailw
 import { styled } from 'react-tailwind-variants';
 
 const Button = styled('button', {
-  base: 'rounded font-medium',
+  base: 'rounded font-medium transition',
   variants: {
     color: {
       brand: 'bg-sky-500 text-white',
@@ -104,9 +107,14 @@ Usage:
 </Button>
 ```
 
-`styled()` returns a typed React component whose variant props are inferred from the config.
+Characteristics:
 
-## Boolean variants
+- variant props are inferred from the config
+- class strings are merged through `tailwind-merge`
+- intrinsic elements can expose `asChild`
+- custom React components can be used as the base type for composition
+
+## Boolean Variants
 
 ```tsx
 const Button = styled('button', {
@@ -123,11 +131,11 @@ const Button = styled('button', {
 <Button disabled={false}>Enabled</Button>;
 ```
 
-If a boolean variant omits one side, the missing side simply contributes no classes.
+If a boolean variant omits one side, the missing side contributes no classes.
 
-## Compound variants
+## Compound Variants
 
-Use `compoundVariants` when styling depends on multiple variant selections:
+Use `compoundVariants` when styling depends on multiple variant selections.
 
 ```tsx
 const Button = styled('button', {
@@ -163,14 +171,14 @@ const Button = styled('button', {
 });
 ```
 
-Compound selectors can match either:
+Compound selectors may match:
 
 - one value, for example `size: 'sm'`
 - many values, for example `color: ['filled', 'outlined']`
 
-## Default variants and required props
+## Default Variants and Required Props
 
-Variants without defaults are required unless they are boolean. Variants with defaults become optional.
+Variants without defaults are required unless they are boolean.
 
 ```tsx
 const Button = styled('button', {
@@ -202,7 +210,7 @@ In this example:
 
 ## Polymorphism with `asChild`
 
-For intrinsic elements like `'button'` or `'div'`, v1 supports polymorphism through the `asChild` prop:
+For intrinsic elements, v1 supports polymorphism through `asChild`.
 
 ```tsx
 const Button = styled('button', {
@@ -224,13 +232,13 @@ const Button = styled('button', {
 
 Notes:
 
-- `asChild` exists only when the base type is an intrinsic JSX element like `'button'`.
-- It is implemented with `@radix-ui/react-slot`.
-- When you build a styled component from a custom React component, `asChild` is not part of the public props.
+- `asChild` exists only for intrinsic JSX element bases
+- it is implemented with `@radix-ui/react-slot`
+- custom-component bases do not expose `asChild`
 
-## Component composition
+## Component Composition
 
-v1 supports component composition by passing an existing styled component as the base type:
+v1 supports component-to-component composition by passing an existing styled component as the base type.
 
 ```tsx
 const BaseButton = styled('button', {
@@ -254,215 +262,143 @@ const Button = styled(BaseButton, {
 });
 ```
 
-You can also layer components through `asChild` when the outer component is intrinsic and slottable.
+This composition story does not carry over directly to v2.
 
 ## `variants(config)`
 
-`variants()` returns a class name resolver function without creating a React component:
+`variants()` creates a class resolver without creating a React component.
 
-```tsx
+```ts
 import { variants } from 'react-tailwind-variants';
 
-const buttonVariants = variants({
-  base: 'rounded font-medium',
+const badge = variants({
+  base: 'inline-flex rounded-full font-medium',
   variants: {
-    color: {
-      brand: 'bg-sky-500 text-white',
-      accent: 'bg-teal-500 text-white',
+    tone: {
+      info: 'bg-sky-100 text-sky-900',
+      success: 'bg-emerald-100 text-emerald-900',
     },
-    size: {
-      small: 'px-3 py-2 text-sm',
-      large: 'px-5 py-3 text-base',
-    },
+  },
+  defaultVariants: {
+    tone: 'info',
   },
 });
 
-buttonVariants({
-  color: 'brand',
-  size: 'small',
-  className: 'px-8',
-});
+badge();
+badge({ tone: 'success', className: 'uppercase' });
 ```
-
-Because `variants()` uses `cx()` internally, Tailwind conflicts are merged automatically.
 
 ## `variantProps(config)`
 
-`variantProps()` returns a function that consumes variant props, resolves `className`, and passes through unrelated props.
+`variantProps()` is the legacy helper for prop splitting plus class resolution.
 
-```tsx
+```ts
 import { variantProps } from 'react-tailwind-variants';
 
-const resolveButtonProps = variantProps({
-  base: 'rounded font-medium',
+const resolveButton = variantProps({
+  base: 'inline-flex items-center',
   variants: {
-    color: {
-      brand: 'bg-sky-500 text-white',
-      accent: 'bg-teal-500 text-white',
+    tone: {
+      primary: 'bg-sky-500 text-white',
+      ghost: 'bg-transparent text-slate-900',
     },
   },
 });
 
-const props = resolveButtonProps({
-  color: 'brand',
+const result = resolveButton({
+  tone: 'primary',
   type: 'button',
-  className: 'px-8',
+  className: 'w-full',
 });
 ```
 
-`props` will contain:
-
-- `className` with merged variant classes
-- non-variant props such as `type`, `onClick`, `data-*`, and `aria-*`
-
-It will not contain consumed variant props such as `color`.
+The resulting object keeps the non-variant props and a merged `className`.
 
 ## `extractVariantsConfig(component)`
 
-`extractVariantsConfig()` returns the original config stored on a styled component:
+This helper extracts the original variants config from a styled component:
 
-```tsx
-import { extractVariantsConfig, styled } from 'react-tailwind-variants';
-
-const Button = styled('button', {
-  base: ['rounded', 'font-medium'],
-  variants: {
-    color: {
-      brand: 'bg-sky-500 text-white',
-      accent: 'bg-teal-500 text-white',
-    },
-  },
-});
-
-const config = extractVariantsConfig(Button);
+```ts
+const buttonConfig = extractVariantsConfig(Button);
 ```
 
-This works only for components created by `styled()`.
+That pattern does not exist in v2. The migration path is to keep the config object explicitly with `defineRecipeConfig()`.
 
 ## `cx()` and `tw`
 
-v1 also exposes two small helpers:
-
 ### `cx(...classes)`
 
-```tsx
-import { cx } from 'react-tailwind-variants';
+`cx()` is the legacy class-merging helper exported by v1.
 
-const className = cx('px-4 py-2', 'px-8', ['text-white', null]);
+Typical use:
+
+```ts
+cx('px-4', condition && 'py-2', ['rounded', 'font-medium']);
 ```
-
-`cx()` flattens nested class arrays, removes falsy values, joins them into a string, and then runs the result through `tailwind-merge`.
 
 ### `tw`
 
-```tsx
-import { tw } from 'react-tailwind-variants';
+`tw` is the tagged-template convenience helper for class strings:
 
-const classes = tw`px-4 py-2 text-white`;
+```ts
+const className = tw`px-4 py-2 rounded`;
 ```
 
-`tw` is only `String.raw`. It exists mainly for editor tooling and tagged-template ergonomics.
+Neither `cx()` nor `tw` exists in v2.
 
-## Type helpers
-
-Common v1 type helpers:
+## Type Helpers
 
 ### `VariantPropsOf<typeof Component>`
 
-Extracts the variant prop type from a styled component.
+Extracts the public variant props from a styled component.
 
-```tsx
-import { type VariantPropsOf, styled } from 'react-tailwind-variants';
-
-const Button = styled('button', {
-  variants: {
-    color: {
-      brand: 'bg-sky-500 text-white',
-      accent: 'bg-teal-500 text-white',
-    },
-  },
-});
-
-type ButtonVariantProps = VariantPropsOf<typeof Button>;
+```ts
+type ButtonVariants = VariantPropsOf<typeof Button>;
 ```
 
 ### `VariantsConfigOf<typeof Component>`
 
-Extracts the config type from a styled component.
+Extracts the config shape from a styled component.
 
-```tsx
-import { type VariantsConfigOf, styled } from 'react-tailwind-variants';
-
-const Button = styled('button', {
-  variants: {
-    color: {
-      brand: 'bg-sky-500 text-white',
-      accent: 'bg-teal-500 text-white',
-    },
-  },
-});
-
+```ts
 type ButtonConfig = VariantsConfigOf<typeof Button>;
 ```
 
 ### `VariantOptions<Config>`
 
-Extracts variant props from a config type directly.
+Projects variant options from a config type.
 
-```tsx
-import { type VariantOptions } from 'react-tailwind-variants';
-
-type ButtonOptions = VariantOptions<{
-  variants: {
-    color: {
-      brand: string;
-      accent: string;
-    };
-    elevated: {
-      true: string;
-      false: string;
-    };
-  };
-  defaultVariants: {
-    color: 'brand';
-  };
-}>;
+```ts
+type ButtonOptions = VariantOptions<typeof buttonConfig>;
 ```
+
+These helpers are specific to the v1 model and do not map one-to-one to the v2 type surface.
 
 ## Tailwind CSS IntelliSense in v1
 
-If you want Tailwind class completion inside tagged template literals, use `tw` and configure VS Code like this:
-
-```tsx
-import { styled, tw } from 'react-tailwind-variants';
-
-const Button = styled('button', {
-  base: tw`px-5 py-2 text-white`,
-  variants: {
-    color: {
-      neutral: tw`bg-slate-500 hover:bg-slate-400`,
-      accent: tw`bg-teal-500 hover:bg-teal-400`,
-    },
-  },
-});
-```
+When using Tailwind CSS IntelliSense in VS Code, v1 projects commonly configured:
 
 ```json
 {
-  "tailwindCSS.experimental.classRegex": ["tw`(\\`|[^`]+?)`"]
+  "tailwindCSS.classFunctions": ["variants", "variantProps", "styled"]
 }
 ```
 
-## When to stay on v1
+This section is only relevant for legacy v1 codebases.
 
-Staying on v1 is reasonable when:
+## When to Stay on v1
 
-- your codebase is built around `styled()` and `asChild`
-- you need the old React compatibility range
-- you are not ready for the v2 package rename
-- you want to defer a larger migration until `react-class-variants` leaves alpha
+Staying on v1 can be reasonable when you still depend on:
 
-## Where to migrate next
+- `asChild`
+- component-to-component `styled()` composition
+- automatic Tailwind merge everywhere
+- the existing CommonJS/legacy React compatibility matrix
 
-- Migration guide: [migration-from-react-tailwind-variants.md](./migration-from-react-tailwind-variants.md)
-- Current package docs: [../README.md](../README.md)
+For new work, the recommendation remains to migrate.
+
+## Where to Migrate Next
+
+- [Migration guide](./migration-from-react-tailwind-variants.md)
+- [Recipes and components guide](./recipes-and-components.md)
+- [API reference](./api-reference.md)
