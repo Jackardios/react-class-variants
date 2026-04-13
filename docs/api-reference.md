@@ -552,7 +552,7 @@ Supported options:
 ```ts
 type SystemOptions = {
   merge?: (className: string) => string;
-  validate?: 'never' | 'dev' | 'always';
+  validate?: 'never' | 'always';
 };
 ```
 
@@ -564,7 +564,6 @@ type SystemOptions = {
 
 ### `validate`
 
-- `'dev'`: strict validation in non-production environments
 - `'always'`: strict validation everywhere
 - `'never'`: lean runtime with no validation
 
@@ -575,7 +574,9 @@ const strict = defineConfig({ validate: 'always' });
 const lean = defineConfig({ validate: 'never' });
 ```
 
-Use `'always'` in strict test fixtures or shared packages, and use `'never'` for production-like benchmarks when you want the lean path.
+Package root and core are lean by default. Use `'always'` in strict test
+fixtures or shared packages, and use `'never'` when you want to force the lean
+path explicitly.
 
 ## `defineRecipeConfig(config)`
 

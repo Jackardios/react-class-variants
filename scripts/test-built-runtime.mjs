@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -7,15 +8,52 @@ import { renderToStaticMarkup } from 'react-dom/server';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDir, '..');
+const packageRootPath = resolve(repoRoot, 'dist/index.js');
+const corePath = resolve(repoRoot, 'dist/core.js');
 
-const packageRoot = await import(
-  pathToFileURL(resolve(repoRoot, 'dist/index.js')).href
-);
-const core = await import(
-  pathToFileURL(resolve(repoRoot, 'dist/core.js')).href
-);
+function assertImportsWithoutProcess(entryPath, shimReact = false) {
+  const reactShim = shimReact
+    ? `import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const reactPath = require.resolve('react');
+require.cache[reactPath] = {
+  id: reactPath,
+  filename: reactPath,
+  loaded: true,
+  exports: {
+    cloneElement: () => null,
+    createElement: () => null,
+    forwardRef: render => render,
+    isValidElement: () => false,
+  },
+};`
+    : '';
 
-const coreSource = readFileSync(resolve(repoRoot, 'dist/core.js'), 'utf8');
+  execFileSync(
+    process.execPath,
+    [
+      '--input-type=module',
+      '--eval',
+      `${reactShim}
+globalThis.process = undefined;
+const module = await import(${JSON.stringify(pathToFileURL(entryPath).href)});
+module.recipe({ base: 'inline-flex' });
+module.defineConfig().recipe({ base: 'inline-flex' });`,
+    ],
+    {
+      cwd: repoRoot,
+      stdio: 'inherit',
+    }
+  );
+}
+
+assertImportsWithoutProcess(packageRootPath, true);
+assertImportsWithoutProcess(corePath);
+
+const packageRoot = await import(pathToFileURL(packageRootPath).href);
+const core = await import(pathToFileURL(corePath).href);
+
+const coreSource = readFileSync(corePath, 'utf8');
 assert.equal(/from ['"]react['"]/.test(coreSource), false);
 
 const rootRecipe = core.recipe({
@@ -202,6 +240,58 @@ assert.equal(
     },
   })({ tone: 'info' }),
   'inline-flex text-sky-700'
+);
+
+const leanDefaultRecipe = core.recipe({
+  base: 'inline-flex',
+  variants: {
+    tone: {
+      info: 'text-sky-700',
+    },
+  },
+});
+assert.equal(leanDefaultRecipe(), 'inline-flex');
+assert.equal(packageRoot.recipe({ base: 'inline-flex' })(), 'inline-flex');
+
+const validationDefaultRecipe = core
+  .defineConfig({
+    validate: 'always',
+  })
+  .recipe({
+    base: 'inline-flex',
+    variants: {
+      tone: {
+        info: 'text-sky-700',
+      },
+    },
+  });
+assert.throws(
+  () => validationDefaultRecipe(),
+  /missing required recipe variant "tone"/
+);
+assert.throws(
+  () =>
+    core.defineConfig({ validate: 'always' }).recipe({
+      base: 'inline-flex',
+      variants: {
+        tone: {
+          info: 'text-sky-700',
+        },
+      },
+    })(),
+  /missing required recipe variant "tone"/
+);
+assert.throws(
+  () =>
+    packageRoot.defineConfig({ validate: 'always' }).recipe({
+      base: 'inline-flex',
+      variants: {
+        tone: {
+          info: 'text-sky-700',
+        },
+      },
+    })(),
+  /missing required recipe variant "tone"/
 );
 
 const configuredPackage = packageRoot.defineConfig({

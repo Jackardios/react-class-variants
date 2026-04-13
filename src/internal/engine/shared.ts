@@ -3,7 +3,6 @@ import type {
   RecipeConfig,
   ResolveOptions,
   SystemOptions,
-  ValidateMode,
 } from '../core-types';
 
 export const compiledRecipeSymbol = Symbol('react-class-variants.compiled');
@@ -125,31 +124,6 @@ export function isPlainObject(
   value: unknown
 ): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-function isProductionEnvironment() {
-  const runtime = globalThis as { process?: { env?: { NODE_ENV?: string } } };
-  return runtime.process?.env?.NODE_ENV === 'production';
-}
-
-function isValidateEnabled(mode: ValidateMode | undefined): boolean {
-  if (mode === 'always') return true;
-  if (mode === 'never') return false;
-  return !isProductionEnvironment();
-}
-
-export function resolveRuntimeSystemOptions(
-  options: SystemOptions = {}
-): RuntimeSystemOptions {
-  const validate = isValidateEnabled(options.validate);
-
-  return {
-    freeze:
-      options.validate === 'always' ? 'deep' : validate ? 'shallow' : 'none',
-    merge: options.merge,
-    mode: validate ? 'strict' : 'lean',
-    validate,
-  };
 }
 
 function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {

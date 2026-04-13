@@ -44,12 +44,6 @@ export {
   resolveSlotViewState,
 };
 
-declare const process: {
-  env: {
-    NODE_ENV?: string;
-  };
-};
-
 function createLeanRecipeFactory(options: SystemOptions): RecipeFactory {
   const runtimeOptions: RuntimeSystemOptions = {
     freeze: 'none',
@@ -92,8 +86,9 @@ function createStrictRecipeFactory(options: SystemOptions): RecipeFactory {
   }) as RecipeFactory;
 }
 
-export function createRecipeFactory(
-  options: SystemOptions = {}
+function createDefaultRecipeFactory(
+  options: SystemOptions,
+  defaultMode: RuntimeSystemOptions['mode']
 ): RecipeFactory {
   if (options.validate === 'never') {
     return createLeanRecipeFactory(options);
@@ -103,7 +98,13 @@ export function createRecipeFactory(
     return createStrictRecipeFactory(options);
   }
 
-  return process.env.NODE_ENV === 'production'
-    ? createLeanRecipeFactory(options)
-    : createStrictRecipeFactory(options);
+  return defaultMode === 'strict'
+    ? createStrictRecipeFactory(options)
+    : createLeanRecipeFactory(options);
+}
+
+export function createRecipeFactory(
+  options: SystemOptions = {}
+): RecipeFactory {
+  return createDefaultRecipeFactory(options, 'lean');
 }

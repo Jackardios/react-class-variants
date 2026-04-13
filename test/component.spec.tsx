@@ -246,7 +246,8 @@ describe('styled()', () => {
   });
 
   it('rejects render when withRender is disabled', () => {
-    const buttonRecipe = recipe({
+    const strict = defineConfig({ validate: 'always' });
+    const buttonRecipe = strict.recipe({
       base: 'inline-flex',
       variants: {
         tone: {
@@ -254,7 +255,7 @@ describe('styled()', () => {
         },
       },
     });
-    const Button = styled('button', buttonRecipe);
+    const Button = strict.styled('button', buttonRecipe);
     const unsupportedRenderProp = { render: <a href="/docs" /> } as object;
 
     expect(() =>

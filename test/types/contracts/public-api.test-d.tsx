@@ -55,7 +55,18 @@ const link = recipe(linkConfig);
 const { recipe: configuredRecipe, styled: configuredStyled } = defineConfig({
   merge: className => className,
 });
+const { recipe: strictConfiguredRecipe, styled: strictConfiguredStyled } =
+  defineConfig({ validate: 'always' });
 const configuredLink = configuredRecipe({
+  base: 'inline-flex',
+  variants: {
+    tone: {
+      primary: 'text-blue-600',
+      secondary: 'text-slate-700',
+    },
+  },
+});
+const strictConfiguredLink = strictConfiguredRecipe({
   base: 'inline-flex',
   variants: {
     tone: {
@@ -103,10 +114,15 @@ expectAssignable<LinkResolved>({
 
 const Link = styled('a', link);
 const ConfiguredLink = configuredStyled('a', configuredLink);
+const StrictConfiguredLink = strictConfiguredStyled('a', strictConfiguredLink);
 
 expectType<string>(link({ tone: 'primary' }));
 expectType<string>(configuredLink({ tone: 'secondary' }));
 expectAssignable<ReturnType<typeof Link>>(ConfiguredLink({ tone: 'primary' }));
+expectAssignable<ReturnType<typeof Link>>(
+  StrictConfiguredLink({ tone: 'primary' })
+);
+expectError(defineConfig({ validate: 'dev' }));
 
 expectType<boolean>(hasOwnProperty({ foo: 1 }, 'foo'));
 expectType<string>(

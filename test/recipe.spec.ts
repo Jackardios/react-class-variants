@@ -82,6 +82,23 @@ describe('recipe()', () => {
     expect(toggle({ selected: true })).toBe('inline-flex is-selected');
   });
 
+  it('uses a lean runtime by default and only validates strictly when enabled', () => {
+    const config = {
+      base: 'inline-flex',
+      variants: {
+        tone: {
+          info: 'text-sky-700',
+        },
+      },
+    } as const;
+
+    expect(recipe(config)()).toBe('inline-flex');
+    expect(defineConfig().recipe(config)()).toBe('inline-flex');
+    expect(() => defineConfig({ validate: 'always' }).recipe(config)()).toThrow(
+      /missing required recipe variant "tone"/
+    );
+  });
+
   it('resolves component prop bags with forwardProps and propAliases', () => {
     const input = recipe({
       base: 'block',
@@ -785,29 +802,6 @@ describe('recipe()', () => {
         },
       } as never)
     ).toThrow(/cannot mix boolean options/);
-  });
-
-  it('keeps default dev recipes detached from nested config mutations', () => {
-    const config = {
-      base: 'inline-flex',
-      variants: {
-        tone: {
-          info: 'bg-sky-100',
-        },
-      },
-    };
-
-    const badge = recipe(config);
-
-    expect(() => {
-      config.base = 'mutated';
-    }).toThrow();
-    expect(() => {
-      config.variants.tone.info = 'text-red-500';
-    }).not.toThrow();
-
-    expect(badge({ tone: 'info' })).toBe('inline-flex bg-sky-100');
-    expect('config' in badge).toBe(false);
   });
 
   it('keeps strict recipes deeply frozen in validate: always mode', () => {

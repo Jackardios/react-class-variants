@@ -2,7 +2,7 @@
 export type ClassNameValue = string | null | readonly string[];
 export type ClassValue = ClassNameValue;
 
-export type ValidateMode = 'never' | 'dev' | 'always';
+export type ValidateMode = 'never' | 'always';
 
 export interface SystemOptions {
   merge?: (className: string) => string;

@@ -21,6 +21,8 @@ type Expect<T extends true> = T;
 
 const { recipe: configuredRecipe, styled: configuredStyled } = defineConfig();
 const { recipe: configuredCoreRecipe } = defineCoreConfig();
+const { recipe: strictConfiguredRecipe, styled: strictConfiguredStyled } =
+  defineConfig({ validate: 'always' });
 
 const badgeConfig = defineRecipeConfig({
   base: ['badge', 'rounded-full'],
@@ -60,6 +62,14 @@ configuredRecipe({
     },
   },
 });
+strictConfiguredRecipe({
+  base: 'inline-flex',
+  variants: {
+    tone: {
+      info: 'text-sky-500',
+    },
+  },
+});
 
 const coreOnlyBadge = configuredCoreRecipe({
   base: 'inline-flex',
@@ -83,6 +93,7 @@ defineCoreRecipeConfig({
 });
 
 const Button = styled('button', badge, { withRender: true });
+const StrictButton = strictConfiguredStyled('button', badge);
 
 type ButtonProps = Parameters<typeof Button>[0];
 type _IntrinsicButtonType = Expect<
@@ -104,6 +115,7 @@ Button({
   },
   children: 'Link button',
 });
+StrictButton({ tone: 'info', size: 'sm', children: 'Strict button' });
 
 const Input = configuredStyled(
   'input',
@@ -180,6 +192,9 @@ MultipartButton({
   tone: 'info',
   className: 'px-4',
 });
+
+// @ts-expect-error validate: 'dev' was removed; use validate: 'always' explicitly
+defineConfig({ validate: 'dev' });
 
 type BadgeOptions = RecipeInput<typeof badge>;
 type BadgeConfig = RecipeConfigOf<typeof badge>;

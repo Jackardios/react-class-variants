@@ -568,10 +568,11 @@ Re-test these areas carefully after migration:
 
 - Tailwind conflict resolution is no longer implicit. Configure
   `defineConfig({ merge: twMerge })` if you depended on v1's automatic merging.
-- Validation is stricter in the checked path. In development by default, v2
-  rejects unknown props in direct recipe calls, missing required variants,
-  invalid variant values, mixed boolean variants, invalid slot maps, and invalid
-  alias targets.
+- Validation is stricter in the checked path. The default root and core
+  entrypoints are lean by default. Use `defineConfig({ validate: 'always' })`
+  when you want the checked runtime, which rejects unknown props in direct
+  recipe calls, missing required variants, invalid variant values, mixed
+  boolean variants, invalid slot maps, and invalid alias targets.
 - Direct recipe calls are variant-oriented. Use `resolve()` when you have a full
   component prop bag.
 - Slotted direct calls do not accept top-level `className`.

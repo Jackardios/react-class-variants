@@ -22,6 +22,8 @@ type Expect<T extends true> = T;
 
 const { recipe: configuredRecipe } = defineConfig();
 const { recipe: configuredCoreRecipe } = defineCoreConfig();
+const { recipe: strictConfiguredRecipe, styled: strictConfiguredStyled } =
+  defineConfig({ validate: 'always' });
 
 const badgeConfig = defineRecipeConfig({
   base: 'badge',
@@ -53,6 +55,14 @@ const badgeConfig = defineRecipeConfig({
 const badge = recipe(badgeConfig);
 
 configuredRecipe({
+  base: 'inline-flex',
+  variants: {
+    tone: {
+      neutral: 'text-slate-700',
+    },
+  },
+});
+strictConfiguredRecipe({
   base: 'inline-flex',
   variants: {
     tone: {
@@ -115,6 +125,7 @@ const Button = styled(
     withRender: true,
   }
 );
+const StrictButton = strictConfiguredStyled('button', badge);
 
 Button({
   tone: 'neutral',
@@ -127,6 +138,7 @@ Button({
     return null;
   },
 });
+StrictButton({ tone: 'accent', size: 'sm', children: 'Strict button' });
 
 const RouterLink = (props: { to: string } & ComponentProps<'a'>) => null;
 
@@ -210,3 +222,6 @@ MultipartButton({
   tone: 'neutral',
   className: 'px-4',
 });
+
+// @ts-expect-error validate: 'dev' was removed; use validate: 'always' explicitly
+defineConfig({ validate: 'dev' });

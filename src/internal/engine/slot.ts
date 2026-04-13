@@ -257,15 +257,6 @@ export function compileLeanSlotRecipe(
   };
 }
 
-export function compileSlotRecipe(
-  config: AnySlotRecipeConfig,
-  options: RuntimeSystemOptions
-): SlotCompiledRecipe {
-  return options.mode === 'lean'
-    ? compileLeanSlotRecipe(config, options)
-    : compileStrictSlotRecipe(config, options);
-}
-
 function buildSlotSelectionLean(
   compiled: LeanSlotCompiledRecipe,
   input: Record<string, unknown> | undefined
@@ -635,10 +626,4 @@ export function createLeanSlotRecipe(
   };
 
   return attachCompiled(slotRecipe as AnyRecipe, compiled);
-}
-
-export function createSlotRecipe(compiled: SlotCompiledRecipe): AnyRecipe {
-  return compiled.runtime === 'lean'
-    ? createLeanSlotRecipe(compiled)
-    : createStrictSlotRecipe(compiled);
 }

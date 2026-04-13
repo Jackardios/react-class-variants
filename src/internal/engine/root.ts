@@ -113,15 +113,6 @@ export function compileLeanRootRecipe(
   };
 }
 
-export function compileRootRecipe(
-  config: AnyRootRecipeConfig,
-  options: RuntimeSystemOptions
-): RootCompiledRecipe {
-  return options.mode === 'lean'
-    ? compileLeanRootRecipe(config, options)
-    : compileStrictRootRecipe(config, options);
-}
-
 function buildRootSelectionLean(
   compiled: LeanRootCompiledRecipe,
   input: Record<string, unknown> | undefined
@@ -350,10 +341,4 @@ export function createLeanRootRecipe(
   };
 
   return attachCompiled(rootRecipe as AnyRecipe, compiled);
-}
-
-export function createRootRecipe(compiled: RootCompiledRecipe): AnyRecipe {
-  return compiled.runtime === 'lean'
-    ? createLeanRootRecipe(compiled)
-    : createStrictRootRecipe(compiled);
 }

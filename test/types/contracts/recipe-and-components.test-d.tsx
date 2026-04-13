@@ -10,6 +10,7 @@ import {
   expectType,
 } from 'tsd';
 import {
+  defineConfig,
   recipe,
   styled,
   type RecipeResolved,
@@ -89,6 +90,33 @@ expectAssignable<BadgeResolved>({
   variants: { tone: 'info', disabled: false },
   resolvedProps: { className: 'inline-flex rounded-full bg-sky-100' },
 });
+expectError(defineConfig({ validate: 'dev' }));
+expectType<string>(
+  defineConfig().recipe({
+    base: 'inline-flex',
+    variants: {
+      tone: {
+        info: 'text-sky-700',
+      },
+    },
+    defaultVariants: {
+      tone: 'info',
+    },
+  })()
+);
+expectType<string>(
+  defineConfig({ validate: 'always' }).recipe({
+    base: 'inline-flex',
+    variants: {
+      tone: {
+        info: 'text-sky-700',
+      },
+    },
+    defaultVariants: {
+      tone: 'info',
+    },
+  })()
+);
 
 const buttonRecipe = recipe({
   slots: {

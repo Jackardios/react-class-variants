@@ -196,9 +196,13 @@ Supported options:
 ```ts
 type SystemOptions = {
   merge?: (className: string) => string;
-  validate?: 'never' | 'dev' | 'always';
+  validate?: 'never' | 'always';
 };
 ```
+
+Default root and core imports are lean and process-less safe. Use
+`defineConfig({ validate: 'always' })` when you want checked runtime behavior
+for a shared factory.
 
 ## Main Package Surfaces
 
