@@ -20,6 +20,7 @@ import {
   defineConfig,
   mergeProps,
   mergeRefs,
+  useMergeRefs,
   styled,
 } from '../../../dist';
 
@@ -112,6 +113,9 @@ expectType<string>(
   mergeProps({ className: 'a' }, { className: 'b' }).className as string
 );
 expectAssignable<ReturnType<typeof mergeRefs>>(undefined);
+expectAssignable<ReturnType<typeof mergeRefs>>(
+  useMergeRefs<HTMLButtonElement>(null, null)
+);
 
 expectError(link.extend({ base: 'px-4' }));
 expectError(link({ tone: 'ghost' }));
