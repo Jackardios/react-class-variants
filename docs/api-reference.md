@@ -445,6 +445,12 @@ Behavior:
 - `host.render()` reuses the current `host.children` unless you override `children`
 - for slotted recipes, external component `className` is routed automatically to the host slot
 
+Important note:
+
+- call `host.render(...)` directly as a method
+- do not destructure `render` from `host`
+- this is intentional: keeping `host.render` method-shaped avoids allocating one extra function per `view` render
+
 Example:
 
 ```tsx

@@ -339,6 +339,12 @@ const Field = styled('label', fieldRecipe, {
 - `host.className` is already the resolved host class string
 - `host.render()` keeps `host.children` unless you override `children`
 
+Important note:
+
+- call `host.render(...)` directly as a method
+- do not destructure `render` from `host`
+- this is intentional: keeping `host.render` method-shaped avoids allocating one extra function per `view` render
+
 ### Reading `host.props` and extending host classes
 
 Use `host.props` when your `view` needs a pass-through prop, and use `host.render({ className })` when the wrapper needs extra host-level classes.

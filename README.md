@@ -158,6 +158,9 @@ Key points:
 - `classes` is a slot render map
 - external component `className` is routed automatically to the host slot
 - if the recipe has no `root` slot, provide `hostSlot`
+- call `host.render(...)` directly as a method
+- do not destructure `render` from `host`
+- this is intentional: keeping `host.render` method-shaped avoids allocating one extra function per `view` render
 
 ## `resolve()` and Wrappers
 
