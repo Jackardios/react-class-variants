@@ -29,6 +29,66 @@ const SimpleButtonWithRender = styled('button', simpleButtonRecipe, {
 const ComplexButtonWithRender = styled('button', complexButtonRecipe, {
   withRender: true,
 });
+const slottedButtonRecipe = recipe({
+  slots: {
+    root: 'inline-flex items-center gap-2',
+    icon: 'size-4',
+    label: 'truncate',
+    badge: 'hidden rounded-full',
+  },
+  variants: {
+    tone: {
+      primary: {
+        root: 'bg-blue text-white',
+        icon: 'text-blue-100',
+      },
+      ghost: {
+        root: 'bg-transparent text-slate-900',
+        icon: 'text-slate-500',
+      },
+    },
+    loading: {
+      true: {
+        label: 'opacity-0',
+        badge: 'inline-flex',
+      },
+    },
+  },
+  defaultVariants: {
+    tone: 'primary',
+    loading: false,
+  },
+});
+const SlottedButton = styled('button', slottedButtonRecipe, {
+  view({ host, classes, variants }) {
+    return host.render({
+      children: (
+        <>
+          <span className={classes.icon()} />
+          <span className={classes.label()}>{host.children}</span>
+          {variants.loading ? <span className={classes.badge()} /> : null}
+        </>
+      ),
+    });
+  },
+});
+const EnumeratedSlottedButton = styled('button', slottedButtonRecipe, {
+  view({ host, classes, variants }) {
+    const slotNames = Object.keys(classes);
+    const slotMap = { ...classes };
+
+    return host.render({
+      'data-slot-count': slotNames.length,
+      children: (
+        <>
+          <span className={slotMap.icon()} />
+          <span className={slotMap.label()}>{host.children}</span>
+          {variants.loading ? <span className={slotMap.badge()} /> : null}
+        </>
+      ),
+    });
+  },
+});
 const { renderElement, renderFunction } = createRenderFixtures(
   createElement,
   '/'
@@ -172,6 +232,26 @@ describe('styled()', () => {
         })
       );
     });
+
+    bench('slotted view with direct slot access', () => {
+      renderToStaticMarkup(
+        createElement(SlottedButton, {
+          children: 'Save',
+          loading: true,
+          tone: 'primary',
+        })
+      );
+    });
+
+    bench('slotted view with Object.keys and spread', () => {
+      renderToStaticMarkup(
+        createElement(EnumeratedSlottedButton, {
+          children: 'Save',
+          loading: true,
+          tone: 'ghost',
+        })
+      );
+    });
   });
 
   describe('client rerender', () => {
@@ -192,6 +272,13 @@ describe('styled()', () => {
         SimpleButtonWithRender,
         createRenderRerenderProps(toggle, renderFunction)
       )
+    );
+    const slottedEnumeratedRerender = createClientRerenderBench(toggle =>
+      createElement(EnumeratedSlottedButton, {
+        children: 'Save',
+        loading: toggle,
+        tone: toggle ? 'ghost' : 'primary',
+      })
     );
 
     bench('simple component rerender', simple.run, {
@@ -217,6 +304,16 @@ describe('styled()', () => {
       teardown: renderFunctionRerender.teardown,
       throws: true,
     });
+
+    bench(
+      'slotted view rerender with Object.keys and spread',
+      slottedEnumeratedRerender.run,
+      {
+        setup: slottedEnumeratedRerender.setup,
+        teardown: slottedEnumeratedRerender.teardown,
+        throws: true,
+      }
+    );
   });
 });
 

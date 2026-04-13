@@ -264,6 +264,7 @@ This means:
 - `resolvedProps` receives `size`
 - `host.props` inside `view` also receives `size`
 - variant props are not renamed; `propAliases` only solve collisions with base props
+- alias names must not collide with existing base prop names, reserved React public props, or declared variant keys
 
 Typical styled usage:
 
@@ -471,7 +472,8 @@ function ActionView({ host }) {
 
 For slotted views:
 
-- `classes` is a readonly slot render map
+- `classes` is a readonly slot render map with enumerable object semantics
+- `Object.keys(classes)`, `Object.entries(classes)`, and `{ ...classes }` all expose the declared slots in order
 - `classes` may be safely destructured
 - local slot overrides still recompute compounds against the merged local selection
 

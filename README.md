@@ -140,6 +140,7 @@ function ButtonView({ host, classes }) {
 }
 
 const Button = styled('button', buttonRecipe, {
+  withRender: true,
   view: ButtonView,
 });
 ```
@@ -150,12 +151,16 @@ Usage:
 <Button tone="ghost" className="w-full">
   Cancel
 </Button>
+
+<Button tone="primary" render={<a href="/docs" />}>
+  Docs
+</Button>
 ```
 
 Key points:
 
 - `view` is required for slotted recipes
-- `classes` is a slot render map
+- `classes` is an enumerable slot render map and behaves like a normal object
 - external component `className` is routed automatically to the host slot
 - if the recipe has no `root` slot, provide `hostSlot`
 - call `host.render(...)` directly as a method
@@ -170,6 +175,8 @@ Use `recipe.resolve()` when you need class resolution plus a full prop bag:
 - headless abstractions
 - host prop aliasing such as `propAliases: { size: 'htmlSize' }`
 - explicit forwarding of resolved variant values with `forwardProps`
+
+Alias names must not collide with existing host props, reserved React public props, or declared variant keys.
 
 ## Shared Configuration
 

@@ -71,6 +71,13 @@ type SlotClassesObject = Record<
   [slotSelectionSymbol]: readonly CompiledSelectionValue[];
 };
 
+type SlotClassAccessor = readonly [
+  slotName: string,
+  getter: (
+    this: SlotClassesObject
+  ) => (input?: Record<string, unknown>) => string
+];
+
 function isIntrinsicBase(base: AnyElementType): base is AnyIntrinsicElement {
   return typeof base === 'string';
 }
@@ -210,15 +217,15 @@ function createHostView(
   return host;
 }
 
-function createSlotClassesPrototype(slotNames: readonly string[]) {
-  const prototype = Object.create(null) as Record<string, unknown>;
-
+function createSlotClassAccessors(
+  slotNames: readonly string[]
+): readonly SlotClassAccessor[] {
+  const accessors = new Array<SlotClassAccessor>(slotNames.length);
   for (let slotIndex = 0; slotIndex < slotNames.length; slotIndex += 1) {
     const slotName = slotNames[slotIndex];
-    Object.defineProperty(prototype, slotName, {
-      configurable: true,
-      enumerable: true,
-      get(this: SlotClassesObject) {
+    accessors[slotIndex] = [
+      slotName,
+      function getSlotRenderer(this: SlotClassesObject) {
         const renderSlot = (input?: Record<string, unknown>) =>
           resolveSlotClassNameForRender(
             this[slotCompiledSymbol],
@@ -236,20 +243,34 @@ function createSlotClassesPrototype(slotNames: readonly string[]) {
 
         return renderSlot;
       },
-    });
+    ];
   }
 
-  return prototype;
+  return accessors;
 }
 
 function createSlotClasses(
-  prototype: object,
+  accessors: readonly SlotClassAccessor[],
   compiled: SlotCompiledRecipe,
   selection: readonly CompiledSelectionValue[]
 ) {
-  const classes = Object.create(prototype) as SlotClassesObject;
-  classes[slotCompiledSymbol] = compiled;
-  classes[slotSelectionSymbol] = selection;
+  const classes = Object.create(null) as SlotClassesObject;
+
+  Object.defineProperty(classes, slotCompiledSymbol, {
+    value: compiled,
+  });
+  Object.defineProperty(classes, slotSelectionSymbol, {
+    value: selection,
+  });
+
+  for (const [slotName, getter] of accessors) {
+    Object.defineProperty(classes, slotName, {
+      configurable: true,
+      enumerable: true,
+      get: getter,
+    });
+  }
+
   return classes;
 }
 
@@ -444,7 +465,7 @@ function createSlotViewStyled<
   const compiled = getCompiledRecipe(recipe) as SlotCompiledRecipe;
   const View = options.view;
   const hostSlotIndex = getHostSlotIndex(compiled, options.hostSlot);
-  const slotClassesPrototype = createSlotClassesPrototype(compiled.slotNames);
+  const slotClassAccessors = createSlotClassAccessors(compiled.slotNames);
 
   const Component = forwardRef<
     unknown,
@@ -466,7 +487,7 @@ function createSlotViewStyled<
 
     return createElement(View as any, {
       classes: createSlotClasses(
-        slotClassesPrototype,
+        slotClassAccessors,
         compiled,
         resolved.selection
       ),

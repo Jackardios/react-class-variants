@@ -294,6 +294,77 @@ describe('styled()', () => {
     expect(input.className).toBe('block rounded-md text-sm opacity-50');
   });
 
+  it('exposes slotted view classes as an enumerable slot map', () => {
+    const buttonRecipe = recipe({
+      slots: {
+        root: 'inline-flex items-center',
+        icon: 'size-4',
+        label: 'truncate',
+      },
+      variants: {
+        tone: {
+          primary: {
+            root: 'bg-blue text-white',
+            icon: 'text-blue-100',
+          },
+        },
+      },
+      defaultVariants: {
+        tone: 'primary',
+      },
+    });
+    let slotKeys: string[] = [];
+    let slotEntryTypes: Array<[string, string]> = [];
+    let spreadKeys: string[] = [];
+    let spreadValueTypes: string[] = [];
+    let spreadSymbols: symbol[] = [];
+    let stableIconReference = false;
+
+    const Button = styled('button', buttonRecipe, {
+      view({ host, classes }) {
+        slotKeys = Object.keys(classes);
+        slotEntryTypes = Object.entries(classes).map(([key, value]) => [
+          key,
+          typeof value,
+        ]);
+
+        const spreadClasses = { ...classes };
+        spreadKeys = Object.keys(spreadClasses);
+        spreadValueTypes = Object.values(spreadClasses).map(
+          value => typeof value
+        );
+        spreadSymbols = Object.getOwnPropertySymbols(spreadClasses);
+
+        const firstIcon = classes.icon;
+        const secondIcon = classes.icon;
+        stableIconReference = firstIcon === secondIcon;
+
+        return host.render({
+          children: (
+            <>
+              <span data-testid="icon" className={firstIcon()} />
+              <span className={classes.label()}>{host.children}</span>
+            </>
+          ),
+        });
+      },
+    });
+
+    render(<Button tone="primary">Save</Button>);
+
+    expect(slotKeys).toEqual(['root', 'icon', 'label']);
+    expect(slotEntryTypes).toEqual([
+      ['root', 'function'],
+      ['icon', 'function'],
+      ['label', 'function'],
+    ]);
+    expect(spreadKeys).toEqual(['root', 'icon', 'label']);
+    expect(spreadValueTypes).toEqual(['function', 'function', 'function']);
+    expect(spreadSymbols).toEqual([]);
+    expect(stableIconReference).toBe(true);
+    expect(screen.getByTestId('icon').className).toBe('size-4 text-blue-100');
+  });
+
   it('rejects reserved prop alias targets on the React surface', () => {
     const strict = defineConfig({ validate: 'always' });
     const inputRecipe = strict.recipe({

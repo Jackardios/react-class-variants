@@ -63,6 +63,30 @@ type VariantPropKeys<TRecipe> = [TRecipe] extends [never]
   ? never
   : keyof VariantProps<TRecipe>;
 
+type BasePropKeys<Base extends AnyElementType> =
+  keyof ComponentPropsWithRef<Base> & string;
+
+type DisallowedAliasTargetKeys<Base extends AnyElementType, TRecipe> =
+  | ReservedReactPublicProps
+  | BasePropKeys<Base>
+  | Extract<VariantPropKeys<TRecipe>, string>;
+
+type ValidatedAliasValue<
+  AliasValue,
+  Disallowed extends string
+> = AliasValue extends string ? Exclude<AliasValue, Disallowed> : AliasValue;
+
+type ValidatedPropAliases<
+  Base extends AnyElementType,
+  TRecipe,
+  Aliases extends PropAliases<Base>
+> = {
+  [NativeKey in keyof Aliases]: ValidatedAliasValue<
+    Aliases[NativeKey],
+    DisallowedAliasTargetKeys<Base, TRecipe>
+  >;
+};
+
 type ResolvedForwardedVariantProps<TRecipe, Forwarded extends string> = Pick<
   ResolvedVariantProps<TRecipe>,
   Extract<Forwarded, keyof ResolvedVariantProps<TRecipe> & string>
@@ -189,7 +213,7 @@ export type StyledOptionsCommon<
   displayName?: string;
   forwardProps?: readonly Forwarded[] &
     readonly (keyof VariantProps<TRecipe> & string)[];
-  propAliases?: Aliases;
+  propAliases?: ValidatedPropAliases<Base, TRecipe, Aliases>;
 };
 
 export type RootStyledOptions<

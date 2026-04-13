@@ -370,6 +370,57 @@ expectError(
   )
 );
 
+expectError(
+  styled(
+    'a',
+    recipe({
+      variants: {
+        tone: {
+          info: 'text-sky-700',
+        },
+      },
+    }),
+    {
+      propAliases: {
+        href: 'id',
+      },
+    }
+  )
+);
+
+const RouterLinkWithHref = (
+  props: { to: string; href?: string } & ComponentPropsWithoutRef<'a'>
+) => null;
+
+expectError(
+  styled(RouterLinkWithHref, badge, {
+    propAliases: {
+      href: 'to',
+    },
+  })
+);
+
+expectError(
+  styled(
+    'input',
+    recipe({
+      variants: {
+        tone: {
+          info: 'text-sky-700',
+        },
+        size: {
+          sm: 'text-sm',
+        },
+      },
+    }),
+    {
+      propAliases: {
+        size: 'tone',
+      },
+    }
+  )
+);
+
 expectType<ReactNode>(
   Input({
     size: 'sm',

@@ -134,6 +134,23 @@ Input({
   value: 'typed input',
 });
 
+styled(
+  // @ts-expect-error alias target must not collide with host props
+  'a',
+  recipe({
+    variants: {
+      tone: {
+        info: 'text-sky-500',
+      },
+    },
+  }),
+  {
+    propAliases: {
+      href: 'id',
+    },
+  }
+);
+
 // @ts-expect-error invalid tone should fail in bundler projects too
 Button({ tone: 'ghost' });
 

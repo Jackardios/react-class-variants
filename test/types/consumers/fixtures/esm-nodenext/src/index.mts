@@ -167,6 +167,23 @@ Input({
   value: 'native size',
 });
 
+styled(
+  // @ts-expect-error alias target must not collide with host props
+  'a',
+  recipe({
+    variants: {
+      tone: {
+        neutral: 'text-slate-700',
+      },
+    },
+  }),
+  {
+    propAliases: {
+      href: 'id',
+    },
+  }
+);
+
 const multipartButtonRecipe = recipe({
   slots: {
     root: 'inline-flex',

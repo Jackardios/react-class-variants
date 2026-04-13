@@ -159,6 +159,8 @@ Usage:
 
 This keeps `size` as the variant prop while still exposing the native input prop under a safe public name.
 
+Alias names must stay distinct from existing host props, reserved React public props, and declared variant keys.
+
 ## 3. Use `resolve()` in a Wrapper
 
 When you want total control over markup or prop routing, use `resolve()` manually.
