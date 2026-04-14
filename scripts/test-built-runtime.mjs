@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import React from 'react';
@@ -11,40 +12,72 @@ const repoRoot = resolve(scriptDir, '..');
 const packageRootPath = resolve(repoRoot, 'dist/index.js');
 const corePath = resolve(repoRoot, 'dist/core.js');
 
-function assertImportsWithoutProcess(entryPath, shimReact = false) {
-  const reactShim = shimReact
-    ? `import { createRequire } from 'node:module';
-const require = createRequire(import.meta.url);
-const reactPath = require.resolve('react');
-require.cache[reactPath] = {
-  id: reactPath,
-  filename: reactPath,
-  loaded: true,
-  exports: {
-    cloneElement: () => null,
-    createElement: () => null,
-    forwardRef: render => render,
-    isValidElement: () => false,
-  },
-};`
-    : '';
+const reactShimSource = `export const cloneElement = () => null;
+export const createElement = () => null;
+export const forwardRef = render => render;
+export const isValidElement = () => false;
+export const useMemo = factory => factory();`;
 
-  execFileSync(
-    process.execPath,
-    [
-      '--input-type=module',
-      '--eval',
-      `${reactShim}
+// Node 20 crashes in the ESM->CJS bridge before require.cache shims apply when
+// globalThis.process is undefined, so the package-root smoke test redirects
+// "react" to an ESM stub via a loader instead.
+function createReactShimLoader() {
+  const tempDir = mkdtempSync(resolve(tmpdir(), 'react-class-variants-'));
+  const reactShimPath = resolve(tempDir, 'react-shim.mjs');
+  const loaderPath = resolve(tempDir, 'react-loader.mjs');
+
+  writeFileSync(reactShimPath, reactShimSource);
+  writeFileSync(
+    loaderPath,
+    `const reactShimUrl = ${JSON.stringify(pathToFileURL(reactShimPath).href)};
+
+export async function resolve(specifier, context, nextResolve) {
+  if (specifier === 'react') {
+    return {
+      shortCircuit: true,
+      url: reactShimUrl,
+    };
+  }
+
+  return nextResolve(specifier, context);
+}
+`
+  );
+
+  return {
+    loaderPath,
+    tempDir,
+  };
+}
+
+function assertImportsWithoutProcess(entryPath, shimReact = false) {
+  const reactShimLoader = shimReact ? createReactShimLoader() : null;
+
+  try {
+    execFileSync(
+      process.execPath,
+      [
+        ...(reactShimLoader
+          ? ['--no-warnings', '--loader', reactShimLoader.loaderPath]
+          : []),
+        '--input-type=module',
+        '--eval',
+        `
 globalThis.process = undefined;
 const module = await import(${JSON.stringify(pathToFileURL(entryPath).href)});
 module.recipe({ base: 'inline-flex' });
 module.defineConfig().recipe({ base: 'inline-flex' });`,
-    ],
-    {
-      cwd: repoRoot,
-      stdio: 'inherit',
+      ],
+      {
+        cwd: repoRoot,
+        stdio: 'inherit',
+      }
+    );
+  } finally {
+    if (reactShimLoader) {
+      rmSync(reactShimLoader.tempDir, { force: true, recursive: true });
     }
-  );
+  }
 }
 
 assertImportsWithoutProcess(packageRootPath, true);
