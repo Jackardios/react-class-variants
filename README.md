@@ -57,9 +57,9 @@ Four rules explain most of the package:
 ## Quick Start
 
 ```tsx
-import { defineRecipeConfig, recipe, styled } from 'react-class-variants';
+import { recipe, styled } from 'react-class-variants';
 
-const buttonConfig = defineRecipeConfig({
+const buttonRecipe = recipe({
   base: 'inline-flex items-center justify-center rounded-md font-medium transition',
   variants: {
     tone: {
@@ -77,12 +77,8 @@ const buttonConfig = defineRecipeConfig({
   },
 });
 
-const buttonRecipe = recipe(buttonConfig);
-
 export const Button = styled('button', buttonRecipe);
 ```
-
-Use `defineRecipeConfig()` when you keep a config object around so `defaultVariants` retains editor completions and exact key/value checks.
 
 Usage:
 
@@ -97,6 +93,39 @@ Direct recipe calls stay available when you only need a class string:
 ```ts
 buttonRecipe({ tone: 'primary', className: 'w-full' });
 ```
+
+## Keeping Config Objects Explicit
+
+Use `defineRecipeConfig()` when you want the config itself to stay available as a typed source of truth, for example to power Storybook controls, docs, or test fixtures from the same declared variants:
+
+```ts
+import { defineRecipeConfig, recipe } from 'react-class-variants';
+
+export const badgeConfig = defineRecipeConfig({
+  base: 'inline-flex items-center rounded-full font-medium',
+  variants: {
+    tone: {
+      info: 'bg-sky-100 text-sky-800',
+      success: 'bg-emerald-100 text-emerald-800',
+      danger: 'bg-red-100 text-red-800',
+    },
+    size: {
+      sm: 'px-2 py-0.5 text-xs',
+      md: 'px-2.5 py-1 text-sm',
+    },
+  },
+  defaultVariants: {
+    tone: 'info',
+    size: 'md',
+  },
+});
+
+export const badgeRecipe = recipe(badgeConfig);
+
+export const badgeToneOptions = Object.keys(badgeConfig.variants.tone);
+```
+
+`defineRecipeConfig()` is a zero-cost typed helper. Reach for it when you keep a config object in a variable and want `defaultVariants` completions plus exact key/value checks. In v2, recipe instances do not expose a runtime `.config` property, so this is the intended way to keep config data around.
 
 ## Slotted Components
 
