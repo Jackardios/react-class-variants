@@ -5,6 +5,8 @@ import {
   styled,
   type RecipeConfigOf,
   type RecipeInput,
+  type RootStyledViewProps,
+  type SlotStyledViewProps,
 } from 'react-class-variants';
 import {
   defineConfig as defineCoreConfig,
@@ -91,6 +93,113 @@ defineCoreRecipeConfig({
     },
   },
 });
+
+const coreButtonRecipe = coreRecipe({
+  base: 'inline-flex',
+  variants: {
+    tone: {
+      info: 'text-sky-700',
+      danger: 'text-rose-700',
+    },
+    disabled: {
+      true: 'opacity-50',
+    },
+  },
+  defaultVariants: {
+    disabled: false,
+  },
+});
+
+const CoreButton = styled('button', coreButtonRecipe, {
+  withRender: true,
+  forwardProps: ['disabled'],
+});
+const CoreViewButton = styled('button', coreButtonRecipe, {
+  forwardProps: ['disabled'],
+  view: ({
+    host,
+    variants,
+  }: RootStyledViewProps<
+    'button',
+    typeof coreButtonRecipe,
+    false,
+    {},
+    'disabled'
+  >) => {
+    type _CoreViewTone = Expect<Equal<typeof variants.tone, 'info' | 'danger'>>;
+    type _CoreViewDisabled = Expect<Equal<typeof variants.disabled, boolean>>;
+    type _CoreViewType = Expect<
+      Equal<typeof host.props.type, 'button' | 'submit' | 'reset' | undefined>
+    >;
+    void (true as _CoreViewTone);
+    void (true as _CoreViewDisabled);
+    void (true as _CoreViewType);
+    return host.render();
+  },
+});
+
+CoreButton({
+  tone: 'info',
+  render: props => {
+    type _CoreRenderClassName = Expect<Equal<typeof props.className, string>>;
+    type _CoreRenderDisabled = Expect<Equal<typeof props.disabled, boolean>>;
+    void (true as _CoreRenderDisabled);
+    return <a {...props} href="/" />;
+  },
+});
+CoreViewButton({ tone: 'danger' });
+
+const coreFieldRecipe = coreRecipe({
+  slots: {
+    root: 'grid gap-2',
+    label: 'text-sm',
+    input: 'rounded-md',
+  },
+  variants: {
+    invalid: {
+      true: {
+        label: 'text-red-700',
+        input: 'border-red-500',
+      },
+    },
+  },
+  defaultVariants: {
+    invalid: false,
+  },
+});
+
+const CoreField = styled('label', coreFieldRecipe, {
+  view: ({
+    host,
+    classes,
+    variants,
+  }: SlotStyledViewProps<'label', typeof coreFieldRecipe, false>) => {
+    type _CoreFieldInvalid = Expect<Equal<typeof variants.invalid, boolean>>;
+    type _CoreFieldRoot = Expect<
+      Equal<ReturnType<typeof classes.root>, string>
+    >;
+    type _CoreFieldLabel = Expect<
+      Equal<ReturnType<typeof classes.label>, string>
+    >;
+    type _CoreFieldInput = Expect<
+      Equal<ReturnType<typeof classes.input>, string>
+    >;
+    void (true as _CoreFieldInvalid);
+    void (true as _CoreFieldRoot);
+    void (true as _CoreFieldLabel);
+    void (true as _CoreFieldInput);
+    return host.render({
+      children: (
+        <>
+          <span className={classes.label()}>{host.children}</span>
+          <input className={classes.input()} />
+        </>
+      ),
+    });
+  },
+});
+
+CoreField({ invalid: true, children: 'Email' });
 
 const Button = styled('button', badge, { withRender: true });
 const StrictButton = strictConfiguredStyled('button', badge);

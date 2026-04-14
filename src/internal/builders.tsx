@@ -17,6 +17,8 @@ import type {
 import type {
   AnyElementType,
   AnyIntrinsicElement,
+  AnyRootRecipeLike,
+  AnySlotRecipeLike,
   PropAliases,
   RenderProp,
   RootStyledOptions,
@@ -310,7 +312,7 @@ function ensureRenderSupported(
 
 function createIntrinsicRootFastStyled<
   Base extends AnyIntrinsicElement,
-  TRecipe extends AnyRootRecipe,
+  TRecipe extends AnyRootRecipeLike,
   Aliases extends PropAliases<Base>,
   Forwarded extends string
 >(
@@ -353,7 +355,7 @@ function createIntrinsicRootFastStyled<
 
 function createRootRenderStyled<
   Base extends AnyElementType,
-  TRecipe extends AnyRootRecipe,
+  TRecipe extends AnyRootRecipeLike,
   WithRender extends boolean,
   Aliases extends PropAliases<Base>,
   Forwarded extends string
@@ -400,7 +402,7 @@ function createRootRenderStyled<
 
 function createRootViewStyled<
   Base extends AnyElementType,
-  TRecipe extends AnyRootRecipe,
+  TRecipe extends AnyRootRecipeLike,
   WithRender extends boolean,
   Aliases extends PropAliases<Base>,
   Forwarded extends string
@@ -452,7 +454,7 @@ function createRootViewStyled<
 
 function createSlotViewStyled<
   Base extends AnyElementType,
-  TRecipe extends AnySlotRecipe,
+  TRecipe extends AnySlotRecipeLike,
   WithRender extends boolean,
   Aliases extends PropAliases<Base>,
   Forwarded extends string
@@ -464,7 +466,9 @@ function createSlotViewStyled<
   withRender: WithRender,
   displayName: string
 ) {
-  const compiled = getCompiledRecipe(recipe) as SlotCompiledRecipe;
+  const compiled = getCompiledRecipe(
+    recipe as unknown as AnySlotRecipe
+  ) as SlotCompiledRecipe;
   const View = options.view;
   const hostSlotIndex = getHostSlotIndex(compiled, options.hostSlot);
   const slotClassAccessors = createSlotClassAccessors(compiled.slotNames);
@@ -517,7 +521,7 @@ function createSlotViewStyled<
 
 export function createRootStyled<
   Base extends AnyElementType,
-  TRecipe extends AnyRootRecipe,
+  TRecipe extends AnyRootRecipeLike,
   WithRender extends boolean,
   Aliases extends PropAliases<Base>,
   Forwarded extends string
@@ -526,7 +530,9 @@ export function createRootStyled<
   recipe: TRecipe,
   options?: RootStyledOptions<Base, TRecipe, WithRender, Aliases, Forwarded>
 ): StyledComponentType<Base, TRecipe, WithRender, Aliases, Forwarded> {
-  const compiled = getCompiledRecipe(recipe) as RootCompiledRecipe;
+  const compiled = getCompiledRecipe(
+    recipe as unknown as AnyRootRecipe
+  ) as RootCompiledRecipe;
   const withRender = options?.withRender === true;
   const resolveOptions = normalizeResolveOptions(
     compiled,
@@ -565,7 +571,7 @@ export function createRootStyled<
 
 export function createSlotStyled<
   Base extends AnyElementType,
-  TRecipe extends AnySlotRecipe,
+  TRecipe extends AnySlotRecipeLike,
   WithRender extends boolean,
   Aliases extends PropAliases<Base>,
   Forwarded extends string
@@ -574,7 +580,9 @@ export function createSlotStyled<
   recipe: TRecipe,
   options: SlotStyledOptions<Base, TRecipe, WithRender, Aliases, Forwarded>
 ): StyledComponentType<Base, TRecipe, WithRender, Aliases, Forwarded> {
-  const compiled = getCompiledRecipe(recipe) as SlotCompiledRecipe;
+  const compiled = getCompiledRecipe(
+    recipe as unknown as AnySlotRecipe
+  ) as SlotCompiledRecipe;
   const withRender = options.withRender === true;
   const resolveOptions = normalizeResolveOptions(
     compiled,

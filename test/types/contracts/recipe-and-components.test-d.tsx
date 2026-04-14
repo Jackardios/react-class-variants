@@ -9,6 +9,7 @@ import {
   expectNotAssignable,
   expectType,
 } from 'tsd';
+import { recipe as coreRecipe } from '../../../dist/core';
 import {
   defineConfig,
   recipe,
@@ -131,6 +132,96 @@ expectType<string>(
     },
   })()
 );
+
+const coreBadge = coreRecipe({
+  base: 'inline-flex rounded-full',
+  variants: {
+    tone: {
+      info: 'bg-sky-100',
+      danger: 'bg-rose-100',
+    },
+    disabled: {
+      true: 'opacity-50',
+    },
+  },
+  defaultVariants: {
+    disabled: false,
+  },
+});
+
+const CoreBadgeButton = styled('button', coreBadge, {
+  withRender: true,
+  forwardProps: ['disabled'],
+});
+const CoreBadgeViewButton = styled('button', coreBadge, {
+  view: ({
+    host,
+    variants,
+  }: RootStyledViewProps<'button', typeof coreBadge, false>) => {
+    expectType<'info' | 'danger'>(variants.tone);
+    expectType<boolean>(variants.disabled);
+    expectType<'button' | 'submit' | 'reset' | undefined>(host.props.type);
+    return host.render({
+      'data-tone': variants.tone,
+      children: host.children,
+    });
+  },
+});
+
+expectType<ReactNode>(CoreBadgeViewButton({ tone: 'danger' }));
+
+expectType<ReactNode>(
+  CoreBadgeButton({
+    tone: 'info',
+    render: props => {
+      expectType<string>(props.className);
+      expectType<boolean>(props.disabled);
+      return <a {...props} href="/" />;
+    },
+  })
+);
+
+const coreField = coreRecipe({
+  slots: {
+    root: 'grid gap-2',
+    label: 'text-sm',
+    input: 'rounded-md',
+  },
+  variants: {
+    invalid: {
+      true: {
+        label: 'text-red-700',
+        input: 'border-red-500',
+      },
+    },
+  },
+  defaultVariants: {
+    invalid: false,
+  },
+});
+
+const CoreField = styled('label', coreField, {
+  view: ({
+    host,
+    classes,
+    variants,
+  }: SlotStyledViewProps<'label', typeof coreField, false>) => {
+    expectType<boolean>(variants.invalid);
+    expectType<string>(classes.root());
+    expectType<string>(classes.label());
+    expectType<string>(classes.input());
+    return host.render({
+      children: (
+        <>
+          <span className={classes.label()}>{host.children}</span>
+          <input className={classes.input()} />
+        </>
+      ),
+    });
+  },
+});
+
+expectType<ReactNode>(CoreField({ invalid: true, children: 'Email' }));
 
 const buttonRecipe = recipe({
   slots: {
