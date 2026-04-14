@@ -163,6 +163,131 @@ export type ResolveOptions<
   propAliases?: PropAliases;
 };
 
+type ResolveInputProps<TInput> = TInput extends Record<string, unknown>
+  ? TInput
+  : {};
+
+type ResolveInputPropAliases<TOptions> = TOptions extends {
+  propAliases?: infer PropAliases;
+}
+  ? Exclude<PropAliases, undefined> extends infer DefinedPropAliases
+    ? DefinedPropAliases extends Record<string, string>
+      ? DefinedPropAliases
+      : {}
+    : {}
+  : {};
+
+type ResolveInputForwardProps<TOptions> = TOptions extends {
+  forwardProps?: infer ForwardProps;
+}
+  ? Exclude<ForwardProps, undefined> extends infer DefinedForwardProps
+    ? DefinedForwardProps extends readonly string[]
+      ? DefinedForwardProps
+      : undefined
+    : undefined
+  : undefined;
+
+type NonVariantResolveInputProps<TRecipe, TInput> = Omit<
+  ResolveInputProps<TInput>,
+  keyof VariantProps<TRecipe>
+>;
+
+type HasSpecificResolvePropAliases<
+  TPropAliases extends Record<string, string>
+> = string extends keyof TPropAliases ? false : true;
+
+type HasExactResolveForwardProps<TForwardProps extends readonly string[]> =
+  number extends TForwardProps['length'] ? false : true;
+
+type ResolveAliasedPropKeys<
+  TProps,
+  TPropAliases extends Record<string, string>
+> =
+  | Exclude<keyof TProps, TPropAliases[keyof TPropAliases] & string>
+  | (keyof TPropAliases & string);
+
+type ResolveAliasedPropValue<
+  TProps,
+  TPropAliases extends Record<string, string>,
+  Key extends PropertyKey
+> = Key extends keyof TPropAliases & string
+  ? TPropAliases[Key] extends keyof TProps
+    ? TProps[TPropAliases[Key]]
+    : Key extends keyof TProps
+    ? TProps[Key]
+    : never
+  : Key extends keyof TProps
+  ? TProps[Key]
+  : never;
+
+type ApplyResolvePropAliases<
+  TProps,
+  TPropAliases extends Record<string, string>
+> = HasSpecificResolvePropAliases<TPropAliases> extends true
+  ? Simplify<{
+      [Key in ResolveAliasedPropKeys<
+        TProps,
+        TPropAliases
+      > as ResolveAliasedPropValue<TProps, TPropAliases, Key> extends never
+        ? never
+        : Key]: ResolveAliasedPropValue<TProps, TPropAliases, Key>;
+    }>
+  : TProps;
+
+type ResolveForwardPropKeys<
+  TRecipe,
+  TForwardProps extends readonly string[]
+> = Extract<
+  TForwardProps[number],
+  keyof ResolvedVariantProps<TRecipe> & string
+>;
+
+type ApplyResolveForwardProps<
+  TRecipe,
+  TProps,
+  TForwardProps extends readonly string[] | undefined
+> = TForwardProps extends readonly string[]
+  ? HasExactResolveForwardProps<TForwardProps> extends true
+    ? Simplify<
+        Omit<
+          TProps,
+          Extract<ResolveForwardPropKeys<TRecipe, TForwardProps>, keyof TProps>
+        > &
+          Pick<
+            ResolvedVariantProps<TRecipe>,
+            ResolveForwardPropKeys<TRecipe, TForwardProps>
+          >
+      >
+    : Simplify<
+        TProps &
+          Partial<
+            Pick<
+              ResolvedVariantProps<TRecipe>,
+              ResolveForwardPropKeys<TRecipe, TForwardProps>
+            >
+          >
+      >
+  : TProps;
+
+type ResolveInputPropsWithOptions<TRecipe, TInput, TOptions> =
+  ApplyResolveForwardProps<
+    TRecipe,
+    ApplyResolvePropAliases<
+      NonVariantResolveInputProps<TRecipe, TInput>,
+      ResolveInputPropAliases<TOptions>
+    >,
+    ResolveInputForwardProps<TOptions>
+  >;
+
+type RootResolvedProps<TRecipe, TInput, TOptions> = Simplify<
+  ResolveInputPropsWithOptions<TRecipe, TInput, TOptions> & {
+    className: string;
+  }
+>;
+
+type SlotResolvedProps<TRecipe, TInput, TOptions> =
+  ResolveInputPropsWithOptions<TRecipe, TInput, TOptions>;
+
 export type RootRecipeInput<TRecipe> = VariantProps<TRecipe> & {
   className?: ClassNameValue;
 };
@@ -218,17 +343,23 @@ type RecipeBrand<
   >;
 };
 
-export type RootResolveResult<TRecipe> = {
+export type RootResolveResult<
+  TRecipe,
+  TInput extends Record<string, unknown> | undefined = undefined,
+  TOptions extends ResolveOptions | undefined = undefined
+> = {
   variants: ResolvedVariantProps<TRecipe>;
-  resolvedProps: Record<string, unknown> & {
-    className: string;
-  };
+  resolvedProps: RootResolvedProps<TRecipe, TInput, TOptions>;
 };
 
-export type SlotResolveResult<TRecipe> = {
+export type SlotResolveResult<
+  TRecipe,
+  TInput extends Record<string, unknown> | undefined = undefined,
+  TOptions extends ResolveOptions | undefined = undefined
+> = {
   variants: ResolvedVariantProps<TRecipe>;
   slots: SlotRenderMap<TRecipe>;
-  resolvedProps: Record<string, unknown>;
+  resolvedProps: SlotResolvedProps<TRecipe, TInput, TOptions>;
 };
 
 export type RootRecipe<
@@ -237,10 +368,19 @@ export type RootRecipe<
   Config = RootRecipeConfig<Variants, any>
 > = RecipeBrand<'root', never, Variants, Defaults, Config> & {
   (input?: RootRecipeInput<RootRecipe<Variants, Defaults, Config>>): string;
-  resolve(
-    input?: Record<string, unknown>,
-    options?: ResolveOptions<Extract<keyof Variants, string>>
-  ): RootResolveResult<RootRecipe<Variants, Defaults, Config>>;
+  resolve<
+    TInput extends Record<string, unknown> | undefined = undefined,
+    const TOptions extends
+      | ResolveOptions<Extract<keyof Variants, string>>
+      | undefined = undefined
+  >(
+    input?: TInput,
+    options?: TOptions
+  ): RootResolveResult<
+    RootRecipe<Variants, Defaults, Config>,
+    TInput,
+    TOptions
+  >;
 };
 
 export type SlotRecipe<
@@ -252,18 +392,27 @@ export type SlotRecipe<
   (
     input?: SlotRecipeInput<SlotRecipe<Slots, Variants, Defaults, Config>>
   ): SlotRenderMap<SlotRecipe<Slots, Variants, Defaults, Config>>;
-  resolve(
-    input?: Record<string, unknown>,
-    options?: ResolveOptions<Extract<keyof Variants, string>>
-  ): SlotResolveResult<SlotRecipe<Slots, Variants, Defaults, Config>>;
+  resolve<
+    TInput extends Record<string, unknown> | undefined = undefined,
+    const TOptions extends
+      | ResolveOptions<Extract<keyof Variants, string>>
+      | undefined = undefined
+  >(
+    input?: TInput,
+    options?: TOptions
+  ): SlotResolveResult<
+    SlotRecipe<Slots, Variants, Defaults, Config>,
+    TInput,
+    TOptions
+  >;
 };
 
 export type AnyRootRecipe = RecipeBrand<'root', never, any, any, any> & {
-  readonly resolve: (...args: any[]) => RootResolveResult<any>;
+  readonly resolve: (...args: any[]) => RootResolveResult<any, any, any>;
 };
 
 export type AnySlotRecipe = RecipeBrand<'slot', any, any, any, any> & {
-  readonly resolve: (...args: any[]) => SlotResolveResult<any>;
+  readonly resolve: (...args: any[]) => SlotResolveResult<any, any, any>;
 };
 
 export type AnyRecipe = AnyRootRecipe | AnySlotRecipe;

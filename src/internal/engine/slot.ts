@@ -1,9 +1,11 @@
 import type {
   AnyRecipe,
+  AnySlotRecipe,
   AnySlotRecipeConfig,
   ClassNameValue,
   ResolveOptions,
   SlotRecipe,
+  SlotResolveResult,
 } from '../core-types';
 import {
   appendClassName,
@@ -574,10 +576,13 @@ export function createStrictSlotRecipe(
     resolve: SlotRecipe['resolve'];
   };
 
-  slotRecipe.resolve = (
-    input?: Record<string, unknown>,
-    options?: ResolveOptions
-  ) => {
+  slotRecipe.resolve = <
+    TInput extends Record<string, unknown> | undefined = undefined,
+    const TOptions extends ResolveOptions | undefined = undefined
+  >(
+    input?: TInput,
+    options?: TOptions
+  ): SlotResolveResult<AnySlotRecipe, TInput, TOptions> => {
     const normalizedOptions = normalizeResolveOptions(compiled, options);
     const selection = buildSelection(compiled, input, 'recipe', true, false);
 
@@ -587,10 +592,14 @@ export function createStrictSlotRecipe(
         input,
         normalizedOptions,
         selection
-      ),
+      ) as SlotResolveResult<AnySlotRecipe, TInput, TOptions>['resolvedProps'],
       slots: createStrictSlotRenderers(compiled, selection),
-      variants: materializeSelection(compiled, selection),
-    } as ReturnType<SlotRecipe['resolve']>;
+      variants: materializeSelection(compiled, selection) as SlotResolveResult<
+        AnySlotRecipe,
+        TInput,
+        TOptions
+      >['variants'],
+    };
   };
 
   return attachCompiled(slotRecipe as AnyRecipe, compiled);
@@ -606,10 +615,13 @@ export function createLeanSlotRecipe(
     resolve: SlotRecipe['resolve'];
   };
 
-  slotRecipe.resolve = (
-    input?: Record<string, unknown>,
-    options?: ResolveOptions
-  ) => {
+  slotRecipe.resolve = <
+    TInput extends Record<string, unknown> | undefined = undefined,
+    const TOptions extends ResolveOptions | undefined = undefined
+  >(
+    input?: TInput,
+    options?: TOptions
+  ): SlotResolveResult<AnySlotRecipe, TInput, TOptions> => {
     const normalizedOptions = normalizeResolveOptions(compiled, options);
     const selection = buildSlotSelectionLean(compiled, input);
 
@@ -619,10 +631,14 @@ export function createLeanSlotRecipe(
         input,
         normalizedOptions,
         selection
-      ),
+      ) as SlotResolveResult<AnySlotRecipe, TInput, TOptions>['resolvedProps'],
       slots: createLeanSlotRenderers(compiled, selection),
-      variants: materializeSelection(compiled, selection),
-    } as ReturnType<SlotRecipe['resolve']>;
+      variants: materializeSelection(compiled, selection) as SlotResolveResult<
+        AnySlotRecipe,
+        TInput,
+        TOptions
+      >['variants'],
+    };
   };
 
   return attachCompiled(slotRecipe as AnyRecipe, compiled);

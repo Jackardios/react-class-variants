@@ -16,6 +16,7 @@ import {
   type RecipeResolved,
   type ResolvedVariantProps,
   type SlotNames,
+  type StyledFn,
   type VariantProps,
   defineConfig,
   mergeProps,
@@ -51,6 +52,16 @@ const linkConfig = defineRecipeConfig({
 });
 
 const link = recipe(linkConfig);
+const resolvedLink = link.resolve(
+  {
+    tone: 'primary',
+    className: 'external',
+    id: 'docs',
+  },
+  {
+    forwardProps: ['disabled'],
+  }
+);
 
 const { recipe: configuredRecipe, styled: configuredStyled } = defineConfig({
   merge: className => className,
@@ -83,6 +94,7 @@ type LinkVariants = VariantProps<typeof link>;
 type LinkResolvedVariants = ResolvedVariantProps<typeof link>;
 
 expectAssignable<AnyRecipe>(link);
+expectAssignable<StyledFn>(styled);
 expectAssignable<LinkConfig>(linkConfig);
 expectType<typeof linkConfig>(defineRecipeConfig(linkConfig));
 expectAssignable<LinkConfig>({
@@ -111,6 +123,9 @@ expectAssignable<LinkResolved>({
   variants: { tone: 'primary', disabled: false },
   resolvedProps: { className: 'inline-flex text-blue-600' },
 });
+expectType<string>(resolvedLink.resolvedProps.className);
+expectType<string>(resolvedLink.resolvedProps.id);
+expectType<boolean>(resolvedLink.resolvedProps.disabled);
 
 const Link = styled('a', link);
 const ConfiguredLink = configuredStyled('a', configuredLink);

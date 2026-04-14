@@ -14,6 +14,7 @@ import {
   recipe,
   styled,
   type RecipeResolved,
+  type ResolveOptions,
   type ResolvedVariantProps,
   type RootStyledViewProps,
   type SlotNames,
@@ -82,6 +83,16 @@ expectError(
 type BadgeVariants = VariantProps<typeof badge>;
 type BadgeResolvedVariants = ResolvedVariantProps<typeof badge>;
 type BadgeResolved = RecipeResolved<typeof badge>;
+const resolvedBadge = badge.resolve(
+  {
+    tone: 'danger',
+    className: 'external',
+    id: 'badge',
+  },
+  {
+    forwardProps: ['disabled'],
+  }
+);
 
 expectAssignable<BadgeVariants>({ tone: 'info' });
 expectNotAssignable<BadgeVariants>({});
@@ -90,6 +101,9 @@ expectAssignable<BadgeResolved>({
   variants: { tone: 'info', disabled: false },
   resolvedProps: { className: 'inline-flex rounded-full bg-sky-100' },
 });
+expectType<string>(resolvedBadge.resolvedProps.className);
+expectType<string>(resolvedBadge.resolvedProps.id);
+expectType<boolean>(resolvedBadge.resolvedProps.disabled);
 expectError(defineConfig({ validate: 'dev' }));
 expectType<string>(
   defineConfig().recipe({
@@ -170,7 +184,63 @@ const resolvedButton = buttonRecipe.resolve({
   id: 'save',
 });
 expectType<string>(resolvedButton.slots.icon());
-expectType<unknown>(resolvedButton.resolvedProps.className);
+expectType<string>(resolvedButton.resolvedProps.className);
+expectType<string>(resolvedButton.resolvedProps.id);
+
+const inputRecipe = recipe({
+  variants: {
+    size: {
+      sm: 'text-sm',
+      md: 'text-base',
+    },
+    disabled: {
+      true: 'opacity-50',
+    },
+  },
+  defaultVariants: {
+    disabled: false,
+  },
+});
+
+const resolvedInput = inputRecipe.resolve(
+  {
+    size: 'md',
+    htmlSize: 20,
+    id: 'field',
+  },
+  {
+    forwardProps: ['disabled'],
+    propAliases: {
+      size: 'htmlSize',
+    },
+  }
+);
+
+expectType<string>(resolvedInput.resolvedProps.className);
+expectType<number>(resolvedInput.resolvedProps.size);
+expectType<string>(resolvedInput.resolvedProps.id);
+expectType<boolean>(resolvedInput.resolvedProps.disabled);
+
+declare const dynamicResolveOptions: ResolveOptions<'size' | 'disabled'>;
+
+const dynamicallyResolvedInput = inputRecipe.resolve(
+  {
+    size: 'md',
+    htmlSize: 20,
+    id: 'field',
+  },
+  dynamicResolveOptions
+);
+
+expectType<string>(dynamicallyResolvedInput.resolvedProps.className);
+expectType<number>(dynamicallyResolvedInput.resolvedProps.htmlSize);
+expectType<string>(dynamicallyResolvedInput.resolvedProps.id);
+expectType<'sm' | 'md' | undefined>(
+  dynamicallyResolvedInput.resolvedProps.size
+);
+expectType<boolean | undefined>(
+  dynamicallyResolvedInput.resolvedProps.disabled
+);
 
 type ButtonVariants = VariantProps<typeof buttonRecipe>;
 type ButtonResolvedVariants = ResolvedVariantProps<typeof buttonRecipe>;
@@ -468,7 +538,7 @@ expectType<ReactNode>(
     type: 'number',
     render: props => {
       expectType<string>(props.className);
-      expectType<boolean | undefined>(props.disabled);
+      expectType<boolean>(props.disabled);
       expectError(props.type);
       return <a {...props} href="/" />;
     },

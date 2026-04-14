@@ -52,6 +52,7 @@ export type {
   RootStyledViewProps,
   SlotStyledOptions,
   SlotStyledViewProps,
+  StyledFn,
   StyledComponentProps,
 } from './internal/react-types';
 

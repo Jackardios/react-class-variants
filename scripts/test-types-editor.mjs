@@ -6,7 +6,7 @@ import ts from 'typescript';
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDir, '..');
 
-const compilerOptions = {
+const bundlerCompilerOptions = {
   strict: true,
   target: ts.ScriptTarget.ESNext,
   module: ts.ModuleKind.ESNext,
@@ -17,9 +17,16 @@ const compilerOptions = {
   types: ['react'],
 };
 
+const nodeNextCompilerOptions = {
+  ...bundlerCompilerOptions,
+  module: ts.ModuleKind.NodeNext,
+  moduleResolution: ts.ModuleResolutionKind.NodeNext,
+};
+
 const exactProbeFile = resolve(repoRoot, '__editor_probe_exact__.tsx');
 const exactProbeSource = `
-import { recipe, styled } from 'react-class-variants';
+import { recipe, styled, type VariantProps } from 'react-class-variants';
+import { recipe as coreRecipe } from 'react-class-variants/core';
 
 const badge = recipe({
   base: 'inline-flex rounded-full',
@@ -67,6 +74,10 @@ const buttonRecipe = recipe({
 
 const resolvedButton = buttonRecipe.resolve({ tone: 'primary' });
 const slotFns = buttonRecipe({ tone: 'primary' });
+const coreOnlyBadge = coreRecipe({
+  base: 'inline-flex rounded-full',
+});
+coreOnlyBadge();
 
 const inputRecipe = recipe({
   variants: {
@@ -87,6 +98,29 @@ const inputRecipe = recipe({
     disabled: false,
   },
 });
+
+const resolvedInput = inputRecipe.resolve(
+  {
+    tone: 'danger',
+    htmlSize: 12,
+    id: 'field',
+  },
+  {
+    forwardProps: ['disabled'],
+    propAliases: {
+      size: 'htmlSize',
+    },
+  }
+);
+resolvedInput.resolvedProps.size;
+resolvedInput.resolvedProps.disabled;
+resolvedInput.resolvedProps.className;
+
+type InputVariants = VariantProps<typeof inputRecipe>;
+const inputVariants: InputVariants = {
+  tone: 'info',
+};
+inputVariants.tone;
 
 const ViewedInput = styled(
   'input',
@@ -198,7 +232,7 @@ badge({ tone:  });
 buttonRecipe({ tone:  }).icon({ tone:  });
 `;
 
-function createLanguageService(fileEntries) {
+function createLanguageService(fileEntries, options = bundlerCompilerOptions) {
   const files = new Map(fileEntries);
 
   const host = {
@@ -213,7 +247,7 @@ function createLanguageService(fileEntries) {
       return text ? ts.ScriptSnapshot.fromString(text) : undefined;
     },
     getCurrentDirectory: () => repoRoot,
-    getCompilationSettings: () => compilerOptions,
+    getCompilationSettings: () => options,
     getDefaultLibFileName: ts.getDefaultLibFilePath,
     fileExists: fileName => files.has(fileName) || ts.sys.fileExists(fileName),
     readFile(fileName) {
@@ -228,22 +262,17 @@ function createLanguageService(fileEntries) {
     realpath: ts.sys.realpath,
     resolveModuleNames(moduleNames, containingFile) {
       return moduleNames.map(name => {
-        const result = ts.resolveModuleName(
-          name,
-          containingFile,
-          compilerOptions,
-          {
-            fileExists: fileName =>
-              files.has(fileName) || ts.sys.fileExists(fileName),
-            readFile: fileName =>
-              files.has(fileName)
-                ? files.get(fileName)
-                : ts.sys.readFile(fileName),
-            realpath: ts.sys.realpath,
-            directoryExists: ts.sys.directoryExists,
-            getDirectories: ts.sys.getDirectories,
-          }
-        );
+        const result = ts.resolveModuleName(name, containingFile, options, {
+          fileExists: fileName =>
+            files.has(fileName) || ts.sys.fileExists(fileName),
+          readFile: fileName =>
+            files.has(fileName)
+              ? files.get(fileName)
+              : ts.sys.readFile(fileName),
+          realpath: ts.sys.realpath,
+          directoryExists: ts.sys.directoryExists,
+          getDirectories: ts.sys.getDirectories,
+        });
 
         return result.resolvedModule;
       });
@@ -312,7 +341,9 @@ function definitionSpans(
     fileName: definition.fileName,
     text: (definition.fileName === exactProbeFile
       ? exactProbeSource
-      : completionProbeSource
+      : definition.fileName === completionProbeFile
+      ? completionProbeSource
+      : ts.sys.readFile(definition.fileName) ?? ''
     ).slice(
       definition.textSpan.start,
       definition.textSpan.start + definition.textSpan.length
@@ -327,16 +358,30 @@ function average(values) {
 const exactLanguageService = createLanguageService(
   new Map([[exactProbeFile, exactProbeSource]])
 );
+const nodeNextExactLanguageService = createLanguageService(
+  new Map([[exactProbeFile, exactProbeSource]]),
+  nodeNextCompilerOptions
+);
 const exactDiagnostics = flattenDiagnostics([
   ...exactLanguageService.getCompilerOptionsDiagnostics(),
   ...exactLanguageService.getSyntacticDiagnostics(exactProbeFile),
   ...exactLanguageService.getSemanticDiagnostics(exactProbeFile),
+]);
+const nodeNextExactDiagnostics = flattenDiagnostics([
+  ...nodeNextExactLanguageService.getCompilerOptionsDiagnostics(),
+  ...nodeNextExactLanguageService.getSyntacticDiagnostics(exactProbeFile),
+  ...nodeNextExactLanguageService.getSemanticDiagnostics(exactProbeFile),
 ]);
 
 assert.deepEqual(
   exactDiagnostics,
   [],
   'Editor exact probe should type-check cleanly.'
+);
+assert.deepEqual(
+  nodeNextExactDiagnostics,
+  [],
+  'Editor exact probe should type-check cleanly in NodeNext mode.'
 );
 
 const completionLanguageService = createLanguageService(
@@ -371,6 +416,69 @@ const renderDisabledQuickInfo = quickInfoText(
   'props.disabled;\n    return <a {...props} href="/" />;',
   'disabled'
 );
+const resolvedInputSizeQuickInfo = quickInfoText(
+  exactLanguageService,
+  exactProbeFile,
+  exactProbeSource,
+  'resolvedInput.resolvedProps.size;\nresolvedInput.resolvedProps.disabled;',
+  'size'
+);
+const resolvedInputDisabledQuickInfo = quickInfoText(
+  exactLanguageService,
+  exactProbeFile,
+  exactProbeSource,
+  'resolvedInput.resolvedProps.disabled;\nresolvedInput.resolvedProps.className;',
+  'disabled'
+);
+const resolvedInputClassNameQuickInfo = quickInfoText(
+  exactLanguageService,
+  exactProbeFile,
+  exactProbeSource,
+  'resolvedInput.resolvedProps.className;\n\ntype InputVariants',
+  'className'
+);
+const styledImportDefinitions = definitionSpans(
+  exactLanguageService,
+  exactProbeFile,
+  exactProbeSource,
+  "import { recipe, styled, type VariantProps } from 'react-class-variants';",
+  'styled'
+);
+const recipeImportDefinitions = definitionSpans(
+  exactLanguageService,
+  exactProbeFile,
+  exactProbeSource,
+  "import { recipe, styled, type VariantProps } from 'react-class-variants';",
+  'recipe'
+);
+const variantPropsImportDefinitions = definitionSpans(
+  exactLanguageService,
+  exactProbeFile,
+  exactProbeSource,
+  "import { recipe, styled, type VariantProps } from 'react-class-variants';",
+  'VariantProps'
+);
+const coreRecipeImportDefinitions = definitionSpans(
+  exactLanguageService,
+  exactProbeFile,
+  exactProbeSource,
+  "import { recipe as coreRecipe } from 'react-class-variants/core';",
+  'coreRecipe'
+);
+const nodeNextStyledImportDefinitions = definitionSpans(
+  nodeNextExactLanguageService,
+  exactProbeFile,
+  exactProbeSource,
+  "import { recipe, styled, type VariantProps } from 'react-class-variants';",
+  'styled'
+);
+const nodeNextCoreRecipeImportDefinitions = definitionSpans(
+  nodeNextExactLanguageService,
+  exactProbeFile,
+  exactProbeSource,
+  "import { recipe as coreRecipe } from 'react-class-variants/core';",
+  'coreRecipe'
+);
 
 assert.match(
   viewTypeQuickInfo,
@@ -389,8 +497,103 @@ assert.equal(
 );
 assert.equal(
   renderDisabledQuickInfo,
-  '(property) disabled?: boolean | undefined',
-  'render callback props should expose forwarded variant props through a broad spread-safe bag.'
+  '(property) disabled: boolean',
+  'render callback props should expose forwarded resolved variant props through a broad spread-safe bag.'
+);
+assert.equal(
+  resolvedInputSizeQuickInfo,
+  '(property) size: number',
+  'recipe.resolve should apply propAliases to resolvedProps.'
+);
+assert.equal(
+  resolvedInputDisabledQuickInfo,
+  '(property) disabled: boolean',
+  'recipe.resolve should expose forwarded variants as resolved values.'
+);
+assert.equal(
+  resolvedInputClassNameQuickInfo,
+  '(property) className: string',
+  'root recipe.resolve should always include a string className on resolvedProps.'
+);
+assert.equal(
+  styledImportDefinitions.length,
+  1,
+  'styled should resolve to a single exported definition target.'
+);
+assert.match(
+  styledImportDefinitions[0].fileName.replace(/\\/g, '/'),
+  /\/dist\/index\.d\.ts$/,
+  'styled should navigate to the root declaration surface.'
+);
+assert.equal(
+  styledImportDefinitions[0].text,
+  'styled',
+  'styled should point to the exported const symbol instead of overload-only declarations.'
+);
+assert.equal(
+  recipeImportDefinitions.length,
+  1,
+  'recipe should resolve to a single exported definition target.'
+);
+assert.match(
+  recipeImportDefinitions[0].fileName.replace(/\\/g, '/'),
+  /\/dist\/index\.d\.ts$/,
+  'recipe should navigate to the root declaration surface.'
+);
+assert.equal(
+  recipeImportDefinitions[0].text,
+  'recipe',
+  'recipe should point to the root declaration export instead of a hashed shared chunk.'
+);
+assert.equal(
+  variantPropsImportDefinitions.length,
+  1,
+  'VariantProps should resolve to a single exported definition target.'
+);
+assert.match(
+  variantPropsImportDefinitions[0].fileName.replace(/\\/g, '/'),
+  /\/dist\/index\.d\.ts$/,
+  'VariantProps should navigate to the root declaration surface.'
+);
+assert.equal(
+  variantPropsImportDefinitions[0].text,
+  'VariantProps',
+  'VariantProps should point to the root declaration export instead of a hashed shared chunk.'
+);
+assert.equal(
+  coreRecipeImportDefinitions.length,
+  1,
+  'core recipe should resolve to a single subpath definition target.'
+);
+assert.match(
+  coreRecipeImportDefinitions[0].fileName.replace(/\\/g, '/'),
+  /\/dist\/core\.d\.ts$/,
+  'core recipe should navigate to the core declaration surface.'
+);
+assert.equal(
+  coreRecipeImportDefinitions[0].text,
+  'recipe',
+  'core recipe should point to the subpath declaration export.'
+);
+assert.equal(
+  nodeNextStyledImportDefinitions.length,
+  1,
+  'styled should resolve to a single exported definition target in NodeNext mode.'
+);
+assert.match(
+  nodeNextStyledImportDefinitions[0].fileName.replace(/\\/g, '/'),
+  /\/dist\/index\.d\.ts$/,
+  'styled should navigate to the root declaration surface in NodeNext mode.'
+);
+assert.equal(
+  nodeNextCoreRecipeImportDefinitions.length,
+  1,
+  'core recipe should resolve to a single subpath definition target in NodeNext mode.'
+);
+assert.match(
+  nodeNextCoreRecipeImportDefinitions[0].fileName.replace(/\\/g, '/'),
+  /\/dist\/core\.d\.ts$/,
+  'core recipe should navigate to the core declaration surface in NodeNext mode.'
 );
 
 for (const [label, snippet, token, expectedText] of [

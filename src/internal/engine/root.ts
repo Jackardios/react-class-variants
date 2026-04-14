@@ -1,9 +1,11 @@
 import type {
   AnyRecipe,
+  AnyRootRecipe,
   AnyRootRecipeConfig,
   ClassNameValue,
   ResolveOptions,
   RootRecipe,
+  RootResolveResult,
 } from '../core-types';
 import {
   appendClassName,
@@ -285,10 +287,13 @@ export function createStrictRootRecipe(
     resolve: RootRecipe['resolve'];
   };
 
-  rootRecipe.resolve = (
-    input?: Record<string, unknown>,
-    options?: ResolveOptions
-  ) => {
+  rootRecipe.resolve = <
+    TInput extends Record<string, unknown> | undefined = undefined,
+    const TOptions extends ResolveOptions | undefined = undefined
+  >(
+    input?: TInput,
+    options?: TOptions
+  ): RootResolveResult<AnyRootRecipe, TInput, TOptions> => {
     const normalizedOptions = normalizeResolveOptions(compiled, options);
     const resolved = resolveStrictRootClassName(compiled, input, true);
     const resolvedProps = createResolvedProps(
@@ -300,11 +305,16 @@ export function createStrictRootRecipe(
     resolvedProps.className = resolved.className;
 
     return {
-      resolvedProps: resolvedProps as Record<string, unknown> & {
-        className: string;
-      },
-      variants: materializeSelection(compiled, resolved.selection),
-    } as ReturnType<RootRecipe['resolve']>;
+      resolvedProps: resolvedProps as RootResolveResult<
+        AnyRootRecipe,
+        TInput,
+        TOptions
+      >['resolvedProps'],
+      variants: materializeSelection(
+        compiled,
+        resolved.selection
+      ) as RootResolveResult<AnyRootRecipe, TInput, TOptions>['variants'],
+    };
   };
 
   return attachCompiled(rootRecipe as AnyRecipe, compiled);
@@ -318,10 +328,13 @@ export function createLeanRootRecipe(
     resolve: RootRecipe['resolve'];
   };
 
-  rootRecipe.resolve = (
-    input?: Record<string, unknown>,
-    options?: ResolveOptions
-  ) => {
+  rootRecipe.resolve = <
+    TInput extends Record<string, unknown> | undefined = undefined,
+    const TOptions extends ResolveOptions | undefined = undefined
+  >(
+    input?: TInput,
+    options?: TOptions
+  ): RootResolveResult<AnyRootRecipe, TInput, TOptions> => {
     const normalizedOptions = normalizeResolveOptions(compiled, options);
     const resolved = resolveLeanRootClassName(compiled, input);
     const resolvedProps = createResolvedProps(
@@ -333,11 +346,16 @@ export function createLeanRootRecipe(
     resolvedProps.className = resolved.className;
 
     return {
-      resolvedProps: resolvedProps as Record<string, unknown> & {
-        className: string;
-      },
-      variants: materializeSelection(compiled, resolved.selection),
-    } as ReturnType<RootRecipe['resolve']>;
+      resolvedProps: resolvedProps as RootResolveResult<
+        AnyRootRecipe,
+        TInput,
+        TOptions
+      >['resolvedProps'],
+      variants: materializeSelection(
+        compiled,
+        resolved.selection
+      ) as RootResolveResult<AnyRootRecipe, TInput, TOptions>['variants'],
+    };
   };
 
   return attachCompiled(rootRecipe as AnyRecipe, compiled);

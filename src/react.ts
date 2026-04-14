@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- public styled overloads intentionally erase recipe generics in the implementation signature. */
+/* eslint-disable @typescript-eslint/no-explicit-any -- public styled implementation intentionally erases recipe generics behind a typed export surface. */
 import { createRootStyled, createSlotStyled } from './internal/builders';
 import { createRecipeFactory, getCompiledRecipe } from './internal/recipe';
 import type {
@@ -8,11 +8,9 @@ import type {
 } from './internal/core-types';
 import type {
   AnyElementType,
-  AnyIntrinsicElement,
-  PropAliases,
   RootStyledOptions,
   SlotStyledOptions,
-  StyledComponentType,
+  StyledFn,
 } from './internal/react-types';
 
 export { defineRecipeConfig, recipe } from './core';
@@ -62,55 +60,10 @@ export type {
   SlotStyledOptions,
   SlotStyledViewProps,
   StyledComponentProps,
+  StyledFn,
 } from './internal/react-types';
 
-export function styled<
-  Base extends AnyIntrinsicElement,
-  TRecipe extends AnyRootRecipe,
-  const WithRender extends boolean = false,
-  const Aliases extends PropAliases<Base> = {},
-  const Forwarded extends string = never
->(
-  base: Base,
-  inputRecipe: TRecipe,
-  options?: RootStyledOptions<Base, TRecipe, WithRender, Aliases, Forwarded>
-): StyledComponentType<Base, TRecipe, WithRender, Aliases, Forwarded>;
-
-export function styled<
-  Base extends Exclude<AnyElementType, AnyIntrinsicElement>,
-  TRecipe extends AnyRootRecipe,
-  const Aliases extends PropAliases<Base> = {},
-  const Forwarded extends string = never
->(
-  base: Base,
-  inputRecipe: TRecipe,
-  options?: RootStyledOptions<Base, TRecipe, false, Aliases, Forwarded>
-): StyledComponentType<Base, TRecipe, false, Aliases, Forwarded>;
-
-export function styled<
-  Base extends AnyIntrinsicElement,
-  TRecipe extends AnySlotRecipe,
-  const WithRender extends boolean = false,
-  const Aliases extends PropAliases<Base> = {},
-  const Forwarded extends string = never
->(
-  base: Base,
-  inputRecipe: TRecipe,
-  options: SlotStyledOptions<Base, TRecipe, WithRender, Aliases, Forwarded>
-): StyledComponentType<Base, TRecipe, WithRender, Aliases, Forwarded>;
-
-export function styled<
-  Base extends Exclude<AnyElementType, AnyIntrinsicElement>,
-  TRecipe extends AnySlotRecipe,
-  const Aliases extends PropAliases<Base> = {},
-  const Forwarded extends string = never
->(
-  base: Base,
-  inputRecipe: TRecipe,
-  options: SlotStyledOptions<Base, TRecipe, false, Aliases, Forwarded>
-): StyledComponentType<Base, TRecipe, false, Aliases, Forwarded>;
-
-export function styled(
+function styledImpl(
   base: AnyElementType,
   inputRecipe: AnyRootRecipe | AnySlotRecipe,
   options?:
@@ -146,6 +99,8 @@ export function styled(
     options as RootStyledOptions<any, any, any, any, any> | undefined
   );
 }
+
+export const styled: StyledFn = styledImpl as StyledFn;
 
 export function defineConfig(options: SystemOptions = {}) {
   return {

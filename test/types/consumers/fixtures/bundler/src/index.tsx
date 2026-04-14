@@ -120,27 +120,71 @@ Button({
 });
 StrictButton({ tone: 'info', size: 'sm', children: 'Strict button' });
 
-const Input = configuredStyled(
-  'input',
-  recipe({
-    variants: {
-      size: {
-        sm: 'text-sm',
-        lg: 'text-lg',
-      },
+const inputRecipe = recipe({
+  variants: {
+    size: {
+      sm: 'text-sm',
+      lg: 'text-lg',
     },
-  }),
+    disabled: {
+      true: 'opacity-50',
+    },
+  },
+  defaultVariants: {
+    disabled: false,
+  },
+});
+
+const Input = configuredStyled('input', inputRecipe, {
+  withRender: true,
+  forwardProps: ['disabled'],
+  propAliases: {
+    size: 'htmlSize',
+  },
+});
+
+const resolvedInput = inputRecipe.resolve(
   {
+    size: 'sm',
+    htmlSize: 20,
+    id: 'field',
+  },
+  {
+    forwardProps: ['disabled'],
     propAliases: {
       size: 'htmlSize',
     },
   }
 );
 
+type _ResolvedInputClassName = Expect<
+  Equal<typeof resolvedInput.resolvedProps.className, string>
+>;
+type _ResolvedInputSize = Expect<
+  Equal<typeof resolvedInput.resolvedProps.size, number>
+>;
+type _ResolvedInputDisabled = Expect<
+  Equal<typeof resolvedInput.resolvedProps.disabled, boolean>
+>;
+type _ResolvedInputId = Expect<
+  Equal<typeof resolvedInput.resolvedProps.id, string>
+>;
+
 Input({
   size: 'sm',
   htmlSize: 20,
   value: 'variant input',
+});
+
+Input({
+  size: 'sm',
+  htmlSize: 20,
+  disabled: true,
+  render: props => {
+    type _InputRenderClassName = Expect<Equal<typeof props.className, string>>;
+    type _InputRenderDisabled = Expect<Equal<typeof props.disabled, boolean>>;
+    return <a {...props} href="/" />;
+  },
 });
 
 Input({

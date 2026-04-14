@@ -57,8 +57,8 @@ type ForwardedRenderVariantProps<TRecipe, Forwarded extends string> = [
 ] extends [never]
   ? {}
   : Pick<
-      VariantProps<TRecipe>,
-      Extract<Forwarded, keyof VariantProps<TRecipe> & string>
+      ResolvedVariantProps<TRecipe>,
+      Extract<Forwarded, keyof ResolvedVariantProps<TRecipe> & string>
     >;
 
 export type RenderFunctionProps<
@@ -287,3 +287,51 @@ export type StyledComponentType<
   Aliases extends PropAliases<Base> = {},
   Forwarded extends string = never
 > = StyledComponent<Base, TRecipe, WithRender, Aliases, Forwarded>;
+
+export interface StyledFn {
+  <
+    Base extends AnyIntrinsicElement,
+    TRecipe extends AnyRootRecipe,
+    const WithRender extends boolean = false,
+    const Aliases extends PropAliases<Base> = {},
+    const Forwarded extends string = never
+  >(
+    base: Base,
+    inputRecipe: TRecipe,
+    options?: RootStyledOptions<Base, TRecipe, WithRender, Aliases, Forwarded>
+  ): StyledComponentType<Base, TRecipe, WithRender, Aliases, Forwarded>;
+
+  <
+    Base extends Exclude<AnyElementType, AnyIntrinsicElement>,
+    TRecipe extends AnyRootRecipe,
+    const Aliases extends PropAliases<Base> = {},
+    const Forwarded extends string = never
+  >(
+    base: Base,
+    inputRecipe: TRecipe,
+    options?: RootStyledOptions<Base, TRecipe, false, Aliases, Forwarded>
+  ): StyledComponentType<Base, TRecipe, false, Aliases, Forwarded>;
+
+  <
+    Base extends AnyIntrinsicElement,
+    TRecipe extends AnySlotRecipe,
+    const WithRender extends boolean = false,
+    const Aliases extends PropAliases<Base> = {},
+    const Forwarded extends string = never
+  >(
+    base: Base,
+    inputRecipe: TRecipe,
+    options: SlotStyledOptions<Base, TRecipe, WithRender, Aliases, Forwarded>
+  ): StyledComponentType<Base, TRecipe, WithRender, Aliases, Forwarded>;
+
+  <
+    Base extends Exclude<AnyElementType, AnyIntrinsicElement>,
+    TRecipe extends AnySlotRecipe,
+    const Aliases extends PropAliases<Base> = {},
+    const Forwarded extends string = never
+  >(
+    base: Base,
+    inputRecipe: TRecipe,
+    options: SlotStyledOptions<Base, TRecipe, false, Aliases, Forwarded>
+  ): StyledComponentType<Base, TRecipe, false, Aliases, Forwarded>;
+}
