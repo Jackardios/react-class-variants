@@ -1,5 +1,66 @@
 # react-class-variants
 
+## 2.0.0-alpha.6
+
+### Major Changes
+
+- c453cb5: Align the published v2 package with its ESM-only packaging and entrypoints.
+
+  **Breaking changes:**
+
+  - Publish only ESM artifacts from the package root and
+    `react-class-variants/core`. CommonJS `require()` consumers now need dynamic
+    `import()` or an ESM consumer setup.
+
+  **Changes:**
+
+  - Align package metadata and export validation with the ESM-only root and
+    `react-class-variants/core` entrypoints.
+  - Split the recipe runtime into dedicated root/shared/slot engine modules while
+    preserving root and slot resolver behavior, slot renderer destructuring, and
+    validate-mode freeze semantics.
+  - Reorganize benchmark tooling under `bench/`, add built-runtime smoke
+    coverage, and expand competitor/overhead reports with isolated subprocess
+    measurements, named bundle and TypeScript profiles, and RME-aware markdown
+    tables.
+
+### Minor Changes
+
+- f5515ff: Add `defineRecipeConfig()` as a zero-cost typed helper on the package root and `react-class-variants/core`, remove the runtime `recipe.config` property in favor of keeping recipe configs explicit, accept readonly string arrays across `ClassNameValue`-backed recipe fields, and tighten recipe creation performance with production-oriented compilation fast paths for root and slotted recipes.
+- bf1ff60: Replace the v2 alpha API with the RFC-backed root React surface:
+
+  - export `recipe()`, `styled()`, `defineConfig()`, React utilities, and public types from `react-class-variants`
+  - make `recipe()` adapt from config shape into root or slotted recipes
+  - require explicit slot maps for slotted variant and compound class values
+  - make `styled()` accept intrinsic tags and custom React component bases
+  - replace `compose` with hook-safe `view` components and `host` / `classes` view models
+  - make slotted `classes` maps enumerable so they behave like normal objects in `view` composition
+  - keep render polymorphism opt-in through `withRender` for intrinsic bases only
+  - rename `nativeAliases` to `propAliases`
+  - tighten `propAliases` typing around host prop collisions
+  - improve editor typing and navigation for slotted recipes and `view`-based styled components
+  - add reproducible overhead tooling for bundle size, runtime, retained memory, and synthetic TypeScript diagnostics
+
+- f5515ff: Add the dedicated `react-class-variants/core` recipe-only subpath, reject mixed boolean/named variant options, validate runtime `className` inputs consistently, reduce retained recipe metadata on direct resolver usage, speed up recipe creation by simplifying config/default compilation, and expand benchmark reporting with synthetic gzip bundle-size comparisons.
+
+### Patch Changes
+
+- f91a2f2: Improve recipe runtime performance by switching the default package-root and
+  core recipe factories to a lean, process-less-safe path, keeping checked
+  runtime validation behind explicit `defineConfig({ validate: 'always' })`,
+  tightening root and slot compilation, aligning lean slot payload storage with
+  dense indexed slot tables, packing lean compound selectors, and removing
+  temporary variant-index allocation during compound compilation.
+- 145eb36: Relax the `render` prop callback typing back to a broad, spread-safe DOM prop bag.
+  The callback now exposes generic HTML attributes plus any `forwardProps` variants,
+  instead of implying intrinsic-element-specific resolved props as part of the
+  stable public contract.
+- 907025c: Fix `styled()` to accept recipes imported from `react-class-variants/core`
+  reliably across packed consumer projects and benchmark harnesses.
+- 3ea47a5: Tighten `defaultVariants` authoring types for `recipe()` and `defineRecipeConfig()` so editors surface the declared variant keys and values, while unknown `defaultVariants` keys now fail type checking.
+- 39f4bcf: Improve the public type surface for low-level `recipe.resolve()` calls so `resolvedProps` tracks exact input props, `propAliases`, `forwardProps`, and root `className` more accurately. Forwarded variant props exposed to `styled(..., { withRender: true })` render callbacks are now typed as resolved values, the package root now exports `styled` as a single typed symbol with a public `StyledFn` type for cleaner editor navigation, and declaration builds now emit stable `index.d.ts` and `core.d.ts` entrypoints without hashed shared declaration chunks.
+- bf1ff60: Improve recipe compile performance and reduce retained memory by compacting the compiled variant state and compound metadata.
+
 ## 2.0.0-alpha.5
 
 ### Minor Changes
