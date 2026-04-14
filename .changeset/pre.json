@@ -5,17 +5,20 @@
     "react-class-variants": "2.0.0-alpha.0"
   },
   "changesets": [
-    "add-type-utilities",
+    "add-define-recipe-config",
     "blue-buses-float",
-    "bright-schools-drum",
-    "few-points-wave",
+    "blue-windows-perform",
+    "bright-bears-burn",
+    "calm-hairs-hunt",
+    "clean-core-react-entries",
+    "fair-poets-train",
     "five-moons-return",
+    "fix-default-variants-authoring-types",
     "fix-merge-props",
-    "fresh-paws-matter",
-    "green-geckos-fix",
+    "four-spoons-joke",
     "late-forks-relax",
-    "major-v2-refactor",
-    "quiet-cameras-smell",
-    "warm-coins-share"
+    "olive-lions-rest",
+    "quick-lamps-float",
+    "quiet-cameras-smell"
   ]
 }
