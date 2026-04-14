@@ -19,6 +19,7 @@ The published v2 package surface is ESM-only.
 Defined in `.github/workflows/main.yml`.
 
 - runs on every push and pull request
+- can be dispatched manually for an existing branch
 - runs `pnpm run verify`
 - tests on Node `20.x`, `22.x`, and `24.x`
 
@@ -35,14 +36,16 @@ Defined in `.github/workflows/changeset-check.yml`.
 Defined in `.github/workflows/release.yml`.
 
 - runs on pushes to `next`
-- runs `pnpm run verify`
+- runs the same `pnpm run verify` matrix as CI on Node `20.x`, `22.x`, and `24.x`
 - uses `changesets/action`
 - uses npm trusted publishing via GitHub Actions OIDC
+- syncs npm dist-tags after publish with `scripts/sync-dist-tags.mjs`
+- creates or updates GitHub Releases from the matching `CHANGELOG.md` section with `scripts/release-notes-from-changelog.mjs`
 
 The release workflow has two paths:
 
-1. If pending changesets exist on `next`, `changesets/action` opens or updates the `Version Packages` release PR.
-2. If no pending changesets remain on `next`, the workflow runs `pnpm run release`, pushes any `v*` tags created on that commit, and creates the corresponding GitHub release entries.
+1. If pending changesets exist on `next`, `changesets/action` opens or updates the `Version Packages` release PR, then manually dispatches the `CI` workflow on `changeset-release/next` so that release PRs receive the normal `build` checks even though the branch update came from the default GitHub Actions token.
+2. If no pending changesets remain on `next`, the workflow runs `pnpm run release:publish`, pushes any `v*` tags created on that commit, synchronizes npm dist-tags, and creates or updates the corresponding GitHub release entries from `CHANGELOG.md`.
 
 In practice, this means the version-package PR is the staging step and the publish happens after that PR is merged back into `next`.
 
@@ -75,28 +78,45 @@ In practice, this means the version-package PR is the staging step and the publi
 
 Important notes:
 
-- do not assume npm dist-tags are in the state you want after a publish
-- `npm publish` and `npm dist-tag` are separate operations
+- do not assume npm dist-tags are in the state you want after a publish unless the sync step has completed successfully
+- `npm publish` and `npm dist-tag` are separate operations, so trusted publishing alone does not fix prerelease tags
 - if a prerelease redesign invalidates pending changesets, rewrite or delete the stale `.changeset/*.md` files before the next alpha so `changeset pre exit` does not pull obsolete notes into the stable release plan
 
 ## Post-Publish Verification
 
-After a successful alpha publish, verify npm dist-tags explicitly:
+After a successful alpha publish, the workflow verifies and, when needed, repairs npm dist-tags to this policy:
+
+- `alpha` points at the newest prerelease
+- `latest` points at the newest stable release when one exists
+- if no stable release exists yet for `react-class-variants`, `latest` stays on the published prerelease
+
+Manual audit remains worthwhile:
 
 ```bash
 npm view react-class-variants version dist-tags --json
 ```
 
-If `react-class-variants@alpha` should point at the newest prerelease, update it explicitly:
+If the automated step cannot repair tags, update them explicitly:
 
 ```bash
 npm dist-tag add react-class-variants@<published-version> alpha
+npm dist-tag add react-class-variants@<latest-stable-version> latest # only if a stable line exists
 ```
 
 Why this matters:
 
 - prerelease tagging affects install behavior
 - trusted publishing covers package publication, not post-publish dist-tag management
+
+## GitHub Release Notes
+
+GitHub Releases are not generated from the pull request body. The workflow extracts the release body from the matching `## <version>` section in `CHANGELOG.md`.
+
+That keeps these surfaces aligned:
+
+- the merged version-package PR diff
+- `CHANGELOG.md` in the published package
+- the GitHub Releases page
 
 ## Stable Release Checklist
 
@@ -118,11 +138,12 @@ These settings live outside the repository and should be reviewed periodically.
 - keep `next` as the default branch during the alpha period
 - protect `next` as the active release branch for v2
 - restrict direct day-to-day development on `main`
-- keep the release workflow allowed to write contents, pull requests, and OIDC tokens
+- keep the release workflow allowed to write Actions, contents, pull requests, and OIDC tokens
 
 ### npm
 
 - keep trusted publishing configured for `react-class-variants`
+- keep an `NPM_TOKEN` repository secret available for `npm dist-tag add` operations after prerelease publishes
 - if legacy releases still matter, keep trusted publishing configured for `react-tailwind-variants`
 - optionally require 2FA and remove legacy publish tokens once trusted publishing is confirmed
 

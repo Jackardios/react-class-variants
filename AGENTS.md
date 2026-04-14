@@ -237,8 +237,10 @@ For changes that touch recipe resolution, class merging, `styled()` behavior, pr
 - Alpha releases publish from `next`.
 - Changesets prerelease mode is active under the `alpha` tag.
 - `changeset publish` creates the canonical `v*` git tag.
-- GitHub releases are created from those tags in CI.
-- Dist-tag management remains a separate post-publish npm step.
+- The `Release` workflow verifies the same Node `20.x` / `22.x` / `24.x` matrix as CI before publishing.
+- The `Release` workflow manually dispatches `CI` on `changeset-release/next` after `changesets/action` updates the release branch, because pushes made with the default GitHub Actions token do not trigger `push` or `pull_request` workflows.
+- GitHub release bodies are generated from the matching `CHANGELOG.md` section for each `v*` tag.
+- Dist-tags follow an explicit policy in CI: prereleases move `alpha` to the published version and keep `latest` on the newest stable release when one exists, otherwise `latest` remains on the published prerelease. Stable publishes move `latest`.
 
 Post-publish verification:
 
@@ -246,10 +248,11 @@ Post-publish verification:
 npm view react-class-variants version dist-tags --json
 ```
 
-If `react-class-variants@alpha` should follow the newest prerelease:
+If CI could not sync dist-tags automatically, repair them explicitly:
 
 ```bash
 npm dist-tag add react-class-variants@<published-version> alpha
+npm dist-tag add react-class-variants@<latest-stable-version> latest # only if a stable line exists
 ```
 
 See `docs/release-process.md` for the full release workflow.

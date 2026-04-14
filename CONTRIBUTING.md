@@ -22,7 +22,7 @@ Install dependencies:
 pnpm install
 ```
 
-CI currently runs `pnpm run verify` on Node `20.x`, `22.x`, and `24.x`. Local development only needs to satisfy the package minimum in `package.json`, but it is useful to keep CI coverage in mind when touching runtime or packaging behavior.
+CI and the release gate both run `pnpm run verify` on Node `20.x`, `22.x`, and `24.x`. Local development only needs to satisfy the package minimum in `package.json`, but it is useful to keep the full support matrix in mind when touching runtime or packaging behavior.
 
 ## Typical Contributor Flow
 
@@ -171,7 +171,10 @@ Do not treat any one of those layers as authoritative on its own. The shipped co
 - Publishing is handled by GitHub Actions via npm trusted publishing.
 - Avoid manual `npm publish` unless it is explicitly required.
 - `changeset publish` produces the canonical `v*` git tag.
-- After a successful alpha publish, verify npm dist-tags explicitly because prerelease tagging affects install behavior.
+- The release workflow dispatches `CI` for the `changeset-release/next` branch after it updates the version-package PR, so release PRs receive the same checks as normal PRs.
+- GitHub release bodies are generated from the matching `CHANGELOG.md` section.
+- After a successful alpha publish, the release workflow syncs npm dist-tags to the repo policy: prereleases move `alpha` to the new version and keep `latest` on the newest stable release when one exists, otherwise `latest` remains on the published prerelease.
+- If that sync step fails, verify npm dist-tags explicitly because prerelease tagging affects install behavior.
 - Keep already-published alpha history in `CHANGELOG.md`; do not rely on superseded pending changesets to document a redesign that has since been replaced.
 
 The release workflow, version-package PR behavior, and post-publish checks are documented in [docs/release-process.md](./docs/release-process.md).
