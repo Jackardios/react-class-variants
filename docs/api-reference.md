@@ -1,6 +1,8 @@
 # API Reference
 
-This document describes the current v2 alpha surface.
+This document covers the primary user-facing v2 alpha APIs:
+`recipe()`, `recipe.resolve()`, `styled()`, `defineConfig()`,
+`defineRecipeConfig()`, `view`, and `render`.
 
 Use this page as a reference, not as a tutorial. For guided examples and recommended patterns, start with the [recipes and components guide](./recipes-and-components.md).
 
@@ -15,7 +17,8 @@ import {
 } from 'react-class-variants';
 ```
 
-The `react-class-variants/core` subpath exposes:
+For recipe-only modules, the primary `react-class-variants/core` APIs covered
+here are:
 
 - `recipe()`
 - `defineConfig()`
@@ -377,6 +380,24 @@ type StyledOptionsCommon = {
   propAliases?: Record<string, string>;
 };
 ```
+
+#### `displayName`
+
+Overrides the generated React component name.
+
+By default, `styled()` uses `Styled(<base>)`, for example
+`Styled(button)` or `Styled(RouterLink)`.
+
+Example:
+
+```ts
+const Button = styled('button', buttonRecipe, {
+  displayName: 'Button',
+});
+```
+
+Use this when you want a clearer component name in React DevTools, error
+stacks, or profiling output.
 
 ### Root recipe options
 

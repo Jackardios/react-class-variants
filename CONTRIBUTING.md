@@ -163,6 +163,12 @@ update the relevant:
 - consumer fixtures in `test/types/consumers/`
 - docs and examples
 
+In particular:
+
+- keep `README.md` aligned with the primary user-facing API summary
+- keep `docs/api-reference.md` aligned with the current primary user-facing contract
+- keep `docs/benchmarks.md` aligned when benchmark commands or enforcement workflow change
+
 Do not treat any one of those layers as authoritative on its own. The shipped contract is the combination of runtime behavior, types, package exports, and documentation.
 
 ## Release Notes for Contributors

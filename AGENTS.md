@@ -230,6 +230,9 @@ For changes that touch recipe resolution, class merging, `styled()` behavior, pr
 - update consumer fixtures in `test/types/consumers/` when package surface or exports change
 - update docs and examples that describe the affected public behavior
 - keep the package-root and core-subpath surfaces aligned across code, tests, fixtures, and docs
+- keep `README.md` aligned with the primary user-facing API summary
+- keep `docs/api-reference.md` aligned with the current primary user-facing contract
+- keep `docs/benchmarks.md` aligned when benchmark commands or enforcement workflow change
 
 ## Release Notes
 

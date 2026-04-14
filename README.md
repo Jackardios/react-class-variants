@@ -7,6 +7,10 @@
 
 `react-class-variants` is a recipe-first, type-safe API for composing CSS classes in React components.
 
+This documentation describes the current `react-class-variants` v2.x surface.
+If you are looking for the legacy `react-tailwind-variants` v1.x docs, use the
+[v1 reference](./docs/react-tailwind-variants-v1.md).
+
 The current v2 alpha surface is built around:
 
 - one adaptive `recipe()` primitive
@@ -241,9 +245,9 @@ Default root and core imports are lean and process-less safe. Use
 `defineConfig({ validate: 'always' })` when you want checked runtime behavior
 for a shared factory.
 
-## Main Package Surfaces
+## Primary APIs
 
-Package root: `react-class-variants`
+Most users will work with these package-root APIs from `react-class-variants`:
 
 - `recipe()`
 - `styled()`
@@ -251,7 +255,7 @@ Package root: `react-class-variants`
 - `defineRecipeConfig()`
 - public core and React types
 
-Core subpath: `react-class-variants/core`
+For recipe-only modules, the primary `react-class-variants/core` APIs are:
 
 - `recipe()`
 - core `defineConfig()`

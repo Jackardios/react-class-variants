@@ -61,6 +61,20 @@ This includes:
 
 The overhead pipeline measures both the package root React surface and the `react-class-variants/core` entrypoint so recipe-only consumers are represented separately.
 
+### `pnpm check:overhead`
+
+Runs the overhead regression gate from [`bench/overhead/check.mjs`](../bench/overhead/check.mjs).
+
+Use this for:
+
+- pass/fail regression checks instead of raw measurement output
+- bundle-sensitive entrypoint changes
+- validating a change against the repo's configured baseline ref
+
+The package script currently checks bundle regressions for the recipe-only and
+slotted-recipe profiles. For ad hoc comparisons or custom thresholds, run the
+check script directly with its CLI flags.
+
 ## Directory Layout
 
 - [`bench/vitest/`](../bench/vitest): local microbench suites
