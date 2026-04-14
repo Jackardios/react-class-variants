@@ -191,12 +191,18 @@ Usage:
 Key points:
 
 - `view` is required for slotted recipes
+- `view` is a normal React component, so hooks and context work inside it
+- prefer a named component such as `ButtonView` when you use hooks
 - `classes` is an enumerable slot render map and behaves like a normal object
 - external component `className` is routed automatically to the host slot
 - if the recipe has no `root` slot, provide `hostSlot`
 - call `host.render(...)` directly as a method
 - do not destructure `render` from `host`
 - this is intentional: keeping `host.render` method-shaped avoids allocating one extra function per `view` render
+
+Inline `view` functions are still fine for trivial cases. A named component is
+easier for hook linting, React DevTools, and stack traces once the `view`
+starts using hooks.
 
 ## `resolve()` and Wrappers
 

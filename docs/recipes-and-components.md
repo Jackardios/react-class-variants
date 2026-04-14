@@ -285,6 +285,11 @@ export const Button = styled('button', buttonRecipe, {
 });
 ```
 
+`view` is a normal React component surface. Hooks and context are allowed
+inside it. When the `view` uses hooks, prefer a named component reference such
+as `view: ButtonView` so hook linting, React DevTools, and stack traces keep a
+clear component name.
+
 Key ideas:
 
 - `view` is required for slot recipes
@@ -335,7 +340,8 @@ const Field = styled('label', fieldRecipe, {
 `view` is not a callback DSL. It is a normal React component surface:
 
 - hooks are allowed
-- prefer a named component reference such as `view: ButtonView` when you plan to use hooks so hook linting stays happy
+- context works the same way as in any other React component
+- prefer a named component reference such as `view: ButtonView` when you use hooks so hook linting, React DevTools, and stack traces keep a clear component name
 - `host.render()` is the canonical way to render the base element or component
 - `host.props` exposes normalized forwarded props and aliased base props
 - `host.className` is already the resolved host class string

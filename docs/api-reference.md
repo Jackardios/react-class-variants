@@ -341,6 +341,11 @@ const Button = styled('button', buttonRecipe, {
 });
 ```
 
+`view` is rendered as a normal React component. Hooks and context are allowed
+inside it. When you use hooks, prefer a named component reference such as
+`view: ButtonView` so hook linting, React DevTools, and stack traces have a
+stable component name.
+
 If the slot recipe has no `root` slot:
 
 ```tsx
@@ -400,7 +405,8 @@ If the recipe does not declare a `root` slot, `hostSlot` is required.
 
 Guidance:
 
-- prefer a named component reference such as `view: ButtonView` when you plan to use hooks so hook linting stays happy
+- hooks and context are allowed inside `view`
+- prefer a named component reference such as `view: ButtonView` when you use hooks so hook linting, React DevTools, and stack traces keep a clear component name
 - inline `view` functions are still valid when you do not need hooks
 
 ### Root view props
