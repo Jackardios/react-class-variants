@@ -82,6 +82,8 @@ const buttonRecipe = recipe(buttonConfig);
 export const Button = styled('button', buttonRecipe);
 ```
 
+Use `defineRecipeConfig()` when you keep a config object around so `defaultVariants` retains editor completions and exact key/value checks.
+
 Usage:
 
 ```tsx

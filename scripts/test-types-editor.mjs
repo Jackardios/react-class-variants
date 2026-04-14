@@ -172,7 +172,7 @@ const completionProbeFile = resolve(
   '__editor_probe_completion__.tsx'
 );
 const completionProbeSource = `
-import { recipe, styled } from 'react-class-variants';
+import { defineRecipeConfig, recipe, styled } from 'react-class-variants';
 
 const badge = recipe({
   base: 'inline-flex rounded-full',
@@ -218,6 +218,38 @@ const buttonRecipe = recipe({
   },
 });
 
+const storedBadgeKeyConfig = defineRecipeConfig({
+  base: 'inline-flex rounded-full',
+  variants: {
+    tone: {
+      info: 'bg-sky-100',
+      danger: 'bg-rose-100',
+    },
+    disabled: {
+      true: 'opacity-50',
+    },
+  },
+  defaultVariants: {
+    /*defaultVariants keys*/
+  },
+});
+
+const storedBadgeValueConfig = defineRecipeConfig({
+  base: 'inline-flex rounded-full',
+  variants: {
+    tone: {
+      info: 'bg-sky-100',
+      danger: 'bg-rose-100',
+    },
+    disabled: {
+      true: 'opacity-50',
+    },
+  },
+  defaultVariants: {
+    tone: /*defaultVariants tone*/
+  },
+});
+
 styled('button', buttonRecipe, {
   withRender: true,
   forwardProps: ['loading'],
@@ -230,6 +262,8 @@ styled('button', buttonRecipe, {
 
 badge({ tone:  });
 buttonRecipe({ tone:  }).icon({ tone:  });
+storedBadgeKeyConfig;
+storedBadgeValueConfig;
 `;
 
 function createLanguageService(fileEntries, options = bundlerCompilerOptions) {
@@ -623,6 +657,12 @@ for (const [label, snippet, expected] of [
   ['root variant values', 'badge({ tone: ', [`'danger'`, `'info'`]],
   ['slot variant values', 'buttonRecipe({ tone: ', [`'ghost'`, `'primary'`]],
   ['slot override values', `.icon({ tone: `, [`'ghost'`, `'primary'`]],
+  ['defaultVariants keys', '/*defaultVariants keys*/', ['disabled', 'tone']],
+  [
+    'defaultVariants values',
+    'tone: /*defaultVariants tone*/',
+    [`'danger'`, `'info'`],
+  ],
   ['forwardProps values', `forwardProps: ['`, ['loading']],
   ['view slot keys', 'classes.', ['icon', 'label', 'root']],
 ]) {

@@ -595,7 +595,7 @@ const buttonConfig = defineRecipeConfig({
 });
 ```
 
-It returns the original config reference unchanged.
+It returns the original config reference unchanged and preserves `defaultVariants` editor completions plus exact key/value checking when you keep a config object in a variable.
 
 ## React Type Exports
 

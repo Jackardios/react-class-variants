@@ -4,8 +4,10 @@ import type {
   ClassNameValue,
   RecipeConfig,
   RootRecipeConfig,
+  RootRecipeConfigInput,
   RootVariantsSchema,
   SlotRecipeConfig,
+  SlotRecipeConfigInput,
   SlotVariantsSchema,
   SystemOptions,
   VariantSelectionValues,
@@ -51,14 +53,14 @@ export function defineRecipeConfig<
   const Variants extends SlotVariantsSchema<keyof SlotDefs & string> = {},
   const Defaults extends Partial<VariantSelectionValues<Variants>> = {}
 >(
-  config: SlotRecipeConfig<SlotDefs, Variants, Defaults>
+  config: SlotRecipeConfigInput<SlotDefs, Variants, Defaults>
 ): SlotRecipeConfig<SlotDefs, Variants, Defaults>;
 
 export function defineRecipeConfig<
   const Variants extends RootVariantsSchema = {},
   const Defaults extends Partial<VariantSelectionValues<Variants>> = {}
 >(
-  config: RootRecipeConfig<Variants, Defaults>
+  config: RootRecipeConfigInput<Variants, Defaults>
 ): RootRecipeConfig<Variants, Defaults>;
 
 export function defineRecipeConfig(config: RecipeConfig): RecipeConfig {

@@ -58,6 +58,19 @@ export type VariantSelectionValues<Variants extends AnyVariantsSchema> = {
     : never;
 };
 
+type DefaultVariantsShape<Variants extends AnyVariantsSchema> = Partial<
+  VariantSelectionValues<Variants>
+>;
+
+type NoExtraProperties<Actual extends object, Allowed extends object> = Actual &
+  Record<Exclude<keyof Actual, keyof Allowed>, never>;
+
+type DefaultVariantsInput<
+  Variants extends AnyVariantsSchema,
+  Defaults extends DefaultVariantsShape<Variants>
+> = DefaultVariantsShape<NoInfer<Variants>> &
+  NoExtraProperties<Defaults, DefaultVariantsShape<NoInfer<Variants>>>;
+
 type BooleanVariantKeys<Variants extends AnyVariantsSchema> = {
   [Key in keyof Variants]: Variants[Key] extends infer Options extends Record<
     string,
@@ -133,6 +146,17 @@ export type RootRecipeConfig<
   defaultVariants?: Defaults;
 };
 
+export type RootRecipeConfigInput<
+  Variants extends RootVariantsSchema = {},
+  Defaults extends Partial<VariantSelectionValues<Variants>> = {}
+> = {
+  base?: ClassNameValue;
+  slots?: never;
+  variants?: RejectMixedBooleanVariants<Variants>;
+  compoundVariants?: readonly RootCompoundVariant<Variants>[];
+  defaultVariants?: DefaultVariantsInput<Variants, Defaults>;
+};
+
 export type SlotRecipeConfig<
   SlotDefs extends Record<string, ClassNameValue> = Record<
     string,
@@ -149,6 +173,24 @@ export type SlotRecipeConfig<
     Variants
   >[];
   defaultVariants?: Defaults;
+};
+
+export type SlotRecipeConfigInput<
+  SlotDefs extends Record<string, ClassNameValue> = Record<
+    string,
+    ClassNameValue
+  >,
+  Variants extends SlotVariantsSchema<keyof SlotDefs & string> = {},
+  Defaults extends Partial<VariantSelectionValues<Variants>> = {}
+> = {
+  base?: never;
+  slots: SlotDefs;
+  variants?: RejectMixedBooleanVariants<Variants>;
+  compoundVariants?: readonly SlotCompoundVariant<
+    keyof SlotDefs & string,
+    Variants
+  >[];
+  defaultVariants?: DefaultVariantsInput<Variants, Defaults>;
 };
 
 export type AnyRootRecipeConfig = RootRecipeConfig<any, any>;
@@ -424,7 +466,7 @@ export type RecipeFactory = {
     const Variants extends SlotVariantsSchema<keyof SlotDefs & string> = {},
     const Defaults extends Partial<VariantSelectionValues<Variants>> = {}
   >(
-    config: SlotRecipeConfig<SlotDefs, Variants, Defaults>
+    config: SlotRecipeConfigInput<SlotDefs, Variants, Defaults>
   ): SlotRecipe<
     keyof SlotDefs & string,
     Variants,
@@ -436,7 +478,7 @@ export type RecipeFactory = {
     const Variants extends RootVariantsSchema = {},
     const Defaults extends Partial<VariantSelectionValues<Variants>> = {}
   >(
-    config: RootRecipeConfig<Variants, Defaults>
+    config: RootRecipeConfigInput<Variants, Defaults>
   ): RootRecipe<Variants, Defaults, RootRecipeConfig<Variants, Defaults>>;
 };
 

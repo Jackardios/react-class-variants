@@ -51,6 +51,35 @@ const linkConfig = defineRecipeConfig({
   },
 });
 
+expectError(
+  defineRecipeConfig({
+    base: 'inline-flex',
+    variants: {
+      tone: {
+        primary: 'text-blue-600',
+        secondary: 'text-slate-700',
+      },
+    },
+    defaultVariants: {
+      tone: 'ghost',
+    },
+  })
+);
+
+expectError(
+  defineRecipeConfig({
+    base: 'inline-flex',
+    variants: {
+      tone: {
+        primary: 'text-blue-600',
+      },
+    },
+    defaultVariants: {
+      missing: 'primary',
+    },
+  })
+);
+
 const link = recipe(linkConfig);
 const resolvedLink = link.resolve(
   {

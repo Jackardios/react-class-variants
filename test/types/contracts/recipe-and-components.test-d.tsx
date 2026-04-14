@@ -81,6 +81,73 @@ expectError(
   })
 );
 
+expectError(
+  recipe({
+    base: 'inline-flex',
+    variants: {
+      tone: {
+        info: 'bg-sky-100',
+        danger: 'bg-rose-100',
+      },
+    },
+    defaultVariants: {
+      tone: 'warning',
+    },
+  })
+);
+
+expectError(
+  recipe({
+    base: 'inline-flex',
+    variants: {
+      tone: {
+        info: 'bg-sky-100',
+      },
+    },
+    defaultVariants: {
+      missing: 'info',
+    },
+  })
+);
+
+expectError(
+  recipe({
+    slots: {
+      root: 'grid gap-2',
+      label: 'text-sm',
+    },
+    variants: {
+      tone: {
+        info: {
+          root: 'text-sky-700',
+        },
+      },
+    },
+    defaultVariants: {
+      tone: 'danger',
+    },
+  })
+);
+
+expectError(
+  recipe({
+    slots: {
+      root: 'grid gap-2',
+      label: 'text-sm',
+    },
+    variants: {
+      tone: {
+        info: {
+          root: 'text-sky-700',
+        },
+      },
+    },
+    defaultVariants: {
+      missing: 'info',
+    },
+  })
+);
+
 type BadgeVariants = VariantProps<typeof badge>;
 type BadgeResolvedVariants = ResolvedVariantProps<typeof badge>;
 type BadgeResolved = RecipeResolved<typeof badge>;
