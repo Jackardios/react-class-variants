@@ -2,14 +2,10 @@
 'react-class-variants': major
 ---
 
-Align the published v2 package with its ESM-only surface and simplify the
-entrypoints.
+Align the published v2 package with its ESM-only packaging and entrypoints.
 
 **Breaking changes:**
 
-- Remove the `react-class-variants/react` subpath. Import the React surface
-  from the package root and keep `react-class-variants/core` for recipe-only
-  usage.
 - Publish only ESM artifacts from the package root and
   `react-class-variants/core`. CommonJS `require()` consumers now need dynamic
   `import()` or an ESM consumer setup.
