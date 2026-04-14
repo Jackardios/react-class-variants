@@ -119,7 +119,17 @@ const SlottedButton = styled('button', buttonRecipe, {
 });
 
 badge({ tone: 'info' });
-ViewedInput({ tone: 'danger', htmlSize: 12, disabled: true, type: 'number' });
+ViewedInput({
+  tone: 'danger',
+  htmlSize: 12,
+  disabled: true,
+  type: 'number',
+  render: props => {
+    props.className;
+    props.disabled;
+    return <a {...props} href="/" />;
+  },
+});
 SlottedButton({ tone: 'primary', render: <a href="/" /> });
 `;
 
@@ -354,6 +364,13 @@ const viewDisabledQuickInfo = quickInfoText(
   'host.props.disabled;\n      return host.render',
   'disabled'
 );
+const renderDisabledQuickInfo = quickInfoText(
+  exactLanguageService,
+  exactProbeFile,
+  exactProbeSource,
+  'props.disabled;\n    return <a {...props} href="/" />;',
+  'disabled'
+);
 
 assert.match(
   viewTypeQuickInfo,
@@ -370,9 +387,14 @@ assert.equal(
   '(property) disabled: boolean',
   'view host.props.disabled should reflect the forwarded resolved variant.'
 );
+assert.equal(
+  renderDisabledQuickInfo,
+  '(property) disabled?: boolean | undefined',
+  'render callback props should expose forwarded variant props through a broad spread-safe bag.'
+);
 
 for (const [label, snippet, token, expectedText] of [
-  ['styled variant prop', `ViewedInput({ tone: 'danger'`, 'tone', 'tone'],
+  ['styled variant prop', `ViewedInput({\n  tone: 'danger'`, 'tone', 'tone'],
   ['view variant', 'variants.tone', 'tone', 'tone'],
   ['view slot', 'classes.icon', 'icon', 'icon'],
   ['resolved slot', 'resolvedButton.slots.icon', 'icon', 'icon'],

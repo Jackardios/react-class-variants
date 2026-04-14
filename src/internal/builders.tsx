@@ -311,7 +311,8 @@ function ensureRenderSupported(
 function createIntrinsicRootFastStyled<
   Base extends AnyIntrinsicElement,
   TRecipe extends AnyRootRecipe,
-  Aliases extends PropAliases<Base>
+  Aliases extends PropAliases<Base>,
+  Forwarded extends string
 >(
   base: Base,
   compiled: RootCompiledRecipe,
@@ -320,7 +321,7 @@ function createIntrinsicRootFastStyled<
 ) {
   const Component = forwardRef<
     unknown,
-    StyledComponentProps<Base, TRecipe, false, Aliases>
+    StyledComponentProps<Base, TRecipe, false, Aliases, Forwarded>
   >(function StyledIntrinsicRootComponent(rawProps, ref) {
     ensureRenderSupported(
       compiled.validate,
@@ -354,7 +355,8 @@ function createRootRenderStyled<
   Base extends AnyElementType,
   TRecipe extends AnyRootRecipe,
   WithRender extends boolean,
-  Aliases extends PropAliases<Base>
+  Aliases extends PropAliases<Base>,
+  Forwarded extends string
 >(
   base: Base,
   compiled: RootCompiledRecipe,
@@ -364,7 +366,7 @@ function createRootRenderStyled<
 ) {
   const Component = forwardRef<
     unknown,
-    StyledComponentProps<Base, TRecipe, WithRender, Aliases>
+    StyledComponentProps<Base, TRecipe, WithRender, Aliases, Forwarded>
   >(function StyledRootRenderComponent(rawProps, ref) {
     ensureRenderSupported(
       compiled.validate,
@@ -414,7 +416,7 @@ function createRootViewStyled<
 
   const Component = forwardRef<
     unknown,
-    StyledComponentProps<Base, TRecipe, WithRender, Aliases>
+    StyledComponentProps<Base, TRecipe, WithRender, Aliases, Forwarded>
   >(function StyledRootViewComponent(rawProps, ref) {
     ensureRenderSupported(
       compiled.validate,
@@ -469,7 +471,7 @@ function createSlotViewStyled<
 
   const Component = forwardRef<
     unknown,
-    StyledComponentProps<Base, TRecipe, WithRender, Aliases>
+    StyledComponentProps<Base, TRecipe, WithRender, Aliases, Forwarded>
   >(function StyledSlotViewComponent(rawProps, ref) {
     ensureRenderSupported(
       compiled.validate,
@@ -523,7 +525,7 @@ export function createRootStyled<
   base: Base,
   recipe: TRecipe,
   options?: RootStyledOptions<Base, TRecipe, WithRender, Aliases, Forwarded>
-): StyledComponentType<Base, TRecipe, WithRender, Aliases> {
+): StyledComponentType<Base, TRecipe, WithRender, Aliases, Forwarded> {
   const compiled = getCompiledRecipe(recipe) as RootCompiledRecipe;
   const withRender = options?.withRender === true;
   const resolveOptions = normalizeResolveOptions(
@@ -538,7 +540,7 @@ export function createRootStyled<
       compiled,
       resolveOptions,
       displayName
-    ) as StyledComponentType<Base, TRecipe, WithRender, Aliases>;
+    ) as StyledComponentType<Base, TRecipe, WithRender, Aliases, Forwarded>;
   }
 
   if (!options?.view) {
@@ -548,7 +550,7 @@ export function createRootStyled<
       resolveOptions,
       withRender as WithRender,
       displayName
-    ) as StyledComponentType<Base, TRecipe, WithRender, Aliases>;
+    ) as StyledComponentType<Base, TRecipe, WithRender, Aliases, Forwarded>;
   }
 
   return createRootViewStyled(
@@ -558,7 +560,7 @@ export function createRootStyled<
     resolveOptions,
     withRender as WithRender,
     displayName
-  ) as StyledComponentType<Base, TRecipe, WithRender, Aliases>;
+  ) as StyledComponentType<Base, TRecipe, WithRender, Aliases, Forwarded>;
 }
 
 export function createSlotStyled<
@@ -571,7 +573,7 @@ export function createSlotStyled<
   base: Base,
   recipe: TRecipe,
   options: SlotStyledOptions<Base, TRecipe, WithRender, Aliases, Forwarded>
-): StyledComponentType<Base, TRecipe, WithRender, Aliases> {
+): StyledComponentType<Base, TRecipe, WithRender, Aliases, Forwarded> {
   const compiled = getCompiledRecipe(recipe) as SlotCompiledRecipe;
   const withRender = options.withRender === true;
   const resolveOptions = normalizeResolveOptions(
@@ -587,5 +589,5 @@ export function createSlotStyled<
     resolveOptions,
     withRender as WithRender,
     displayName
-  ) as StyledComponentType<Base, TRecipe, WithRender, Aliases>;
+  ) as StyledComponentType<Base, TRecipe, WithRender, Aliases, Forwarded>;
 }

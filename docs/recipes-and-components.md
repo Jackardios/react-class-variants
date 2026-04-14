@@ -545,7 +545,7 @@ Function form:
 </LinkButton>
 ```
 
-Use the function form when you want to derive the rendered element from the resolved host props instead of cloning a fixed element instance.
+Use the function form when you want a spread-safe prop bag for cross-element rendering instead of cloning a fixed element instance. The callback receives the resolved `className`, `children`, `ref`, generic HTML attributes, and any variants listed in `forwardProps`, but it does not promise exact intrinsic resolved props such as `type` or alias-resolved native keys.
 
 ## 10. Share Merge and Validation Rules
 

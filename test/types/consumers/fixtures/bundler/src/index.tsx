@@ -111,6 +111,9 @@ Button({
   },
   render: props => {
     type _ClassName = Expect<Equal<typeof props.className, string>>;
+    // @ts-expect-error render props intentionally expose a broad spread-safe bag
+    const renderType = props.type;
+    void renderType;
     return <a {...props} href="/" />;
   },
   children: 'Link button',

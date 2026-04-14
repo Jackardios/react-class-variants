@@ -5,6 +5,7 @@ import type {
   ComponentType,
   ElementType,
   ForwardRefExoticComponent,
+  HTMLAttributes,
   JSX,
   PropsWithoutRef,
   ReactElement,
@@ -28,18 +29,6 @@ export type AnyIntrinsicElement = keyof JSX.IntrinsicElements;
 
 type ReservedReactPublicProps = 'children' | 'className' | 'ref' | 'render';
 
-export type RenderFunctionProps = Simplify<
-  {
-    className: string;
-    children?: ReactNode;
-    ref?: Ref<any>;
-  } & Record<string, unknown>
->;
-
-export type RenderProp =
-  | ReactElement
-  | ((props: RenderFunctionProps) => ReactNode);
-
 export type PropAliases<Base extends AnyElementType> = Partial<
   Record<
     Exclude<
@@ -62,6 +51,34 @@ type AliasProps<
 type VariantPropKeys<TRecipe> = [TRecipe] extends [never]
   ? never
   : keyof VariantProps<TRecipe>;
+
+type ForwardedRenderVariantProps<TRecipe, Forwarded extends string> = [
+  TRecipe
+] extends [never]
+  ? {}
+  : Pick<
+      VariantProps<TRecipe>,
+      Extract<Forwarded, keyof VariantProps<TRecipe> & string>
+    >;
+
+export type RenderFunctionProps<
+  TRecipe = never,
+  Forwarded extends string = never
+> = Simplify<
+  {
+    className: string;
+    children?: ReactNode;
+    ref?: Ref<any>;
+  } & ForwardedRenderVariantProps<TRecipe, Forwarded> &
+    Omit<
+      HTMLAttributes<any>,
+      'className' | Extract<VariantPropKeys<TRecipe>, string>
+    >
+>;
+
+export type RenderProp<TRecipe = never, Forwarded extends string = never> =
+  | ReactElement
+  | ((props: RenderFunctionProps<TRecipe, Forwarded>) => ReactNode);
 
 type BasePropKeys<Base extends AnyElementType> =
   keyof ComponentPropsWithRef<Base> & string;
@@ -137,9 +154,12 @@ type StyledComponent<
   Base extends AnyElementType,
   TRecipe,
   WithRender extends boolean,
-  Aliases extends PropAliases<Base> = {}
+  Aliases extends PropAliases<Base> = {},
+  Forwarded extends string = never
 > = ForwardRefExoticComponent<
-  PropsWithoutRef<StyledComponentProps<Base, TRecipe, WithRender, Aliases>> &
+  PropsWithoutRef<
+    StyledComponentProps<Base, TRecipe, WithRender, Aliases, Forwarded>
+  > &
     RefAttributes<ComponentRef<Base>>
 >;
 
@@ -147,23 +167,30 @@ export type StyledComponentProps<
   Base extends AnyElementType,
   TRecipe,
   WithRender extends boolean,
-  Aliases extends PropAliases<Base>
+  Aliases extends PropAliases<Base>,
+  Forwarded extends string = never
 > = Simplify<
   PublicBaseProps<Base, TRecipe, Aliases> &
     AliasProps<Base, Aliases> &
     VariantProps<TRecipe> & {
       className?: ClassNameValue;
-    } & (WithRender extends true ? { render?: RenderProp } : {})
+    } & (WithRender extends true
+      ? { render?: RenderProp<TRecipe, Forwarded> }
+      : {})
 >;
 
 export type HostRenderOverrides<
   Base extends AnyElementType,
-  WithRender extends boolean
+  TRecipe,
+  WithRender extends boolean,
+  Forwarded extends string = never
 > = Simplify<
   Partial<Omit<ComponentPropsWithRef<Base>, 'className'>> &
     Record<string, unknown> & {
       className?: ClassNameValue;
-    } & (WithRender extends true ? { render?: RenderProp } : {})
+    } & (WithRender extends true
+      ? { render?: RenderProp<TRecipe, Forwarded> }
+      : {})
 >;
 
 export type HostView<
@@ -178,7 +205,9 @@ export type HostView<
   >;
   readonly className: string;
   readonly children?: ReactNode;
-  render(overrides?: HostRenderOverrides<Base, WithRender>): ReactNode;
+  render(
+    overrides?: HostRenderOverrides<Base, TRecipe, WithRender, Forwarded>
+  ): ReactNode;
 };
 
 export type RootStyledViewProps<
@@ -255,5 +284,6 @@ export type StyledComponentType<
   Base extends AnyElementType,
   TRecipe,
   WithRender extends boolean,
-  Aliases extends PropAliases<Base> = {}
-> = StyledComponent<Base, TRecipe, WithRender, Aliases>;
+  Aliases extends PropAliases<Base> = {},
+  Forwarded extends string = never
+> = StyledComponent<Base, TRecipe, WithRender, Aliases, Forwarded>;

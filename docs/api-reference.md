@@ -529,7 +529,9 @@ When the render target is a React element:
 When the render target is a function:
 
 - its props are intentionally broad
-- you always receive the resolved `className`, `children`, `ref`, and normalized host props
+- you always receive the resolved `className`, `children`, and `ref`
+- you receive a spread-safe generic HTML attribute bag rather than exact intrinsic resolved props
+- any variants listed in `forwardProps` are included on that bag
 
 ## `defineConfig(options?)`
 

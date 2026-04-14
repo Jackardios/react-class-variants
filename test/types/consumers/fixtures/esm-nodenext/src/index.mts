@@ -135,6 +135,9 @@ Button({
   form: 'checkout',
   render: props => {
     type _RenderClassName = Expect<Equal<typeof props.className, string>>;
+    // @ts-expect-error render props intentionally expose a broad spread-safe bag
+    const renderType = props.type;
+    void renderType;
     return null;
   },
 });

@@ -278,6 +278,7 @@ expectType<ReactNode>(
     tone: 'danger',
     render: props => {
       expectType<string>(props.className);
+      expectError(props.type);
       return <a {...props} href="/" />;
     },
     children: 'Link',
@@ -467,6 +468,8 @@ expectType<ReactNode>(
     type: 'number',
     render: props => {
       expectType<string>(props.className);
+      expectType<boolean | undefined>(props.disabled);
+      expectError(props.type);
       return <a {...props} href="/" />;
     },
   })

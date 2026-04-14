@@ -74,7 +74,7 @@ export function styled<
   base: Base,
   inputRecipe: TRecipe,
   options?: RootStyledOptions<Base, TRecipe, WithRender, Aliases, Forwarded>
-): StyledComponentType<Base, TRecipe, WithRender, Aliases>;
+): StyledComponentType<Base, TRecipe, WithRender, Aliases, Forwarded>;
 
 export function styled<
   Base extends Exclude<AnyElementType, AnyIntrinsicElement>,
@@ -85,7 +85,7 @@ export function styled<
   base: Base,
   inputRecipe: TRecipe,
   options?: RootStyledOptions<Base, TRecipe, false, Aliases, Forwarded>
-): StyledComponentType<Base, TRecipe, false, Aliases>;
+): StyledComponentType<Base, TRecipe, false, Aliases, Forwarded>;
 
 export function styled<
   Base extends AnyIntrinsicElement,
@@ -97,7 +97,7 @@ export function styled<
   base: Base,
   inputRecipe: TRecipe,
   options: SlotStyledOptions<Base, TRecipe, WithRender, Aliases, Forwarded>
-): StyledComponentType<Base, TRecipe, WithRender, Aliases>;
+): StyledComponentType<Base, TRecipe, WithRender, Aliases, Forwarded>;
 
 export function styled<
   Base extends Exclude<AnyElementType, AnyIntrinsicElement>,
@@ -108,7 +108,7 @@ export function styled<
   base: Base,
   inputRecipe: TRecipe,
   options: SlotStyledOptions<Base, TRecipe, false, Aliases, Forwarded>
-): StyledComponentType<Base, TRecipe, false, Aliases>;
+): StyledComponentType<Base, TRecipe, false, Aliases, Forwarded>;
 
 export function styled(
   base: AnyElementType,
