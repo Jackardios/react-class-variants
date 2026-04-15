@@ -247,6 +247,21 @@ What changed is the data flow:
 - v1 combined config definition and component creation in one call
 - v2 always creates a recipe first, then builds a component from that recipe
 
+### Update VS Code Tailwind IntelliSense settings
+
+If your v1 workspace configured `tailwindCSS.classFunctions`, switch the list
+to the v2 recipe-first helpers:
+
+```json
+{
+  "tailwindCSS.classFunctions": ["recipe", "defineRecipeConfig"]
+}
+```
+
+In v2, Tailwind-heavy config usually lives in `recipe()` or
+`defineRecipeConfig()`, not in `styled(base, config)` or `variantProps()`. If
+you alias `recipe` from `defineConfig()`, add that alias name too.
+
 Two new tools matter during migration:
 
 - use `propAliases` when a variant name would collide with a base prop like

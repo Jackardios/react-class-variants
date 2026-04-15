@@ -131,6 +131,41 @@ export const badgeToneOptions = Object.keys(badgeConfig.variants.tone);
 
 `defineRecipeConfig()` is a zero-cost typed helper. Reach for it when you keep a config object in a variable and want `defaultVariants` completions plus exact key/value checks. In v2, recipe instances do not expose a runtime `.config` property, so this is the intended way to keep config data around.
 
+## Tailwind CSS IntelliSense in VS Code
+
+If you use the Tailwind CSS IntelliSense extension, register the v2 recipe
+helpers in `tailwindCSS.classFunctions` so completions, hovers, and linting
+work inside `recipe(...)` and `defineRecipeConfig(...)` calls:
+
+```json
+{
+  "editor.quickSuggestions": {
+    "strings": "on"
+  },
+  "tailwindCSS.classFunctions": ["recipe", "defineRecipeConfig"]
+}
+```
+
+This is the setting that covers class strings in `base`, `slots`, variant
+branches, and `compoundVariants[].className` inside JavaScript and TypeScript
+config objects.
+
+If you rename a configured factory, add that alias too:
+
+```ts
+const { recipe: uiRecipe } = defineConfig();
+```
+
+```json
+{
+  "tailwindCSS.classFunctions": ["recipe", "defineRecipeConfig", "uiRecipe"]
+}
+```
+
+Tailwind CSS IntelliSense matches function names, so wrapper or alias names
+must be listed explicitly. This still depends on the extension detecting your
+Tailwind project normally.
+
 ## Slotted Components
 
 Use `slots` when different parts of the component need different classes, then render them through a `view` component:
