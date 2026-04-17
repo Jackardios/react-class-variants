@@ -1,8 +1,8 @@
 # API Reference
 
-This document covers the primary user-facing v2 alpha APIs:
+This document covers the primary user-facing v2 alpha APIs and public helpers:
 `recipe()`, `recipe.resolve()`, `styled()`, `defineConfig()`,
-`defineRecipeConfig()`, `view`, and `render`.
+`defineRecipeConfig()`, `view`, `render`, and the exported utilities.
 
 Use this page as a reference, not as a tutorial. For guided examples and recommended patterns, start with the [recipes and components guide](./recipes-and-components.md).
 
@@ -162,6 +162,7 @@ Rules:
 
 - top-level slot recipe calls do not accept `className`
 - top-level slot recipe calls accept optional `slotClassNames`
+- `slotClassNames` keys should match declared slot names
 - slot render functions accept local variant overrides plus optional `className`
 - slot render functions are plain functions and may be safely destructured
 
@@ -423,12 +424,20 @@ type RootStyledOptions = StyledOptionsCommon & {
 ```ts
 type SlotStyledOptions = StyledOptionsCommon & {
   withRender?: boolean;
-  hostSlot?: string;
   view: ComponentType<SlotStyledViewProps<...>>;
-};
+} & (
+  'root' extends SlotNames<TRecipe>
+    ? {
+        hostSlot?: SlotNames<TRecipe>;
+      }
+    : {
+        hostSlot: SlotNames<TRecipe>;
+      }
+);
 ```
 
 If the recipe does not declare a `root` slot, `hostSlot` is required.
+When you provide `hostSlot`, it must be one of the declared slot names.
 
 ## `view` Model
 
@@ -635,6 +644,41 @@ const buttonConfig = defineRecipeConfig({
 
 It returns the original config reference unchanged and preserves `defaultVariants` editor completions plus exact key/value checking when you keep a config object in a variable.
 
+## Utilities
+
+### `hasOwnProperty(object, key)`
+
+- typed own-property guard
+- uses `Object.hasOwn` when available and falls back to `Object.prototype.hasOwnProperty.call(...)`
+- exported from both the package root and `react-class-variants/core`
+
+### `mergeProps(base, overrides)`
+
+- exported from the package root
+- concatenates `className`
+- shallow-merges `style`
+- composes React event handlers with override-first ordering
+- replaces other props with the override value
+
+Use this when a wrapper or polymorphic helper needs the same prop-merging
+semantics as the render path.
+
+### `mergeRefs(...refs)`
+
+- exported from the package root
+- merges multiple refs into one callback ref
+- avoids wrapping when there is only one non-null ref
+
+Use this in non-hook code such as `cloneElement()` or conditional branches.
+
+### `useMergeRefs(...refs)`
+
+- exported from the package root
+- memoized hook form of `mergeRefs(...)`
+
+Use this inside React components when you need one ref prop to update multiple
+refs.
+
 ## React Type Exports
 
 - `AnyElementType`
@@ -648,16 +692,21 @@ It returns the original config reference unchanged and preserves `defaultVariant
 - `SlotStyledOptions`
 - `RootStyledViewProps`
 - `SlotStyledViewProps`
+- `StyledFn`
 
 ## Common Errors
 
-| Error                                                                 | Cause                                                         | Fix                                           |
-| --------------------------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------------- |
-| `unknown recipe prop "type"`                                          | direct recipe calls are variant-only APIs                     | use `resolve()` when you need arbitrary props |
-| `className cannot be passed directly to a slotted recipe call`        | slot recipes route class overrides at the slot-function level | use a slot renderer or `resolve()`            |
-| `slotted recipes require a view component`                            | slot recipes no longer accept the default direct host path    | pass `view` to `styled()`                     |
-| `prop alias target "className" conflicts with a reserved public prop` | aliasing would shadow a reserved React prop                   | choose a different alias                      |
-| `forwardProps key "x" is not declared in variants`                    | `forwardProps` references a non-existent variant              | only forward declared variant keys            |
+| Error                                                                    | Cause                                                         | Fix                                           |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------- | --------------------------------------------- |
+| `unknown recipe prop "type"`                                             | direct recipe calls are variant-only APIs                     | use `resolve()` when you need arbitrary props |
+| `className cannot be passed directly to a slotted recipe call`           | slot recipes route class overrides at the slot-function level | use a slot renderer or `resolve()`            |
+| `slotted recipes require a view component`                               | slot recipes no longer accept the default direct host path    | pass `view` to `styled()`                     |
+| `slotted recipes without a "root" slot require hostSlot`                 | the recipe has no default host slot                           | provide `hostSlot` with a declared slot name  |
+| `hostSlot "x" is not declared in recipe.slots`                           | `hostSlot` references an unknown slot                         | use one of the declared slot names            |
+| `invalid input.slotClassNames; slot "x" is not declared in recipe.slots` | `slotClassNames` targets an unknown slot                      | only override declared slots                  |
+| `variant key "slotClassNames" is reserved`                               | `slotClassNames` cannot also be a variant name                | rename the variant key                        |
+| `prop alias target "className" conflicts with a reserved public prop`    | aliasing would shadow a reserved React prop                   | choose a different alias                      |
+| `forwardProps key "x" is not declared in variants`                       | `forwardProps` references a non-existent variant              | only forward declared variant keys            |
 
 ## Related Docs
 

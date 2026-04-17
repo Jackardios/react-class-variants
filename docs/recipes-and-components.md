@@ -296,12 +296,57 @@ Key ideas:
 - `classes` exists only for slotted recipes
 - `classes` may be safely destructured inside `view`
 - top-level `slotClassNames` applies to matching slots
+- `slotClassNames` keys should match declared slot names
 - external `className` is routed automatically to the host slot
 - slot render functions can still be called many times with local overrides
 
+### External slot overrides
+
+Use top-level `slotClassNames` when callers need to target non-host slots from
+outside:
+
+```tsx
+<Button
+  tone="primary"
+  slotClassNames={{
+    spinner: 'text-red-500',
+    label: 'uppercase',
+  }}
+>
+  Save
+</Button>
+```
+
+The same shape works on direct slot recipe calls and `resolve()`:
+
+```ts
+const slots = buttonRecipe({
+  tone: 'primary',
+  slotClassNames: {
+    spinner: 'text-red-500',
+  },
+});
+
+const resolved = buttonRecipe.resolve({
+  tone: 'primary',
+  className: 'w-full',
+  slotClassNames: {
+    label: 'uppercase',
+  },
+  id: 'save',
+});
+```
+
+Rules:
+
+- top-level `slotClassNames` is consumed before props are forwarded
+- local slot-function `className` still wins for that one slot render call
+- raw slot `resolve()` still leaves top-level `className` in `resolvedProps`; only `styled(..., { view })` chooses the host slot automatically
+
 ## 5. Slot Recipes Do Not Need `root`
 
-If the actual wrapper corresponds to a different slot, provide `hostSlot`.
+If the actual wrapper corresponds to a different slot, provide `hostSlot` with
+one of the declared slot names.
 
 ```tsx
 const fieldRecipe = recipe({

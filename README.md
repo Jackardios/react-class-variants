@@ -235,6 +235,26 @@ Usage:
 </Button>
 ```
 
+External non-host slot overrides use `slotClassNames`:
+
+```ts
+const slots = buttonRecipe({
+  tone: 'primary',
+  slotClassNames: {
+    icon: 'text-red-500',
+  },
+});
+
+const resolved = buttonRecipe.resolve({
+  tone: 'primary',
+  className: 'w-full',
+  slotClassNames: {
+    label: 'uppercase',
+  },
+  id: 'save',
+});
+```
+
 Key points:
 
 - `view` is required for slotted recipes
@@ -243,8 +263,10 @@ Key points:
 - use `classes.slotName()` for the most direct slot lookup in `view`
 - `classes` is still an enumerable slot render map and may be safely destructured when that reads better
 - top-level `slotClassNames` applies to matching slots, while top-level `className` still routes only to the host slot
+- `slotClassNames` keys should match declared slot names
+- `slotClassNames` is consumed before props are forwarded, while local slot-function `className` still wins for that one slot call
 - external component `className` is routed automatically to the host slot
-- if the recipe has no `root` slot, provide `hostSlot`
+- if the recipe has no `root` slot, provide `hostSlot` with one of the declared slot names
 - call `host.render(...)` directly as a method
 - do not destructure `render` from `host`
 - this is intentional: keeping `host.render` method-shaped avoids allocating one extra function per `view` render
@@ -348,6 +370,25 @@ Default root and core imports are lean and process-less safe. Use
 `defineConfig({ validate: 'always' })` when you want checked runtime behavior
 for a shared factory.
 
+## Utilities
+
+Package root also exports a few low-level helpers for wrappers and polymorphic
+components:
+
+```ts
+import {
+  hasOwnProperty,
+  mergeProps,
+  mergeRefs,
+  useMergeRefs,
+} from 'react-class-variants';
+```
+
+- `hasOwnProperty(object, key)` is a typed own-property guard and is also available from `react-class-variants/core`
+- `mergeProps(base, overrides)` concatenates `className`, shallow-merges `style`, composes React event handlers with override-first ordering, and replaces other props with the override value
+- `mergeRefs(...refs)` creates a merged ref callback for non-hook contexts such as `cloneElement()` or conditional branches
+- `useMergeRefs(...refs)` is the memoized hook form for React components
+
 ## Primary APIs
 
 Most users will work with these package-root APIs from `react-class-variants`:
@@ -357,6 +398,9 @@ Most users will work with these package-root APIs from `react-class-variants`:
 - `defineConfig()`
 - `defineRecipeConfig()`
 - public core and React types
+
+Package root also exports `mergeProps`, `mergeRefs`, `useMergeRefs`, and
+`hasOwnProperty` for lower-level integration work.
 
 For recipe-only modules, the primary `react-class-variants/core` APIs are:
 

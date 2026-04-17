@@ -45,6 +45,7 @@ This pipeline:
 - runs with `NODE_ENV=production`
 - isolates each runtime, creation, and retained-memory task in its own subprocess
 - compares only common-denominator root-only scenarios across libraries
+- writes the canonical committed competitor artifacts used for historical report diffs
 
 ### `pnpm bench:overhead`
 
@@ -58,6 +59,11 @@ This includes:
 - runtime throughput
 - retained memory
 - synthetic TypeScript diagnostics
+
+`bench/overhead/reports/current.json` is a local measurement artifact, not the
+committed historical baseline. Use it to inspect the current run, and use
+`pnpm check:overhead` when you need pass/fail regression checks against the
+configured baseline ref.
 
 The overhead pipeline measures both the package root React surface and the `react-class-variants/core` entrypoint so recipe-only consumers are represented separately.
 
@@ -74,6 +80,9 @@ Use this for:
 The package script currently checks bundle regressions for the recipe-only and
 slotted-recipe profiles. For ad hoc comparisons or custom thresholds, run the
 check script directly with its CLI flags.
+
+The current package script compares against the baseline ref configured in
+`package.json`, currently `4fe016c`.
 
 ## Directory Layout
 

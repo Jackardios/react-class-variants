@@ -31,8 +31,8 @@ If you are learning v2 from scratch, start with the [README](../README.md), the
 | `styled(base, config)`               | `const r = recipe(config)` then `styled(base, r, options?)` | config definition and component creation are separate   |
 | `variantProps(config)`               | `recipe.resolve(input, options?)`                           | returns structured output, not one merged prop object   |
 | `extractVariantsConfig(Component)`   | keep the config explicitly with `defineRecipeConfig()`      | no runtime extraction helper in v2                      |
-| `VariantPropsOf<typeof Component>`   | `VariantProps<typeof recipe>`                               | types are recipe-first                                  |
-| `VariantsConfigOf<typeof Component>` | `RecipeConfigOf<typeof recipe>`                             | the recipe carries the config type, not the config data |
+| `VariantPropsOf<typeof Component>`   | `VariantProps<typeof someRecipe>`                           | types are recipe-first and use the recipe instance      |
+| `VariantsConfigOf<typeof Component>` | `RecipeConfigOf<typeof someRecipe>`                         | the recipe carries the config type, not the config data |
 | `asChild`                            | `withRender: true` plus `render`, or a wrapper component    | intrinsic bases only                                    |
 | `cx()`                               | your own `clsx` or `tailwind-merge` utility                 | no v2 export                                            |
 | `tw`                                 | plain strings or your own tagged template                   | no v2 export                                            |
@@ -555,7 +555,27 @@ Slot-specific rules to remember:
 - slotted recipes require `view`
 - if the recipe has no `root` slot, `hostSlot` is required
 - direct slot recipe calls do not accept top-level `className`
+- external non-host slot overrides now use top-level `slotClassNames`
 - individual slot renderers do accept local overrides and `className`
+
+Example external slot overrides:
+
+```tsx
+<Field
+  slotClassNames={{
+    input: 'bg-white',
+  }}
+/>
+```
+
+```ts
+const resolved = fieldRecipe.resolve({
+  className: 'w-full',
+  slotClassNames: {
+    input: 'ring-1 ring-sky-500',
+  },
+});
+```
 
 ## 9. Removed v1 Utilities
 
@@ -591,6 +611,7 @@ Re-test these areas carefully after migration:
 - Direct recipe calls are variant-oriented. Use `resolve()` when you have a full
   component prop bag.
 - Slotted direct calls do not accept top-level `className`.
+- External slot overrides now use `slotClassNames`, and its keys must match the declared slots.
 - `className` values are stricter on the validated path. Use strings, `null`, or
   flat arrays of strings. Do not rely on deep flattening or non-string array
   items.
@@ -615,9 +636,10 @@ Re-test these areas carefully after migration:
 - [ ] Replace `asChild` with `withRender: true` plus `render`, or with a wrapper
 - [ ] Replace `extractVariantsConfig()` by keeping the config explicitly with
       `defineRecipeConfig()`
-- [ ] Replace `VariantPropsOf<typeof Component>` with `VariantProps<typeof recipe>`
+- [ ] Replace `VariantPropsOf<typeof Component>` with
+      `VariantProps<typeof someRecipe>`
 - [ ] Replace `VariantsConfigOf<typeof Component>` with
-      `RecipeConfigOf<typeof recipe>`
+      `RecipeConfigOf<typeof someRecipe>`
 - [ ] Add `propAliases` anywhere variant keys collide with base props
 - [ ] Add `forwardProps` anywhere the base component needs resolved variant
       values
