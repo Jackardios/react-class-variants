@@ -147,7 +147,12 @@ Rules:
 ### Slot recipe direct call
 
 ```ts
-const slots = buttonRecipe({ tone: 'primary' });
+const slots = buttonRecipe({
+  tone: 'primary',
+  slotClassNames: {
+    icon: 'text-red-500',
+  },
+});
 
 slots.root();
 slots.icon({ className: 'text-red-500' });
@@ -156,6 +161,7 @@ slots.icon({ className: 'text-red-500' });
 Rules:
 
 - top-level slot recipe calls do not accept `className`
+- top-level slot recipe calls accept optional `slotClassNames`
 - slot render functions accept local variant overrides plus optional `className`
 - slot render functions are plain functions and may be safely destructured
 
@@ -196,6 +202,9 @@ const result = buttonRecipe.resolve(
   {
     tone: 'primary',
     className: 'external',
+    slotClassNames: {
+      icon: 'text-red-500',
+    },
     id: 'save',
   },
   {
@@ -220,6 +229,7 @@ For slot recipes:
 
 - `resolve()` does not choose a canonical slot for component-level `className`
 - if `className` was present in the input, it stays in `resolvedProps`
+- if `slotClassNames` was present in the input, it is consumed and applied to the matching slots
 
 ### `ResolveOptions`
 
@@ -472,6 +482,7 @@ Behavior:
 - `host.render({ className })` appends to the resolved host class string
 - `host.render()` reuses the current `host.children` unless you override `children`
 - for slotted recipes, external component `className` is routed automatically to the host slot
+- for slotted recipes, top-level `slotClassNames` applies to the matching slots before local slot-function `className` overrides
 
 Important note:
 

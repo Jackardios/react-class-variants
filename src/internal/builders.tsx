@@ -45,6 +45,7 @@ import { mergeProps } from '../utils';
 
 const hostStateSymbol = Symbol('react-class-variants.host-state');
 const slotCompiledSymbol = Symbol('react-class-variants.slot-compiled');
+const slotClassNamesSymbol = Symbol('react-class-variants.slot-class-names');
 const slotSelectionSymbol = Symbol('react-class-variants.slot-selection');
 
 type HostRuntimeState = {
@@ -70,6 +71,7 @@ type SlotClassesObject = Record<
   (input?: Record<string, unknown>) => string
 > & {
   [slotCompiledSymbol]: SlotCompiledRecipe;
+  [slotClassNamesSymbol]: readonly (string | undefined)[];
   [slotSelectionSymbol]: readonly CompiledSelectionValue[];
 };
 
@@ -233,6 +235,7 @@ function createSlotClassAccessors(
             this[slotCompiledSymbol],
             slotIndex,
             this[slotSelectionSymbol],
+            this[slotClassNamesSymbol],
             input
           );
 
@@ -254,12 +257,16 @@ function createSlotClassAccessors(
 function createSlotClasses(
   accessors: readonly SlotClassAccessor[],
   compiled: SlotCompiledRecipe,
-  selection: readonly CompiledSelectionValue[]
+  selection: readonly CompiledSelectionValue[],
+  slotClassNames: readonly (string | undefined)[]
 ) {
   const classes = Object.create(null) as SlotClassesObject;
 
   Object.defineProperty(classes, slotCompiledSymbol, {
     value: compiled,
+  });
+  Object.defineProperty(classes, slotClassNamesSymbol, {
+    value: slotClassNames,
   });
   Object.defineProperty(classes, slotSelectionSymbol, {
     value: selection,
@@ -281,9 +288,9 @@ function getHostSlotIndex(
   hostSlot: string | undefined
 ) {
   const resolvedHostSlot = hostSlot ?? 'root';
-  const slotIndex = compiled.slotNames.indexOf(resolvedHostSlot);
+  const slotIndex = compiled.slotIndex[resolvedHostSlot];
 
-  if (slotIndex >= 0) {
+  if (slotIndex !== undefined) {
     return slotIndex;
   }
 
@@ -495,7 +502,8 @@ function createSlotViewStyled<
       classes: createSlotClasses(
         slotClassAccessors,
         compiled,
-        resolved.selection
+        resolved.selection,
+        resolved.slotClassNames
       ),
       host: createHostView(
         base,
@@ -504,6 +512,7 @@ function createSlotViewStyled<
           compiled,
           hostSlotIndex,
           resolved.selection,
+          resolved.slotClassNames,
           className ? { className } : undefined
         ),
         children,

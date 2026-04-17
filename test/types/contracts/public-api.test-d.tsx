@@ -24,6 +24,7 @@ import {
   useMergeRefs,
   styled,
 } from '../../../dist';
+import { recipe as coreRecipe } from '../../../dist/core';
 
 expectAssignable<ClassNameValue>('rounded');
 expectAssignable<ClassNameValue>(null);
@@ -106,6 +107,15 @@ const configuredLink = configuredRecipe({
     },
   },
 });
+const crossEntryRootRecipe = coreRecipe({
+  base: 'inline-flex',
+  variants: {
+    slotClassNames: {
+      compact: 'gap-1',
+      spacious: 'gap-3',
+    },
+  },
+});
 const strictConfiguredLink = strictConfiguredRecipe({
   base: 'inline-flex',
   variants: {
@@ -158,13 +168,25 @@ expectType<boolean>(resolvedLink.resolvedProps.disabled);
 
 const Link = styled('a', link);
 const ConfiguredLink = configuredStyled('a', configuredLink);
+const CrossEntryRoot = styled('button', crossEntryRootRecipe);
 const StrictConfiguredLink = strictConfiguredStyled('a', strictConfiguredLink);
 
 expectType<string>(link({ tone: 'primary' }));
 expectType<string>(configuredLink({ tone: 'secondary' }));
+expectAssignable<ReturnType<typeof CrossEntryRoot>>(
+  CrossEntryRoot({ slotClassNames: 'compact' })
+);
 expectAssignable<ReturnType<typeof Link>>(ConfiguredLink({ tone: 'primary' }));
 expectAssignable<ReturnType<typeof Link>>(
   StrictConfiguredLink({ tone: 'primary' })
+);
+expectError(
+  Link({
+    tone: 'primary',
+    slotClassNames: {
+      root: 'px-4',
+    },
+  })
 );
 expectError(defineConfig({ validate: 'dev' }));
 

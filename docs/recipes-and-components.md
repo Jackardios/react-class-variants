@@ -295,6 +295,7 @@ Key ideas:
 - `view` is required for slot recipes
 - `classes` exists only for slotted recipes
 - `classes` may be safely destructured inside `view`
+- top-level `slotClassNames` applies to matching slots
 - external `className` is routed automatically to the host slot
 - slot render functions can still be called many times with local overrides
 
@@ -355,7 +356,7 @@ Important note:
 
 ### Reading `host.props` and extending host classes
 
-Use `host.props` when your `view` needs a pass-through prop, and use `host.render({ className })` when the wrapper needs extra host-level classes.
+Use `host.props` when your `view` needs a pass-through prop, use `host.render({ className })` when the wrapper needs extra host-level classes, and use top-level `slotClassNames` when callers need to target non-host slots from outside.
 
 ```tsx
 import { recipe, styled } from 'react-class-variants';

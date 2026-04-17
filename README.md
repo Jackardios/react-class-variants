@@ -220,6 +220,16 @@ Usage:
   Cancel
 </Button>
 
+<Button
+  tone="primary"
+  slotClassNames={{
+    icon: 'text-red-500',
+    label: 'uppercase',
+  }}
+>
+  Save
+</Button>
+
 <Button tone="primary" render={<a href="/docs" />}>
   Docs
 </Button>
@@ -232,6 +242,7 @@ Key points:
 - prefer a named component such as `ButtonView` when you use hooks
 - use `classes.slotName()` for the most direct slot lookup in `view`
 - `classes` is still an enumerable slot render map and may be safely destructured when that reads better
+- top-level `slotClassNames` applies to matching slots, while top-level `className` still routes only to the host slot
 - external component `className` is routed automatically to the host slot
 - if the recipe has no `root` slot, provide `hostSlot`
 - call `host.render(...)` directly as a method
@@ -307,6 +318,7 @@ What `resolve()` gives you here:
 - `propAliases` lets the public API accept `htmlSize` while `resolvedProps` receives the native `size` prop
 - `resolved.variants` gives you the effective variant selection after defaults and boolean fallbacks
 - for slot recipes, `resolve()` returns `slots` plus `resolvedProps` instead of one root `className`
+- for slot recipes, top-level `slotClassNames` applies to matching slots and is consumed before props are forwarded
 
 Alias names must not collide with existing host props, reserved React public props, or declared variant keys.
 

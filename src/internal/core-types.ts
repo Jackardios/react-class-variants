@@ -327,14 +327,39 @@ type RootResolvedProps<TRecipe, TInput, TOptions> = Simplify<
   }
 >;
 
-type SlotResolvedProps<TRecipe, TInput, TOptions> =
-  ResolveInputPropsWithOptions<TRecipe, TInput, TOptions>;
+type SlotResolvedProps<TRecipe, TInput, TOptions> = Simplify<
+  Omit<
+    ResolveInputPropsWithOptions<TRecipe, TInput, TOptions>,
+    'slotClassNames'
+  >
+>;
 
 export type RootRecipeInput<TRecipe> = VariantProps<TRecipe> & {
   className?: ClassNameValue;
 };
 
-export type SlotRecipeInput<TRecipe> = VariantProps<TRecipe>;
+type SlotClassNamesForShape<TShape extends object> = Partial<{
+  [Slot in keyof TShape]: ClassNameValue;
+}>;
+
+type SlotRecipeSlotClassNames<TRecipe> = SlotClassNamesForShape<
+  SlotDefinitions<TRecipe>
+>;
+
+export type SlotRecipeInput<TRecipe> = VariantProps<TRecipe> & {
+  slotClassNames?: SlotRecipeSlotClassNames<TRecipe>;
+};
+
+type SlotResolveInputContext<TRecipe> = Partial<VariantProps<TRecipe>> & {
+  slotClassNames?: SlotRecipeSlotClassNames<TRecipe>;
+};
+
+type ContextualResolveInput<TContext, TInput> = TInput extends Record<
+  string,
+  unknown
+>
+  ? TContext & TInput
+  : TInput;
 
 export type SlotRenderInput<TRecipe> = Partial<VariantProps<TRecipe>> & {
   className?: ClassNameValue;
@@ -440,7 +465,10 @@ export type SlotRecipe<
       | ResolveOptions<Extract<keyof Variants, string>>
       | undefined = undefined
   >(
-    input?: TInput,
+    input?: ContextualResolveInput<
+      SlotResolveInputContext<SlotRecipe<Slots, Variants, Defaults, Config>>,
+      TInput
+    >,
     options?: TOptions
   ): SlotResolveResult<
     SlotRecipe<Slots, Variants, Defaults, Config>,

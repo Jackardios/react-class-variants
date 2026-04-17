@@ -10,12 +10,13 @@ const normalizedResolveOptionsSymbol = Symbol(
   'react-class-variants.normalized-resolve-options'
 );
 
-export const reservedPublicProps = new Set([
+const sharedReservedPublicProps = new Set([
   'children',
   'className',
   'ref',
   'render',
 ]);
+const slotReservedPublicProps = new Set(['slotClassNames']);
 
 type RecipeWithCompiled = AnyRecipe & {
   [compiledRecipeSymbol]: CompiledRecipe;
@@ -83,6 +84,7 @@ export type StrictSlotCompiledRecipe = SharedCompiledRecipe & {
   compounds: readonly CompiledCompound<SlotClassTable>[];
   mode: 'slot';
   runtime: 'strict';
+  slotIndex: Readonly<Record<string, number>>;
   slotNames: readonly string[];
   variantTable: readonly CompiledVariant<SlotClassTable>[];
 };
@@ -92,6 +94,7 @@ export type LeanSlotCompiledRecipe = SharedCompiledRecipe & {
   compounds: LeanCompiledCompounds<LeanSlotClassTable>;
   mode: 'slot';
   runtime: 'lean';
+  slotIndex: Readonly<Record<string, number>>;
   slotNames: readonly string[];
   variantTable: readonly CompiledVariant<LeanSlotClassTable>[];
 };
@@ -210,6 +213,13 @@ export function ensureVariantIndex(
   return compiled.variantIndex;
 }
 
+function isReservedPublicProp(mode: CompiledRecipe['mode'], key: string) {
+  return (
+    sharedReservedPublicProps.has(key) ||
+    (mode === 'slot' && slotReservedPublicProps.has(key))
+  );
+}
+
 export function isAllowedVariantValue<TClassName>(
   variant: CompiledVariant<TClassName> | undefined,
   value: unknown
@@ -269,10 +279,12 @@ function compileCompoundSelection<TClassName>(
 export function compileVariants<TClassName>(params: {
   compileClassName: (context: string, value: unknown) => TClassName;
   defaultVariants: RecipeConfig['defaultVariants'];
+  mode: CompiledRecipe['mode'];
   validate: boolean;
   variants: RecipeConfig['variants'];
 }): readonly CompiledVariant<TClassName>[] {
-  const { compileClassName, defaultVariants, validate, variants } = params;
+  const { compileClassName, defaultVariants, mode, validate, variants } =
+    params;
   const compiledVariants: Array<CompiledVariant<TClassName>> = [];
   const defaults = defaultVariants as Record<string, unknown> | undefined;
 
@@ -291,7 +303,7 @@ export function compileVariants<TClassName>(params: {
   for (const variantKey in variants) {
     if (!hasOwnKey(variants, variantKey)) continue;
 
-    if (validate && reservedPublicProps.has(variantKey)) {
+    if (isReservedPublicProp(mode, variantKey)) {
       throw new Error(
         `react-class-variants: variant key "${variantKey}" is reserved.`
       );
@@ -545,14 +557,14 @@ function validateKnownRecipeProps(
   source: Record<string, unknown>,
   context: string,
   allowUnknownProps: boolean,
-  allowClassName: boolean
+  allowedPublicProps: readonly string[] | undefined
 ) {
   if (!compiled.validate || allowUnknownProps) return;
 
   const variantIndex = ensureVariantIndex(compiled);
   for (const key in source) {
     if (!hasOwnKey(source, key)) continue;
-    if (allowClassName && key === 'className') continue;
+    if (allowedPublicProps?.includes(key)) continue;
     if (getVariantIndex(variantIndex, key) === undefined) {
       throw new Error(
         `react-class-variants: unknown ${context} prop "${key}". Use resolve() for arbitrary component props.`
@@ -566,7 +578,7 @@ export function buildSelection(
   input: Record<string, unknown> | undefined,
   context: string,
   allowUnknownProps: boolean,
-  allowClassName: boolean
+  allowedPublicProps?: readonly string[]
 ) {
   const source = input ?? {};
   const selection = new Array<CompiledSelectionValue>(
@@ -578,7 +590,7 @@ export function buildSelection(
     source,
     context,
     allowUnknownProps,
-    allowClassName
+    allowedPublicProps
   );
 
   for (let index = 0; index < compiled.variantTable.length; index += 1) {
@@ -720,6 +732,7 @@ export function createResolvedProps(
 
   for (const key in source) {
     if (!hasOwnKey(source, key)) continue;
+    if (compiled.mode === 'slot' && key === 'slotClassNames') continue;
     if (getVariantIndex(variantIndex, key) !== undefined) continue;
     resolvedProps[key] = source[key];
   }
@@ -782,13 +795,13 @@ export function normalizeResolveOptions(
       if (!aliasKey) continue;
 
       if (compiled.validate) {
-        if (reservedPublicProps.has(nativeKey)) {
+        if (isReservedPublicProp(compiled.mode, nativeKey)) {
           throw new Error(
             `react-class-variants: prop alias target "${nativeKey}" conflicts with a reserved public prop.`
           );
         }
 
-        if (reservedPublicProps.has(aliasKey)) {
+        if (isReservedPublicProp(compiled.mode, aliasKey)) {
           throw new Error(
             `react-class-variants: prop alias "${aliasKey}" conflicts with a reserved public prop.`
           );

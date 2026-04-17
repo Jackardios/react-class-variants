@@ -14,6 +14,7 @@ import {
   defineConfig,
   recipe,
   styled,
+  type RecipeInput,
   type RecipeResolved,
   type ResolveOptions,
   type ResolvedVariantProps,
@@ -332,18 +333,29 @@ const slots = buttonRecipe({ tone: 'ghost' });
 expectType<string>(slots.root());
 expectType<string>(slots.icon({ tone: 'primary', className: 'text-red-500' }));
 expectType<string>(slots.label({ loading: true }));
-expectType<string>(buttonRecipe().root());
+expectType<string>(
+  buttonRecipe({
+    slotClassNames: {
+      root: 'cursor-wait',
+      icon: 'animate-spin',
+    },
+  }).root()
+);
 expectError(buttonRecipe({ tone: 'primary', className: 'px-4' }));
 expectError(slots.icon({ tone: 'danger' }));
 
 const resolvedButton = buttonRecipe.resolve({
   tone: 'primary',
   className: 'external',
+  slotClassNames: {
+    icon: 'text-red-500',
+  },
   id: 'save',
 });
 expectType<string>(resolvedButton.slots.icon());
 expectType<string>(resolvedButton.resolvedProps.className);
 expectType<string>(resolvedButton.resolvedProps.id);
+expectError(resolvedButton.resolvedProps.slotClassNames);
 
 const inputRecipe = recipe({
   variants: {
@@ -403,11 +415,18 @@ expectType<boolean | undefined>(
 type ButtonVariants = VariantProps<typeof buttonRecipe>;
 type ButtonResolvedVariants = ResolvedVariantProps<typeof buttonRecipe>;
 type ButtonSlots = SlotNames<typeof buttonRecipe>;
+type ButtonInput = RecipeInput<typeof buttonRecipe>;
 type ButtonResolved = RecipeResolved<typeof buttonRecipe>;
 
 expectAssignable<ButtonVariants>({ tone: 'ghost' });
 expectAssignable<ButtonVariants>({ loading: true });
 expectNotAssignable<ButtonVariants>({ tone: 'danger' });
+expectAssignable<ButtonInput>({
+  tone: 'ghost',
+  slotClassNames: {
+    icon: 'animate-spin',
+  },
+});
 expectAssignable<ButtonResolvedVariants>({ tone: 'primary', loading: false });
 expectAssignable<ButtonSlots>('root');
 expectAssignable<ButtonSlots>('icon');
@@ -629,6 +648,25 @@ expectError(
 
 expectError(
   styled(
+    'button',
+    recipe({
+      variants: {
+        tone: {
+          info: 'text-sky-700',
+        },
+      },
+    }),
+    {
+      withRender: true,
+      propAliases: {
+        type: 'render',
+      },
+    }
+  )
+);
+
+expectError(
+  styled(
     'a',
     recipe({
       variants: {
@@ -747,6 +785,9 @@ expectType<ReactNode>(
   SlottedButton({
     tone: 'primary',
     className: 'px-4',
+    slotClassNames: {
+      icon: 'animate-spin',
+    },
     render: <a href="/" />,
     children: 'Save',
   })

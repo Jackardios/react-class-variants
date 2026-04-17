@@ -258,7 +258,7 @@ describe('recipe()', () => {
     });
   });
 
-  it('returns slot render functions with local variant overrides', () => {
+  it('returns slot render functions with top-level and local slot overrides', () => {
     const button = recipe({
       slots: {
         root: 'inline-flex items-center',
@@ -298,17 +298,25 @@ describe('recipe()', () => {
       },
     });
 
-    const slots = button({ loading: true });
+    const slots = button({
+      loading: true,
+      slotClassNames: {
+        root: 'cursor-wait',
+        spinner: 'animate-pulse',
+      },
+    });
 
     expect(Object.keys(slots)).toEqual(['root', 'label', 'spinner']);
     expect(Object.prototype.hasOwnProperty.call(slots, 'root')).toBe(true);
-    expect(slots.root()).toBe('inline-flex items-center bg-blue text-white');
+    expect(slots.root()).toBe(
+      'inline-flex items-center bg-blue text-white cursor-wait'
+    );
     expect(slots.label()).toBe('transition-opacity opacity-0');
     expect(slots.spinner()).toBe(
-      'hidden size-4 text-blue-100 inline-block animate-spin drop-shadow'
+      'hidden size-4 text-blue-100 inline-block animate-spin drop-shadow animate-pulse'
     );
     expect(slots.spinner({ tone: 'ghost', className: 'text-red-500' })).toBe(
-      'hidden size-4 text-slate-500 inline-block animate-spin text-red-500'
+      'hidden size-4 text-slate-500 inline-block animate-spin animate-pulse text-red-500'
     );
   });
 
@@ -393,6 +401,9 @@ describe('recipe()', () => {
         {
           disabled: true,
           className: 'external',
+          slotClassNames: {
+            label: 'uppercase',
+          },
           type: 'button',
         },
         {
@@ -414,13 +425,58 @@ describe('recipe()', () => {
       },
     });
 
-    const resolved = button.resolve({ disabled: true, className: 'external' });
+    const resolved = button.resolve({
+      disabled: true,
+      className: 'external',
+      slotClassNames: {
+        label: 'uppercase',
+      },
+    });
     expect(resolved.slots.root()).toBe('inline-flex opacity-50');
+    expect(resolved.slots.label()).toBe('truncate uppercase');
     expect(
       resolved.slots.root({
         className: resolved.resolvedProps.className as string,
       })
     ).toBe('inline-flex opacity-50 external');
+    expect('slotClassNames' in resolved.resolvedProps).toBe(false);
+  });
+
+  it('applies the configured merge hook to each resolved slot independently', () => {
+    const { recipe: mergedRecipe } = defineConfig({
+      merge: className =>
+        className
+          .split(/\s+/)
+          .filter(Boolean)
+          .filter((token, index, tokens) => tokens.indexOf(token) === index)
+          .join(' '),
+    });
+
+    const button = mergedRecipe({
+      slots: {
+        root: 'rounded rounded p-4',
+        icon: 'size-4 size-4',
+      },
+      variants: {
+        tone: {
+          primary: {
+            root: 'bg-white bg-white',
+            icon: 'text-blue-500 text-blue-500',
+          },
+        },
+      },
+    });
+
+    const slots = button({
+      tone: 'primary',
+      slotClassNames: {
+        root: 'p-4 shadow-sm shadow-sm',
+        icon: 'size-4 text-red-500 text-red-500',
+      },
+    });
+
+    expect(slots.root()).toBe('rounded p-4 bg-white shadow-sm');
+    expect(slots.icon()).toBe('size-4 text-blue-500 text-red-500');
   });
 
   it('uses the configured merge hook from the React factory', () => {
@@ -445,6 +501,34 @@ describe('recipe()', () => {
     expect(card({ tone: 'neutral', className: 'p-4 shadow-sm' })).toBe(
       'rounded p-4 bg-white shadow-sm'
     );
+  });
+
+  it('rejects reserved variant keys in lean mode too', () => {
+    expect(() =>
+      recipe({
+        base: 'inline-flex',
+        variants: {
+          className: {
+            compact: 'gap-1',
+          },
+        },
+      } as never)
+    ).toThrow(/variant key "className" is reserved/);
+
+    expect(() =>
+      recipe({
+        slots: {
+          root: 'inline-flex',
+        },
+        variants: {
+          slotClassNames: {
+            compact: {
+              root: 'gap-1',
+            },
+          },
+        },
+      } as never)
+    ).toThrow(/variant key "slotClassNames" is reserved/);
   });
 
   it('rejects invalid direct calls and slotted string shortcuts in validate mode', () => {

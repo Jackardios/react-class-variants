@@ -190,7 +190,13 @@ const CoreField = styled('label', coreFieldRecipe, {
   },
 });
 
-CoreField({ invalid: true, children: 'Email' });
+CoreField({
+  invalid: true,
+  slotClassNames: {
+    input: 'w-full',
+  },
+  children: 'Email',
+});
 
 type BadgeOptions = RecipeInput<typeof badge>;
 type BadgeConfig = RecipeConfigOf<typeof badge>;

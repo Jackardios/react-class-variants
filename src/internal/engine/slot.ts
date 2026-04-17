@@ -115,6 +115,25 @@ function readSlotClassName(
   return classTable[index];
 }
 
+function resolveTopLevelSlotClassNames(
+  compiled: SlotCompiledRecipe,
+  input: Record<string, unknown> | undefined
+) {
+  const value = input?.slotClassNames;
+  if (value === undefined) {
+    return emptySlotClassTable;
+  }
+
+  return compileSlotClassTable(
+    value,
+    compiled.slotNames,
+    compiled.slotIndex,
+    compiled.validate,
+    'input.slotClassNames',
+    !compiled.validate
+  );
+}
+
 function compileSlotBase(config: AnySlotRecipeConfig, validate: boolean) {
   if (hasOwnKey(config, 'base')) {
     throw new Error(
@@ -170,6 +189,7 @@ export function compileStrictSlotRecipe(
         context
       ),
     defaultVariants: config.defaultVariants,
+    mode: 'slot',
     validate: options.validate,
     variants: config.variants,
   });
@@ -196,6 +216,7 @@ export function compileStrictSlotRecipe(
     merge: options.merge,
     mode: 'slot',
     runtime: 'strict',
+    slotIndex: compiledBase.slotIndex,
     slotNames: compiledBase.slotNames,
     validate: options.validate,
     variantTable,
@@ -231,6 +252,7 @@ export function compileLeanSlotRecipe(
         compiledBase.slotIndex
       ),
     defaultVariants: config.defaultVariants,
+    mode: 'slot',
     validate: false,
     variants: config.variants,
   });
@@ -253,6 +275,7 @@ export function compileLeanSlotRecipe(
     merge: options.merge,
     mode: 'slot',
     runtime: 'lean',
+    slotIndex: compiledBase.slotIndex,
     slotNames: compiledBase.slotNames,
     validate: false,
     variantTable,
@@ -372,6 +395,7 @@ function resolveStrictSlotClassName(
   compiled: StrictSlotCompiledRecipe,
   slotIndex: number,
   selection: readonly CompiledSelectionValue[],
+  slotClassNames?: SlotClassTable,
   className?: ClassNameValue
 ) {
   let output = readSlotClassName(compiled.base, slotIndex) ?? '';
@@ -395,6 +419,11 @@ function resolveStrictSlotClassName(
 
   output = appendClassName(
     output,
+    readSlotClassName(slotClassNames, slotIndex)
+  );
+
+  output = appendClassName(
+    output,
     flattenUserClassName('slot input.className', className, true)
   );
 
@@ -405,6 +434,7 @@ function resolveLeanSlotClassName(
   compiled: LeanSlotCompiledRecipe,
   slotIndex: number,
   selection: readonly CompiledSelectionValue[],
+  slotClassNames?: SlotClassTable,
   className?: ClassNameValue
 ) {
   let output = readSlotClassName(compiled.base, slotIndex) ?? '';
@@ -432,6 +462,11 @@ function resolveLeanSlotClassName(
 
   output = appendClassName(
     output,
+    readSlotClassName(slotClassNames, slotIndex)
+  );
+
+  output = appendClassName(
+    output,
     flattenUserClassName('slot input.className', className, false)
   );
 
@@ -442,6 +477,7 @@ export function resolveSlotClassNameForRender(
   compiled: SlotCompiledRecipe,
   slotIndex: number,
   parentSelection: readonly CompiledSelectionValue[],
+  slotClassNames: SlotClassTable,
   input?: Record<string, unknown>
 ) {
   if (compiled.runtime === 'lean') {
@@ -454,6 +490,7 @@ export function resolveSlotClassNameForRender(
       compiled,
       slotIndex,
       selection,
+      slotClassNames,
       input?.className as ClassNameValue | undefined
     );
   }
@@ -467,6 +504,7 @@ export function resolveSlotClassNameForRender(
     compiled,
     slotIndex,
     selection,
+    slotClassNames,
     input?.className as ClassNameValue | undefined
   );
 }
@@ -479,18 +517,20 @@ export function resolveSlotViewState(
   const selection =
     compiled.runtime === 'lean'
       ? buildSlotSelectionLean(compiled, input)
-      : buildSelection(compiled, input, 'recipe', true, false);
+      : buildSelection(compiled, input, 'recipe', true, ['slotClassNames']);
 
   return {
     resolvedProps: createResolvedProps(compiled, input, options, selection),
     selection,
+    slotClassNames: resolveTopLevelSlotClassNames(compiled, input),
     variants: materializeSelection(compiled, selection),
   };
 }
 
 function createStrictSlotRenderers(
   compiled: StrictSlotCompiledRecipe,
-  selection: readonly CompiledSelectionValue[]
+  selection: readonly CompiledSelectionValue[],
+  slotClassNames: SlotClassTable
 ) {
   const slots = Object.create(null) as Record<
     string,
@@ -514,6 +554,7 @@ function createStrictSlotRenderers(
         compiled,
         slotIndex,
         slotSelection,
+        slotClassNames,
         input?.className as ClassNameValue | undefined
       );
     };
@@ -524,7 +565,8 @@ function createStrictSlotRenderers(
 
 function createLeanSlotRenderers(
   compiled: LeanSlotCompiledRecipe,
-  selection: readonly CompiledSelectionValue[]
+  selection: readonly CompiledSelectionValue[],
+  slotClassNames: SlotClassTable
 ) {
   const slots = Object.create(null) as Record<
     string,
@@ -540,7 +582,12 @@ function createLeanSlotRenderers(
     const slotName = compiled.slotNames[slotIndex];
     slots[slotName] = input => {
       if (!input) {
-        return resolveLeanSlotClassName(compiled, slotIndex, selection);
+        return resolveLeanSlotClassName(
+          compiled,
+          slotIndex,
+          selection,
+          slotClassNames
+        );
       }
 
       const slotSelection = resolveLeanSlotSelection(
@@ -552,6 +599,7 @@ function createLeanSlotRenderers(
         compiled,
         slotIndex,
         slotSelection,
+        slotClassNames,
         input.className as ClassNameValue | undefined
       );
     };
@@ -570,8 +618,14 @@ export function createStrictSlotRecipe(
       );
     }
 
-    const selection = buildSelection(compiled, input, 'recipe', false, false);
-    return createStrictSlotRenderers(compiled, selection);
+    const selection = buildSelection(compiled, input, 'recipe', false, [
+      'slotClassNames',
+    ]);
+    return createStrictSlotRenderers(
+      compiled,
+      selection,
+      resolveTopLevelSlotClassNames(compiled, input)
+    );
   }) as SlotRecipe & {
     resolve: SlotRecipe['resolve'];
   };
@@ -584,7 +638,10 @@ export function createStrictSlotRecipe(
     options?: TOptions
   ): SlotResolveResult<AnySlotRecipe, TInput, TOptions> => {
     const normalizedOptions = normalizeResolveOptions(compiled, options);
-    const selection = buildSelection(compiled, input, 'recipe', true, false);
+    const selection = buildSelection(compiled, input, 'recipe', true, [
+      'slotClassNames',
+    ]);
+    const slotClassNames = resolveTopLevelSlotClassNames(compiled, input);
 
     return {
       resolvedProps: createResolvedProps(
@@ -593,7 +650,7 @@ export function createStrictSlotRecipe(
         normalizedOptions,
         selection
       ) as SlotResolveResult<AnySlotRecipe, TInput, TOptions>['resolvedProps'],
-      slots: createStrictSlotRenderers(compiled, selection),
+      slots: createStrictSlotRenderers(compiled, selection, slotClassNames),
       variants: materializeSelection(compiled, selection) as SlotResolveResult<
         AnySlotRecipe,
         TInput,
@@ -610,7 +667,11 @@ export function createLeanSlotRecipe(
 ): AnyRecipe {
   const slotRecipe = ((input?: Record<string, unknown>) => {
     const selection = buildSlotSelectionLean(compiled, input);
-    return createLeanSlotRenderers(compiled, selection);
+    return createLeanSlotRenderers(
+      compiled,
+      selection,
+      resolveTopLevelSlotClassNames(compiled, input)
+    );
   }) as SlotRecipe & {
     resolve: SlotRecipe['resolve'];
   };
@@ -624,6 +685,7 @@ export function createLeanSlotRecipe(
   ): SlotResolveResult<AnySlotRecipe, TInput, TOptions> => {
     const normalizedOptions = normalizeResolveOptions(compiled, options);
     const selection = buildSlotSelectionLean(compiled, input);
+    const slotClassNames = resolveTopLevelSlotClassNames(compiled, input);
 
     return {
       resolvedProps: createResolvedProps(
@@ -632,7 +694,7 @@ export function createLeanSlotRecipe(
         normalizedOptions,
         selection
       ) as SlotResolveResult<AnySlotRecipe, TInput, TOptions>['resolvedProps'],
-      slots: createLeanSlotRenderers(compiled, selection),
+      slots: createLeanSlotRenderers(compiled, selection, slotClassNames),
       variants: materializeSelection(compiled, selection) as SlotResolveResult<
         AnySlotRecipe,
         TInput,

@@ -199,7 +199,13 @@ const CoreField = styled('label', coreFieldRecipe, {
   },
 });
 
-CoreField({ invalid: true, children: 'Email' });
+CoreField({
+  invalid: true,
+  slotClassNames: {
+    input: 'w-full',
+  },
+  children: 'Email',
+});
 
 const Button = styled('button', badge, { withRender: true });
 const StrictButton = strictConfiguredStyled('button', badge);

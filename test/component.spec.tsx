@@ -442,7 +442,15 @@ describe('styled()', () => {
     });
 
     render(
-      <Button loading disabled className="rounded-md">
+      <Button
+        loading
+        disabled
+        className="rounded-md"
+        slotClassNames={{
+          label: 'uppercase',
+          spinner: 'animate-pulse',
+        }}
+      >
         Save
       </Button>
     );
@@ -454,10 +462,10 @@ describe('styled()', () => {
       'inline-flex items-center gap-2 bg-blue text-white opacity-50 rounded-md'
     );
     expect(screen.getByTestId('spinner').className).toBe(
-      'hidden size-4 text-blue-100 inline-block animate-spin'
+      'hidden size-4 text-blue-100 inline-block animate-spin animate-pulse'
     );
     expect(screen.getByTestId('label').className).toBe(
-      'transition-opacity opacity-0'
+      'transition-opacity opacity-0 uppercase'
     );
   });
 
@@ -500,7 +508,13 @@ describe('styled()', () => {
     });
 
     render(
-      <Field invalid className="font-medium">
+      <Field
+        invalid
+        className="font-medium"
+        slotClassNames={{
+          input: 'w-full',
+        }}
+      >
         Email
       </Field>
     );
@@ -509,7 +523,7 @@ describe('styled()', () => {
       'block text-sm text-red-700 font-medium'
     );
     expect(screen.getByLabelText('field').className).toBe(
-      'block rounded-md border-red-500'
+      'block rounded-md border-red-500 w-full'
     );
   });
 

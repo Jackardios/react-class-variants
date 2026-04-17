@@ -74,6 +74,19 @@ const buttonRecipe = recipe({
 
 const resolvedButton = buttonRecipe.resolve({ tone: 'primary' });
 const slotFns = buttonRecipe({ tone: 'primary' });
+const slotFnsWithOverrides = buttonRecipe({
+  slotClassNames: {
+    icon: 'text-red-500',
+    label: 'uppercase',
+  },
+});
+const resolvedButtonWithOverrides = buttonRecipe.resolve({
+  slotClassNames: {
+    icon: 'text-pink-500',
+    label: 'lowercase',
+  },
+  id: 'save',
+});
 const coreOnlyBadge = coreRecipe({
   base: 'inline-flex rounded-full',
 });
@@ -165,6 +178,14 @@ ViewedInput({
   },
 });
 SlottedButton({ tone: 'primary', render: <a href="/" /> });
+SlottedButton({
+  tone: 'primary',
+  slotClassNames: {
+    icon: 'animate-pulse',
+    label: 'italic',
+  },
+  render: <a href="/" />,
+});
 `;
 
 const completionProbeFile = resolve(
@@ -373,6 +394,7 @@ function definitionSpans(
 
   return definitions.map(definition => ({
     fileName: definition.fileName,
+    start: definition.textSpan.start,
     text: (definition.fileName === exactProbeFile
       ? exactProbeSource
       : definition.fileName === completionProbeFile
@@ -630,6 +652,17 @@ assert.match(
   'core recipe should navigate to the core declaration surface in NodeNext mode.'
 );
 
+const slotIconDefinitionStart = position(
+  exactProbeSource,
+  "icon: 'size-4'",
+  'icon'
+);
+const slotLabelDefinitionStart = position(
+  exactProbeSource,
+  "label: 'truncate'",
+  'label'
+);
+
 for (const [label, snippet, token, expectedText] of [
   ['styled variant prop', `ViewedInput({\n  tone: 'danger'`, 'tone', 'tone'],
   ['view variant', 'variants.tone', 'tone', 'tone'],
@@ -650,6 +683,48 @@ for (const [label, snippet, token, expectedText] of [
       span => span.fileName === exactProbeFile && span.text === expectedText
     ),
     `${label} should resolve to the local recipe declaration.`
+  );
+}
+
+for (const [label, snippet, token, expectedStart] of [
+  [
+    'direct slotClassNames icon',
+    "icon: 'text-red-500'",
+    'icon',
+    slotIconDefinitionStart,
+  ],
+  [
+    'direct slotClassNames label',
+    "label: 'uppercase'",
+    'label',
+    slotLabelDefinitionStart,
+  ],
+  [
+    'resolve slotClassNames icon',
+    "icon: 'text-pink-500'",
+    'icon',
+    slotIconDefinitionStart,
+  ],
+  [
+    'styled slotClassNames icon',
+    "icon: 'animate-pulse'",
+    'icon',
+    slotIconDefinitionStart,
+  ],
+]) {
+  const spans = definitionSpans(
+    exactLanguageService,
+    exactProbeFile,
+    exactProbeSource,
+    snippet,
+    token
+  );
+
+  assert.ok(
+    spans.some(
+      span => span.fileName === exactProbeFile && span.start === expectedStart
+    ),
+    `${label} should resolve to the original slot declaration.`
   );
 }
 
@@ -710,6 +785,14 @@ const timedQueries = [
       exactProbeFile,
       exactProbeSource,
       'classes.icon',
+      'icon'
+    ),
+  () =>
+    definitionSpans(
+      exactLanguageService,
+      exactProbeFile,
+      exactProbeSource,
+      "icon: 'animate-pulse'",
       'icon'
     ),
 ];

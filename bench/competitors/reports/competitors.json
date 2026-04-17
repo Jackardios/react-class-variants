@@ -12,14 +12,14 @@
         "rawBytes": 850
       },
       "react-class-variants": {
-        "brotliBytes": 2985,
-        "gzipBytes": 3286,
-        "rawBytes": 10060
+        "brotliBytes": 3103,
+        "gzipBytes": 3410,
+        "rawBytes": 10487
       },
       "react-class-variants/core": {
-        "brotliBytes": 2890,
-        "gzipBytes": 3187,
-        "rawBytes": 9745
+        "brotliBytes": 2999,
+        "gzipBytes": 3302,
+        "rawBytes": 10121
       },
       "tailwind-variants/lite": {
         "brotliBytes": 2019,
@@ -34,9 +34,9 @@
         "rawBytes": 1647
       },
       "react-class-variants": {
-        "brotliBytes": 4912,
-        "gzipBytes": 5452,
-        "rawBytes": 17779
+        "brotliBytes": 5029,
+        "gzipBytes": 5611,
+        "rawBytes": 18373
       }
     },
     "tailwindAwareRecipe": {
@@ -51,9 +51,9 @@
         "rawBytes": 26995
       },
       "react-class-variants/core + twMerge": {
-        "brotliBytes": 10748,
-        "gzipBytes": 12247,
-        "rawBytes": 41173
+        "brotliBytes": 10856,
+        "gzipBytes": 12395,
+        "rawBytes": 41683
       },
       "tailwind-variants": {
         "brotliBytes": 9341,
@@ -66,236 +66,236 @@
     "plain": {
       "freshComplexConfig": {
         "class-variance-authority": {
-          "maxOpsPerSec": 19809324.770566776,
-          "meanOpsPerSec": 15563492.751386365,
-          "minOpsPerSec": 14191061.76536134,
-          "opsPerSec": 14900752.454427755,
-          "relativeMarginOfErrorPct": 9.09717123230027,
+          "maxOpsPerSec": 18698540.228721447,
+          "meanOpsPerSec": 14327541.479317162,
+          "minOpsPerSec": 12417986.695014268,
+          "opsPerSec": 13950843.910487631,
+          "relativeMarginOfErrorPct": 10.678056490940408,
           "sampleOpsPerSec": [
-            19809324.770566776, 14662041.360893546, 14792350.84301001,
-            14191061.76536134, 14900752.454427755, 15210126.399076078,
-            15378791.666369064
+            18698540.228721447, 13310363.86295439, 13950843.910487631,
+            14410218.809698388, 14456951.818850964, 13047885.029493056,
+            12417986.695014268
           ],
           "samples": 7,
-          "stdDevOpsPerSec": 1911201.0957222434
+          "stdDevOpsPerSec": 2065174.8961307965
         },
         "classname-variants": {
-          "maxOpsPerSec": 14421473.90034647,
-          "meanOpsPerSec": 13324223.725354116,
-          "minOpsPerSec": 11603362.266501334,
-          "opsPerSec": 13921383.824123422,
-          "relativeMarginOfErrorPct": 6.098825761833707,
+          "maxOpsPerSec": 13786483.898128964,
+          "meanOpsPerSec": 12094522.818619622,
+          "minOpsPerSec": 10423580.268253693,
+          "opsPerSec": 11937859.30380106,
+          "relativeMarginOfErrorPct": 7.071912931052295,
           "sampleOpsPerSec": [
-            11603362.266501334, 12543506.72700504, 12476646.216240969,
-            13921383.824123422, 14170094.05834559, 14421473.90034647,
-            14133099.084915977
+            10423580.268253693, 11486974.655013978, 11937859.30380106,
+            12504569.928023033, 13190089.44575476, 13786483.898128964,
+            11332102.231361873
           ],
           "samples": 7,
-          "stdDevOpsPerSec": 1096935.4982294173
+          "stdDevOpsPerSec": 1154565.5422041165
         },
         "tailwind-variants/lite": {
-          "maxOpsPerSec": 8145776.945353589,
-          "meanOpsPerSec": 7891009.3487995025,
-          "minOpsPerSec": 7139561.295115105,
-          "opsPerSec": 8048367.344970896,
-          "relativeMarginOfErrorPct": 3.3700017861676312,
+          "maxOpsPerSec": 7737427.642937254,
+          "meanOpsPerSec": 6337777.4623796195,
+          "minOpsPerSec": 3611390.696127749,
+          "opsPerSec": 6940492.437808561,
+          "relativeMarginOfErrorPct": 18.102523801716885,
           "sampleOpsPerSec": [
-            7139561.295115105, 7724989.284355886, 8113027.930307202,
-            8048367.344970896, 8002551.422192874, 8062791.219300963,
-            8145776.945353589
+            6681744.798408233, 7737427.642937254, 7478815.282859604,
+            3611390.696127749, 4747813.198351032, 6940492.437808561,
+            7166758.180164902
           ],
           "samples": 7,
-          "stdDevOpsPerSec": 358967.91920298344
+          "stdDevOpsPerSec": 1548706.2878470942
         },
         "react-class-variants": {
-          "maxOpsPerSec": 1479106.5809974528,
-          "meanOpsPerSec": 1448479.348716291,
-          "minOpsPerSec": 1407956.0192587827,
-          "opsPerSec": 1457943.765026206,
-          "relativeMarginOfErrorPct": 1.2789432021059857,
+          "maxOpsPerSec": 1324394.0543677188,
+          "meanOpsPerSec": 1295899.9459922474,
+          "minOpsPerSec": 1218509.3437796342,
+          "opsPerSec": 1301261.1102773454,
+          "relativeMarginOfErrorPct": 2.072623167680831,
           "sampleOpsPerSec": [
-            1450595.0834274532, 1457943.765026206, 1459590.3915115963,
-            1479106.5809974528, 1421195.4304090508, 1407956.0192587827,
-            1462968.1703834953
+            1298974.4543832352, 1324394.0543677188, 1313791.2010412635,
+            1301261.1102773454, 1291806.845349607, 1218509.3437796342,
+            1322562.6127469274
           ],
           "samples": 7,
-          "stdDevOpsPerSec": 25006.707501790763
+          "stdDevOpsPerSec": 36256.40744717396
         }
       },
       "reusedComplexConfig": {
         "tailwind-variants/lite": {
-          "maxOpsPerSec": 13031977.723025346,
-          "meanOpsPerSec": 12719459.778252695,
-          "minOpsPerSec": 12596575.82240789,
-          "opsPerSec": 12675845.491640111,
-          "relativeMarginOfErrorPct": 0.8672018468249816,
+          "maxOpsPerSec": 12164935.348136654,
+          "meanOpsPerSec": 11608316.10895227,
+          "minOpsPerSec": 9833906.24298622,
+          "opsPerSec": 11893475.429674886,
+          "relativeMarginOfErrorPct": 5.273228371248606,
           "sampleOpsPerSec": [
-            12596575.82240789, 12748788.86505782, 12715855.673750523,
-            12670519.283945782, 13031977.723025346, 12596655.587941406,
-            12675845.491640111
+            9833906.24298622, 11438560.640160404, 11893475.429674886,
+            11691463.267648783, 12087746.626449388, 12148125.207609564,
+            12164935.348136654
           ],
           "samples": 7,
-          "stdDevOpsPerSec": 148895.5811124112
+          "stdDevOpsPerSec": 826301.90622109
         },
         "react-class-variants": {
-          "maxOpsPerSec": 1586695.8391973223,
-          "meanOpsPerSec": 1565161.8157906493,
-          "minOpsPerSec": 1510375.7587934046,
-          "opsPerSec": 1576647.9140962064,
-          "relativeMarginOfErrorPct": 1.2969622630257802,
+          "maxOpsPerSec": 1479980.2689030557,
+          "meanOpsPerSec": 1452350.29309179,
+          "minOpsPerSec": 1366707.0342044753,
+          "opsPerSec": 1474181.1622385713,
+          "relativeMarginOfErrorPct": 2.178086823794286,
           "sampleOpsPerSec": [
-            1576647.9140962064, 1586695.8391973223, 1568635.6791180866,
-            1510375.7587934046, 1548597.614777619, 1579936.278010036,
-            1585243.62654187
+            1474181.1622385713, 1366707.0342044753, 1470739.243270554,
+            1422555.2958484665, 1479980.2689030557, 1478058.939098229,
+            1474230.1080791773
           ],
           "samples": 7,
-          "stdDevOpsPerSec": 27401.827792464035
+          "stdDevOpsPerSec": 42701.144279453125
         },
         "class-variance-authority": {
-          "maxOpsPerSec": 621659326.1212904,
-          "meanOpsPerSec": 347287200.4443491,
-          "minOpsPerSec": 148122680.07339606,
-          "opsPerSec": 156818248.967432,
-          "relativeMarginOfErrorPct": 51.562721442701815,
+          "maxOpsPerSec": 618389484.2631701,
+          "meanOpsPerSec": 376704399.862264,
+          "minOpsPerSec": 193506436.38546756,
+          "opsPerSec": 198998325.23009482,
+          "relativeMarginOfErrorPct": 44.36813808966584,
           "sampleOpsPerSec": [
-            591832947.718595, 621659326.1212904, 603053366.4129695,
-            148122680.07339606, 156077554.8890251, 156818248.967432,
-            153446278.92773592
+            617126114.66242, 618148918.2393932, 618389484.2631701,
+            198998325.23009482, 196145701.27081084, 193506436.38546756,
+            194615818.9844912
           ],
           "samples": 7,
-          "stdDevOpsPerSec": 241722767.01895532
+          "stdDevOpsPerSec": 225613376.57226238
         },
         "classname-variants": {
-          "maxOpsPerSec": 629044024.0817711,
-          "meanOpsPerSec": 326251985.80940676,
-          "minOpsPerSec": 105054554.81231497,
-          "opsPerSec": 106597184.128784,
-          "relativeMarginOfErrorPct": 62.477992001549474,
+          "maxOpsPerSec": 616156969.7400229,
+          "meanOpsPerSec": 296603390.23201674,
+          "minOpsPerSec": 59448845.74121109,
+          "opsPerSec": 69773883.0632196,
+          "relativeMarginOfErrorPct": 72.36803912107861,
           "sampleOpsPerSec": [
-            622327043.9465413, 629044024.0817711, 609645325.2396458,
-            105095936.36052464, 106597184.128784, 105054554.81231497,
-            105999832.09626591
+            606315200.4088736, 616156969.7400229, 596326621.2133641,
+            59448845.74121109, 68245549.00499818, 59956662.452427916,
+            69773883.0632196
           ],
           "samples": 7,
-          "stdDevOpsPerSec": 275152317.8561418
+          "stdDevOpsPerSec": 289744942.85003924
         }
       }
     },
     "tailwindAware": {
       "freshComplexConfig": {
         "tailwind-variants": {
-          "maxOpsPerSec": 8185231.751684508,
-          "meanOpsPerSec": 8023191.624910829,
-          "minOpsPerSec": 7882536.70036688,
-          "opsPerSec": 8012368.832634291,
-          "relativeMarginOfErrorPct": 1.1307575533233294,
+          "maxOpsPerSec": 7239719.480508352,
+          "meanOpsPerSec": 6737575.7712950865,
+          "minOpsPerSec": 5695390.724314751,
+          "opsPerSec": 6895599.365625426,
+          "relativeMarginOfErrorPct": 5.502106764777065,
           "sampleOpsPerSec": [
-            8185231.751684508, 7925610.505505865, 7909711.460817338,
-            8149203.513710963, 8012368.832634291, 8097678.609655954,
-            7882536.70036688
+            6786902.891647759, 6603895.450900876, 5695390.724314751,
+            6899576.294188401, 7041946.191880039, 7239719.480508352,
+            6895599.365625426
           ],
           "samples": 7,
-          "stdDevOpsPerSec": 122464.33007095326
+          "stdDevOpsPerSec": 500409.59030656307
         },
         "react-class-variants + twMerge": {
-          "maxOpsPerSec": 1356785.9115967853,
-          "meanOpsPerSec": 1032272.145871769,
-          "minOpsPerSec": 538318.1245717574,
-          "opsPerSec": 1098679.6558673647,
-          "relativeMarginOfErrorPct": 21.218588271090145,
+          "maxOpsPerSec": 1337471.6301471016,
+          "meanOpsPerSec": 1319246.4129663887,
+          "minOpsPerSec": 1291418.7345075822,
+          "opsPerSec": 1317705.1860187575,
+          "relativeMarginOfErrorPct": 0.9629945657803815,
           "sampleOpsPerSec": [
-            538318.1245717574, 801927.253741982, 953859.4201986513,
-            1098679.6558673647, 1122380.7553219113, 1356785.9115967853,
-            1353953.899803932
+            1291418.7345075822, 1334628.1892978807, 1337471.6301471016,
+            1306702.6215627803, 1334057.8114723896, 1317705.1860187575,
+            1312740.717758228
           ],
           "samples": 7,
-          "stdDevOpsPerSec": 295667.53679174295
+          "stdDevOpsPerSec": 17149.15426451754
         },
         "class-variance-authority + twMerge": {
-          "maxOpsPerSec": 18573847.429110404,
-          "meanOpsPerSec": 10477476.484764952,
-          "minOpsPerSec": 6121023.484492468,
-          "opsPerSec": 8647415.1802885,
-          "relativeMarginOfErrorPct": 30.288465834385953,
+          "maxOpsPerSec": 20800526.023702405,
+          "meanOpsPerSec": 14498188.700691482,
+          "minOpsPerSec": 13171878.660442365,
+          "opsPerSec": 13553941.91167751,
+          "relativeMarginOfErrorPct": 14.22021154112938,
           "sampleOpsPerSec": [
-            18573847.429110404, 12724519.912443668, 11842101.045178555,
-            6121023.484492468, 7529025.447368874, 7904402.894472211,
-            8647415.1802885
+            20800526.023702405, 13362099.599327005, 13582646.961097308,
+            13171878.660442365, 13434392.670876874, 13581835.077716915,
+            13553941.91167751
           ],
           "samples": 7,
-          "stdDevOpsPerSec": 4283777.639107578
+          "stdDevOpsPerSec": 2782997.09944188
         },
         "classname-variants + twMerge": {
-          "maxOpsPerSec": 11367551.892115837,
-          "meanOpsPerSec": 10137334.661078034,
-          "minOpsPerSec": 5709663.991731183,
-          "opsPerSec": 10899457.369933425,
-          "relativeMarginOfErrorPct": 14.440374445690479,
+          "maxOpsPerSec": 12426532.97732796,
+          "meanOpsPerSec": 11629309.142687038,
+          "minOpsPerSec": 11216389.694185061,
+          "opsPerSec": 11579652.25186294,
+          "relativeMarginOfErrorPct": 2.5028801810958186,
           "sampleOpsPerSec": [
-            10899457.369933425, 5709663.991731183, 10558994.518354153,
-            10917078.75577243, 11056562.204239534, 11367551.892115837,
-            10452033.895399664
+            12426532.97732796, 11216389.694185061, 11575367.949572997,
+            11296047.690423662, 11621269.459647857, 11689903.975788781,
+            11579652.25186294
           ],
           "samples": 7,
-          "stdDevOpsPerSec": 1976037.5244298053
+          "stdDevOpsPerSec": 392904.4282558478
         }
       },
       "reusedComplexConfig": {
         "class-variance-authority + twMerge": {
-          "maxOpsPerSec": 615490511.5982734,
-          "meanOpsPerSec": 292548527.7968313,
-          "minOpsPerSec": 72358335.75827761,
-          "opsPerSec": 74162466.42833525,
-          "relativeMarginOfErrorPct": 69.35468190688121,
+          "maxOpsPerSec": 617540634.3787391,
+          "meanOpsPerSec": 304018510.9445582,
+          "minOpsPerSec": 71958566.72926782,
+          "opsPerSec": 73384539.01614459,
+          "relativeMarginOfErrorPct": 70.28888228907023,
           "sampleOpsPerSec": [
-            546979133.5850524, 591198915.7411886, 615490511.5982734,
-            74162466.42833525, 72358335.75827761, 73575720.39464754,
-            74074611.07204457
+            617540634.3787391, 603246832.954127, 616268254.7283026,
+            73384539.01614459, 73228053.45188317, 71958566.72926782,
+            72502695.35344316
           ],
           "samples": 7,
-          "stdDevOpsPerSec": 273883992.2982508
+          "stdDevOpsPerSec": 288456024.3559757
         },
         "classname-variants + twMerge": {
-          "maxOpsPerSec": 589536610.1644914,
-          "meanOpsPerSec": 130812597.63797008,
-          "minOpsPerSec": 48095451.03605012,
-          "opsPerSec": 50965871.76438705,
-          "relativeMarginOfErrorPct": 114.6039430669676,
+          "maxOpsPerSec": 604898689.7894379,
+          "meanOpsPerSec": 131310867.49257883,
+          "minOpsPerSec": 48173910.0469875,
+          "opsPerSec": 49823356.952170834,
+          "relativeMarginOfErrorPct": 117.85190771276298,
           "sampleOpsPerSec": [
-            589536610.1644914, 61713988.07013816, 63745675.87582264,
-            50965871.76438705, 48095451.03605012, 50960661.45878767,
-            50669925.0961134
+            604898689.7894379, 59519469.20537362, 59727292.32292984,
+            48568988.11370163, 48173910.0469875, 48464366.01745047,
+            49823356.952170834
           ],
           "samples": 7,
-          "stdDevOpsPerSec": 202368111.4354482
+          "stdDevOpsPerSec": 208896053.89889592
         },
         "tailwind-variants": {
-          "maxOpsPerSec": 12542587.330887454,
-          "meanOpsPerSec": 11640050.460739762,
-          "minOpsPerSec": 9406213.20906144,
-          "opsPerSec": 11848558.433289655,
-          "relativeMarginOfErrorPct": 7.00755324905078,
+          "maxOpsPerSec": 12160537.059197716,
+          "meanOpsPerSec": 11843177.93097062,
+          "minOpsPerSec": 11029693.925993552,
+          "opsPerSec": 12059643.25163333,
+          "relativeMarginOfErrorPct": 2.8492424002629533,
           "sampleOpsPerSec": [
-            11848558.433289655, 11469932.143881438, 9406213.20906144,
-            11323955.838571168, 12481462.679527203, 12407643.589959977,
-            12542587.330887454
+            12160537.059197716, 12059643.25163333, 12151803.608466092,
+            12130813.941143073, 12006949.22631278, 11029693.925993552,
+            11362804.504047802
           ],
           "samples": 7,
-          "stdDevOpsPerSec": 1101068.1956948382
+          "stdDevOpsPerSec": 455502.32844287605
         },
         "react-class-variants + twMerge": {
-          "maxOpsPerSec": 1579662.6093412465,
-          "meanOpsPerSec": 1463017.759040602,
-          "minOpsPerSec": 1214867.3893776012,
-          "opsPerSec": 1499299.7010984123,
-          "relativeMarginOfErrorPct": 6.091320812766278,
+          "maxOpsPerSec": 1468470.5878827197,
+          "meanOpsPerSec": 1393077.2619054478,
+          "minOpsPerSec": 1278790.0523313463,
+          "opsPerSec": 1390637.1874760208,
+          "relativeMarginOfErrorPct": 3.380762218762257,
           "sampleOpsPerSec": [
-            1579662.6093412465, 1526205.5964845992, 1520608.8444665004,
-            1413559.585052491, 1499299.7010984123, 1214867.3893776012,
-            1486920.5874633635
+            1445294.1223376687, 1431821.675137655, 1390637.1874760208,
+            1278790.0523313463, 1363822.6770179067, 1468470.5878827197,
+            1372704.5311548153
           ],
           "samples": 7,
-          "stdDevOpsPerSec": 120296.78472238178
+          "stdDevOpsPerSec": 63574.4744409488
         }
       }
     }
@@ -305,135 +305,135 @@
     "node": "v22.17.0",
     "platform": "darwin arm64"
   },
-  "generatedAt": "2026-04-13T21:50:35.284Z",
+  "generatedAt": "2026-04-17T12:03:45.183Z",
   "memory": {
     "plain": {
       "freshComplexConfig": {
         "tailwind-variants/lite": {
           "bytesPerInstance": 1088.016,
           "count": 10000,
-          "maxBytesPerInstance": 1092.468,
-          "meanBytesPerInstance": 1088.9088,
+          "maxBytesPerInstance": 1092.4944,
+          "meanBytesPerInstance": 1088.91408,
           "minBytesPerInstance": 1088.0128,
-          "relativeMarginOfErrorPct": 0.1601623813583016,
+          "relativeMarginOfErrorPct": 0.1611119750378611,
           "retainedBytes": 10880160,
           "sampleBytesPerInstance": [
-            1092.468, 1088.0328, 1088.0144, 1088.0128, 1088.016
+            1092.4944, 1088.0328, 1088.0144, 1088.0128, 1088.016
           ],
           "sampleRetainedBytes": [
-            10924680, 10880328, 10880144, 10880128, 10880160
+            10924944, 10880328, 10880144, 10880128, 10880160
           ],
           "samples": 5,
-          "stdDevBytesPerInstance": 1.9896695605049906
+          "stdDevBytesPerInstance": 2.001475903427284
         },
         "react-class-variants": {
           "bytesPerInstance": 1552.016,
           "count": 10000,
-          "maxBytesPerInstance": 1560.9888,
-          "meanBytesPerInstance": 1553.81296,
+          "maxBytesPerInstance": 1561.2776,
+          "meanBytesPerInstance": 1553.8707200000001,
           "minBytesPerInstance": 1552.0128,
-          "relativeMarginOfErrorPct": 0.2262929172233965,
+          "relativeMarginOfErrorPct": 0.23357014248134722,
           "retainedBytes": 15520160,
           "sampleBytesPerInstance": [
-            1560.9888, 1552.0328, 1552.0144, 1552.0128, 1552.016
+            1561.2776, 1552.0328, 1552.0144, 1552.0128, 1552.016
           ],
           "sampleRetainedBytes": [
-            15609888, 15520328, 15520144, 15520128, 15520160
+            15612776, 15520328, 15520144, 15520128, 15520160
           ],
           "samples": 5,
-          "stdDevBytesPerInstance": 4.01142458086903
+          "stdDevBytesPerInstance": 4.140579615464432
         },
         "class-variance-authority": {
           "bytesPerInstance": 728.016,
           "count": 10000,
-          "maxBytesPerInstance": 730.644,
-          "meanBytesPerInstance": 728.5440000000001,
+          "maxBytesPerInstance": 730.6928,
+          "meanBytesPerInstance": 728.55376,
           "minBytesPerInstance": 728.0128,
-          "relativeMarginOfErrorPct": 0.1412439299181183,
+          "relativeMarginOfErrorPct": 0.14386767224123398,
           "retainedBytes": 7280160,
           "sampleBytesPerInstance": [
-            730.644, 728.0328, 728.0144, 728.0128, 728.016
+            730.6928, 728.0328, 728.0144, 728.0128, 728.016
           ],
-          "sampleRetainedBytes": [7306440, 7280328, 7280144, 7280128, 7280160],
+          "sampleRetainedBytes": [7306928, 7280328, 7280144, 7280128, 7280160],
           "samples": 5,
-          "stdDevBytesPerInstance": 1.1739632702942753
+          "stdDevBytesPerInstance": 1.1957867903602468
         },
         "classname-variants": {
           "bytesPerInstance": 888.016,
           "count": 10000,
-          "maxBytesPerInstance": 890.804,
-          "meanBytesPerInstance": 888.576,
+          "maxBytesPerInstance": 890.8528,
+          "meanBytesPerInstance": 888.5857599999999,
           "minBytesPerInstance": 888.0128,
-          "relativeMarginOfErrorPct": 0.12286431186990913,
+          "relativeMarginOfErrorPct": 0.12501573235055413,
           "retainedBytes": 8880160,
           "sampleBytesPerInstance": [
-            890.804, 888.0328, 888.0144, 888.0128, 888.016
+            890.8528, 888.0328, 888.0144, 888.0128, 888.016
           ],
-          "sampleRetainedBytes": [8908040, 8880328, 8880144, 8880128, 8880160],
+          "sampleRetainedBytes": [8908528, 8880328, 8880144, 8880128, 8880160],
           "samples": 5,
-          "stdDevBytesPerInstance": 1.245515860998966
+          "stdDevBytesPerInstance": 1.2673394367729696
         }
       },
       "freshSimpleConfig": {
         "tailwind-variants/lite": {
           "bytesPerInstance": 704.016,
           "count": 10000,
-          "maxBytesPerInstance": 707.7768,
-          "meanBytesPerInstance": 704.77056,
+          "maxBytesPerInstance": 707.8264,
+          "meanBytesPerInstance": 704.78048,
           "minBytesPerInstance": 704.0128,
-          "relativeMarginOfErrorPct": 0.20901475917511522,
+          "relativeMarginOfErrorPct": 0.21177054573216894,
           "retainedBytes": 7040160,
           "sampleBytesPerInstance": [
-            707.7768, 704.0328, 704.0144, 704.0128, 704.016
+            707.8264, 704.0328, 704.0144, 704.0128, 704.016
           ],
-          "sampleRetainedBytes": [7077768, 7040328, 7040144, 7040128, 7040160],
+          "sampleRetainedBytes": [7078264, 7040328, 7040144, 7040128, 7040160],
           "samples": 5,
-          "stdDevBytesPerInstance": 1.6805585166842614
+          "stdDevBytesPerInstance": 1.7027400600209324
         },
         "react-class-variants": {
-          "bytesPerInstance": 864.016,
+          "bytesPerInstance": 864.0328,
           "count": 10000,
-          "maxBytesPerInstance": 870.1008,
-          "meanBytesPerInstance": 865.23536,
-          "minBytesPerInstance": 864.0128,
-          "relativeMarginOfErrorPct": 0.2755407540414548,
-          "retainedBytes": 8640160,
+          "maxBytesPerInstance": 870.06,
+          "meanBytesPerInstance": 865.3411199999998,
+          "minBytesPerInstance": 864.0144,
+          "relativeMarginOfErrorPct": 0.26833981038126753,
+          "retainedBytes": 8640328,
           "sampleBytesPerInstance": [
-            870.1008, 864.0328, 864.0144, 864.0128, 864.016
+            870.06, 864.0328, 864.0144, 864.5824, 864.016
           ],
-          "sampleRetainedBytes": [8701008, 8640328, 8640144, 8640128, 8640160],
+          "sampleRetainedBytes": [8700600, 8640328, 8640144, 8645824, 8640160],
           "samples": 5,
-          "stdDevBytesPerInstance": 2.7198755500941902
+          "stdDevBytesPerInstance": 2.649118470736994
         },
         "class-variance-authority": {
           "bytesPerInstance": 320.016,
           "count": 10000,
-          "maxBytesPerInstance": 322.04,
-          "meanBytesPerInstance": 320.42320000000007,
+          "maxBytesPerInstance": 322.0768,
+          "meanBytesPerInstance": 320.43056,
           "minBytesPerInstance": 320.0128,
-          "relativeMarginOfErrorPct": 0.24725531798246697,
+          "relativeMarginOfErrorPct": 0.2517514061401832,
           "retainedBytes": 3200160,
           "sampleBytesPerInstance": [
-            322.04, 320.0328, 320.0144, 320.0128, 320.016
+            322.0768, 320.0328, 320.0144, 320.0128, 320.016
           ],
-          "sampleRetainedBytes": [3220400, 3200328, 3200144, 3200128, 3200160],
+          "sampleRetainedBytes": [3220768, 3200328, 3200144, 3200128, 3200160],
           "samples": 5,
-          "stdDevBytesPerInstance": 0.9038545015653795
+          "stdDevBytesPerInstance": 0.9203113212386212
         },
         "classname-variants": {
           "bytesPerInstance": 360.016,
           "count": 10000,
-          "maxBytesPerInstance": 364.5728,
-          "meanBytesPerInstance": 360.92976,
+          "maxBytesPerInstance": 362.1288,
+          "meanBytesPerInstance": 360.44096,
           "minBytesPerInstance": 360.0128,
-          "relativeMarginOfErrorPct": 0.49458474596659885,
+          "relativeMarginOfErrorPct": 0.22946106913279474,
           "retainedBytes": 3600160,
           "sampleBytesPerInstance": [
-            364.5728, 360.0328, 360.0144, 360.0128, 360.016
+            362.1288, 360.0328, 360.0144, 360.0128, 360.016
           ],
-          "sampleRetainedBytes": [3645728, 3600328, 3600144, 3600128, 3600160],
+          "sampleRetainedBytes": [3621288, 3600328, 3600144, 3600128, 3600160],
           "samples": 5,
-          "stdDevBytesPerInstance": 2.0365371707876863
+          "stdDevBytesPerInstance": 0.943565561050208
         }
       }
     },
@@ -442,128 +442,128 @@
         "class-variance-authority + twMerge": {
           "bytesPerInstance": 824.016,
           "count": 10000,
-          "maxBytesPerInstance": 826.7168,
-          "meanBytesPerInstance": 824.55856,
+          "maxBytesPerInstance": 826.7656,
+          "meanBytesPerInstance": 824.56832,
           "minBytesPerInstance": 824.0128,
-          "relativeMarginOfErrorPct": 0.12825785525628317,
+          "relativeMarginOfErrorPct": 0.1305762397504419,
           "retainedBytes": 8240160,
           "sampleBytesPerInstance": [
-            826.7168, 824.0328, 824.0144, 824.0128, 824.016
+            826.7656, 824.0328, 824.0144, 824.0128, 824.016
           ],
-          "sampleRetainedBytes": [8267168, 8240328, 8240144, 8240128, 8240160],
+          "sampleRetainedBytes": [8267656, 8240328, 8240144, 8240128, 8240160],
           "samples": 5,
-          "stdDevBytesPerInstance": 1.206519675761677
+          "stdDevBytesPerInstance": 1.2283432223934683
         },
         "classname-variants + twMerge": {
           "bytesPerInstance": 984.016,
           "count": 10000,
-          "maxBytesPerInstance": 986.884,
-          "meanBytesPerInstance": 984.592,
+          "maxBytesPerInstance": 986.9328,
+          "meanBytesPerInstance": 984.6017599999999,
           "minBytesPerInstance": 984.0128,
-          "relativeMarginOfErrorPct": 0.11406777137577898,
+          "relativeMarginOfErrorPct": 0.11600947986927669,
           "retainedBytes": 9840160,
           "sampleBytesPerInstance": [
-            986.884, 984.0328, 984.0144, 984.0128, 984.016
+            986.9328, 984.0328, 984.0144, 984.0128, 984.016
           ],
-          "sampleRetainedBytes": [9868840, 9840328, 9840144, 9840128, 9840160],
+          "sampleRetainedBytes": [9869328, 9840328, 9840144, 9840128, 9840160],
           "samples": 5,
-          "stdDevBytesPerInstance": 1.2812922227189405
+          "stdDevBytesPerInstance": 1.3031158229413364
         },
         "tailwind-variants": {
           "bytesPerInstance": 1088.016,
           "count": 10000,
-          "maxBytesPerInstance": 1092.468,
-          "meanBytesPerInstance": 1088.9088,
+          "maxBytesPerInstance": 1092.5168,
+          "meanBytesPerInstance": 1088.91856,
           "minBytesPerInstance": 1088.0128,
-          "relativeMarginOfErrorPct": 0.1601623813583016,
+          "relativeMarginOfErrorPct": 0.16191768373667723,
           "retainedBytes": 10880160,
           "sampleBytesPerInstance": [
-            1092.468, 1088.0328, 1088.0144, 1088.0128, 1088.016
+            1092.5168, 1088.0328, 1088.0144, 1088.0128, 1088.016
           ],
           "sampleRetainedBytes": [
-            10924680, 10880328, 10880144, 10880128, 10880160
+            10925168, 10880328, 10880144, 10880128, 10880160
           ],
           "samples": 5,
-          "stdDevBytesPerInstance": 1.9896695605049906
+          "stdDevBytesPerInstance": 2.0114934073966473
         },
         "react-class-variants + twMerge": {
           "bytesPerInstance": 1552.016,
           "count": 10000,
-          "maxBytesPerInstance": 1560.9752,
-          "meanBytesPerInstance": 1553.81024,
+          "maxBytesPerInstance": 1561.268,
+          "meanBytesPerInstance": 1553.8687999999997,
           "minBytesPerInstance": 1552.0128,
-          "relativeMarginOfErrorPct": 0.2259502090887983,
+          "relativeMarginOfErrorPct": 0.23332824893548232,
           "retainedBytes": 15520160,
           "sampleBytesPerInstance": [
-            1560.9752, 1552.0328, 1552.0144, 1552.0128, 1552.016
+            1561.268, 1552.0328, 1552.0144, 1552.0128, 1552.016
           ],
           "sampleRetainedBytes": [
-            15609752, 15520328, 15520144, 15520128, 15520160
+            15612680, 15520328, 15520144, 15520128, 15520160
           ],
           "samples": 5,
-          "stdDevBytesPerInstance": 4.005342488227479
+          "stdDevBytesPerInstance": 4.136286373064622
         }
       },
       "freshSimpleConfig": {
         "class-variance-authority + twMerge": {
           "bytesPerInstance": 416.016,
           "count": 10000,
-          "maxBytesPerInstance": 420.6072,
-          "meanBytesPerInstance": 416.93664,
+          "maxBytesPerInstance": 418.1656,
+          "meanBytesPerInstance": 416.44831999999997,
           "minBytesPerInstance": 416.0128,
-          "relativeMarginOfErrorPct": 0.43138166799756206,
+          "relativeMarginOfErrorPct": 0.20206511212402364,
           "retainedBytes": 4160160,
           "sampleBytesPerInstance": [
-            420.6072, 416.0328, 416.0144, 416.0128, 416.016
+            418.1656, 416.0328, 416.0144, 416.0128, 416.016
           ],
-          "sampleRetainedBytes": [4206072, 4160328, 4160144, 4160128, 4160160],
+          "sampleRetainedBytes": [4181656, 4160328, 4160144, 4160128, 4160160],
           "samples": 5,
-          "stdDevBytesPerInstance": 2.0519211992666584
+          "stdDevBytesPerInstance": 0.9600224330712116
         },
         "classname-variants + twMerge": {
           "bytesPerInstance": 456.016,
           "count": 10000,
-          "maxBytesPerInstance": 458.1592,
-          "meanBytesPerInstance": 456.44704,
+          "maxBytesPerInstance": 458.2064,
+          "meanBytesPerInstance": 456.45648,
           "minBytesPerInstance": 456.0128,
-          "relativeMarginOfErrorPct": 0.18380841141026344,
+          "relativeMarginOfErrorPct": 0.18785795599078262,
           "retainedBytes": 4560160,
           "sampleBytesPerInstance": [
-            458.1592, 456.0328, 456.0144, 456.0128, 456.016
+            458.2064, 456.0328, 456.0144, 456.0128, 456.016
           ],
-          "sampleRetainedBytes": [4581592, 4560328, 4560144, 4560128, 4560160],
+          "sampleRetainedBytes": [4582064, 4560328, 4560144, 4560128, 4560160],
           "samples": 5,
-          "stdDevBytesPerInstance": 0.9571603669187215
+          "stdDevBytesPerInstance": 0.9782681186668406
         },
         "tailwind-variants": {
           "bytesPerInstance": 704.016,
           "count": 10000,
-          "maxBytesPerInstance": 707.7776,
-          "meanBytesPerInstance": 704.77072,
+          "maxBytesPerInstance": 707.8504,
+          "meanBytesPerInstance": 704.7852800000001,
           "minBytesPerInstance": 704.0128,
-          "relativeMarginOfErrorPct": 0.20905920795439395,
+          "relativeMarginOfErrorPct": 0.21310396328051526,
           "retainedBytes": 7040160,
           "sampleBytesPerInstance": [
-            707.7776, 704.0328, 704.0144, 704.0128, 704.016
+            707.8504, 704.0328, 704.0144, 704.0128, 704.016
           ],
-          "sampleRetainedBytes": [7077776, 7040328, 7040144, 7040128, 7040160],
+          "sampleRetainedBytes": [7078504, 7040328, 7040144, 7040128, 7040160],
           "samples": 5,
-          "stdDevBytesPerInstance": 1.6809162834597218
+          "stdDevBytesPerInstance": 1.7134730671942557
         },
         "react-class-variants + twMerge": {
           "bytesPerInstance": 864.016,
           "count": 10000,
-          "maxBytesPerInstance": 870.0968,
-          "meanBytesPerInstance": 865.2345600000001,
+          "maxBytesPerInstance": 870.0176,
+          "meanBytesPerInstance": 865.2187200000001,
           "minBytesPerInstance": 864.0128,
-          "relativeMarginOfErrorPct": 0.27535978706687253,
+          "relativeMarginOfErrorPct": 0.27177657227660673,
           "retainedBytes": 8640160,
           "sampleBytesPerInstance": [
-            870.0968, 864.0328, 864.0144, 864.0128, 864.016
+            870.0176, 864.0328, 864.0144, 864.0128, 864.016
           ],
-          "sampleRetainedBytes": [8700968, 8640328, 8640144, 8640128, 8640160],
+          "sampleRetainedBytes": [8700176, 8640328, 8640144, 8640128, 8640160],
           "samples": 5,
-          "stdDevBytesPerInstance": 2.7180867035472085
+          "stdDevBytesPerInstance": 2.6826675440687935
         }
       }
     }
@@ -572,544 +572,544 @@
     "plain": {
       "complexExplicit": {
         "react-class-variants": {
-          "maxOpsPerSec": 5478789.962856788,
-          "meanOpsPerSec": 5338356.992634661,
-          "minOpsPerSec": 5014943.395376346,
-          "opsPerSec": 5420715.068236309,
-          "relativeMarginOfErrorPct": 3.0745239048836237,
+          "maxOpsPerSec": 5396529.266919739,
+          "meanOpsPerSec": 5332025.014841964,
+          "minOpsPerSec": 5235856.893559382,
+          "opsPerSec": 5345590.206878739,
+          "relativeMarginOfErrorPct": 1.1500413077354217,
           "sampleOpsPerSec": [
-            5433847.852260137, 5420715.068236309, 5478789.962856788,
-            5343488.6844437225, 5014943.395376346
+            5395015.663104822, 5287133.043747135, 5345590.206878739,
+            5396529.266919739, 5235856.893559382
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 187246.8058249691
+          "stdDevOpsPerSec": 69957.54312345997
         },
         "class-variance-authority": {
-          "maxOpsPerSec": 767472.2158760568,
-          "meanOpsPerSec": 761708.0015359143,
-          "minOpsPerSec": 752939.6093890057,
-          "opsPerSec": 764823.3245126774,
-          "relativeMarginOfErrorPct": 0.768320572251608,
+          "maxOpsPerSec": 743756.7915291698,
+          "meanOpsPerSec": 722197.6255827921,
+          "minOpsPerSec": 649778.9659886975,
+          "opsPerSec": 740323.1307686861,
+          "relativeMarginOfErrorPct": 4.937265545526635,
           "sampleOpsPerSec": [
-            752939.6093890057, 767060.2661654333, 756244.591736398,
-            767472.2158760568, 764823.3245126774
+            740323.1307686861, 743340.0807340103, 743756.7915291698,
+            649778.9659886975, 733789.158893397
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 6676.669984963907
+          "stdDevOpsPerSec": 40679.112841435
         },
         "classname-variants": {
-          "maxOpsPerSec": 2673344.2465026258,
-          "meanOpsPerSec": 2551587.101284732,
-          "minOpsPerSec": 2275711.3578742137,
-          "opsPerSec": 2628048.713984499,
-          "relativeMarginOfErrorPct": 5.524910466039112,
+          "maxOpsPerSec": 2642556.451427211,
+          "meanOpsPerSec": 2595202.1013236074,
+          "minOpsPerSec": 2502779.977760178,
+          "opsPerSec": 2614180.4088456575,
+          "relativeMarginOfErrorPct": 1.8899602185839801,
           "sampleOpsPerSec": [
-            2633252.842478259, 2547578.345584063, 2628048.713984499,
-            2673344.2465026258, 2275711.3578742137
+            2502779.977760178, 2614180.4088456575, 2631048.795277389,
+            2585444.8733076006, 2642556.451427211
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 160829.0784012039
+          "stdDevOpsPerSec": 55956.78806025776
         },
         "tailwind-variants/lite": {
-          "maxOpsPerSec": 504534.3626580606,
-          "meanOpsPerSec": 481551.75549965596,
-          "minOpsPerSec": 455655.2967679951,
-          "opsPerSec": 485315.0404795718,
-          "relativeMarginOfErrorPct": 3.3161501156731976,
+          "maxOpsPerSec": 586294.7600905636,
+          "meanOpsPerSec": 575200.0150786436,
+          "minOpsPerSec": 568195.7336337586,
+          "opsPerSec": 571650.625430557,
+          "relativeMarginOfErrorPct": 1.2172973569742005,
           "sampleOpsPerSec": [
-            473568.43003418023, 455655.2967679951, 485315.0404795718,
-            488685.6475584716, 504534.3626580606
+            568998.9521862302, 571650.625430557, 568195.7336337586,
+            580860.0040521084, 586294.7600905636
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 18218.225914402126
+          "stdDevOpsPerSec": 7988.118496993469
         }
       },
       "complexNoCompound": {
         "classname-variants": {
-          "maxOpsPerSec": 2728410.295700644,
-          "meanOpsPerSec": 2678912.2046155347,
-          "minOpsPerSec": 2613219.7765225167,
-          "opsPerSec": 2679566.282574171,
-          "relativeMarginOfErrorPct": 1.560663270281032,
+          "maxOpsPerSec": 3026107.472242873,
+          "meanOpsPerSec": 3008837.07227259,
+          "minOpsPerSec": 2957584.944359249,
+          "opsPerSec": 3022589.422240132,
+          "relativeMarginOfErrorPct": 0.8475141974090673,
           "sampleOpsPerSec": [
-            2653414.3739822004, 2679566.282574171, 2728410.295700644,
-            2613219.7765225167, 2719950.2942981417
+            2957584.944359249, 3022589.422240132, 3026107.472242873,
+            3024722.601982284, 3013180.9205384115
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 47697.610316466584
+          "stdDevOpsPerSec": 29092.067356595795
         },
         "tailwind-variants/lite": {
-          "maxOpsPerSec": 733780.1879349258,
-          "meanOpsPerSec": 700621.6611321216,
-          "minOpsPerSec": 648558.4922564956,
-          "opsPerSec": 720516.8984629986,
-          "relativeMarginOfErrorPct": 4.974307696105372,
+          "maxOpsPerSec": 763601.9705193733,
+          "meanOpsPerSec": 758267.596879151,
+          "minOpsPerSec": 743962.5490811457,
+          "opsPerSec": 763155.6087645494,
+          "relativeMarginOfErrorPct": 0.9732849801034509,
           "sampleOpsPerSec": [
-            667591.5992656405, 648558.4922564956, 720516.8984629986,
-            732661.127740547, 733780.1879349258
+            743962.5490811457, 757288.8300397232, 763329.0259909638,
+            763155.6087645494, 763601.9705193733
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 39759.88659758766
+          "stdDevOpsPerSec": 8419.599812467055
         },
         "react-class-variants": {
-          "maxOpsPerSec": 7165409.4851830555,
-          "meanOpsPerSec": 6730533.701355681,
-          "minOpsPerSec": 5329545.077199867,
-          "opsPerSec": 7024862.526701545,
-          "relativeMarginOfErrorPct": 10.256364671779222,
+          "maxOpsPerSec": 7954268.40033427,
+          "meanOpsPerSec": 7837505.8877956765,
+          "minOpsPerSec": 7711090.749266264,
+          "opsPerSec": 7864286.210453298,
+          "relativeMarginOfErrorPct": 1.113182069690853,
           "sampleOpsPerSec": [
-            7157821.054473639, 7024862.526701545, 5329545.077199867,
-            6975030.363220299, 7165409.4851830555
+            7896581.585171743, 7954268.40033427, 7711090.749266264,
+            7761302.493752808, 7864286.210453298
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 787538.6704156885
+          "stdDevOpsPerSec": 99534.35656784955
         },
         "class-variance-authority": {
-          "maxOpsPerSec": 834239.4683974213,
-          "meanOpsPerSec": 821671.8817630659,
-          "minOpsPerSec": 813576.8130608276,
-          "opsPerSec": 821604.8080873098,
-          "relativeMarginOfErrorPct": 0.8573953973582642,
+          "maxOpsPerSec": 931958.0990199364,
+          "meanOpsPerSec": 873964.185626413,
+          "minOpsPerSec": 710895.8537574244,
+          "opsPerSec": 921732.2208978942,
+          "relativeMarginOfErrorPct": 9.419522775378768,
           "sampleOpsPerSec": [
-            813576.8130608276, 823019.3661312247, 815918.9531385467,
-            821604.8080873098, 834239.4683974213
+            931958.0990199364, 921732.2208978942, 929116.6194310738,
+            710895.8537574244, 876118.1350257356
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 8037.2689992498645
+          "stdDevOpsPerSec": 93918.56911111868
         }
       },
       "complexWithCompound": {
         "class-variance-authority": {
-          "maxOpsPerSec": 795330.2494299613,
-          "meanOpsPerSec": 685257.5896784606,
-          "minOpsPerSec": 502062.35257716785,
-          "opsPerSec": 772155.0852829992,
-          "relativeMarginOfErrorPct": 17.189690523251073,
+          "maxOpsPerSec": 881874.3329075603,
+          "meanOpsPerSec": 862589.4646506233,
+          "minOpsPerSec": 844983.7069470006,
+          "opsPerSec": 859493.8757852492,
+          "relativeMarginOfErrorPct": 1.79928626215897,
           "sampleOpsPerSec": [
-            795330.2494299613, 772155.0852829992, 775619.280707595,
-            581120.9803945794, 502062.35257716785
+            846540.1766987931, 844983.7069470006, 859493.8757852492,
+            881874.3329075603, 880055.2309145138
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 134385.01466169677
+          "stdDevOpsPerSec": 17706.525304073166
         },
         "classname-variants": {
-          "maxOpsPerSec": 2506097.250012749,
-          "meanOpsPerSec": 2398794.5822828575,
-          "minOpsPerSec": 2206496.6067165765,
-          "opsPerSec": 2454359.060479751,
-          "relativeMarginOfErrorPct": 4.551317728392807,
+          "maxOpsPerSec": 2772447.515386654,
+          "meanOpsPerSec": 2761886.080297214,
+          "minOpsPerSec": 2741775.1744356966,
+          "opsPerSec": 2767663.000681466,
+          "relativeMarginOfErrorPct": 0.3936299513398528,
           "sampleOpsPerSec": [
-            2342649.773858808, 2454359.060479751, 2484370.220346404,
-            2506097.250012749, 2206496.6067165765
+            2758348.094315012, 2741775.1744356966, 2767663.000681466,
+            2772447.515386654, 2769196.616667243
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 124554.4203241005
+          "stdDevOpsPerSec": 12402.888188573614
         },
         "tailwind-variants/lite": {
-          "maxOpsPerSec": 617635.0789604873,
-          "meanOpsPerSec": 603333.6327850625,
-          "minOpsPerSec": 590552.1653953113,
-          "opsPerSec": 602283.4581508476,
-          "relativeMarginOfErrorPct": 1.6493537475230642,
+          "maxOpsPerSec": 682782.2476615612,
+          "meanOpsPerSec": 664493.8707404925,
+          "minOpsPerSec": 634161.4226923349,
+          "opsPerSec": 668970.3891526636,
+          "relativeMarginOfErrorPct": 2.3898021073687095,
           "sampleOpsPerSec": [
-            590552.1653953113, 617635.0789604873, 594542.2318985796,
-            611655.2295200867, 602283.4581508476
+            634161.4226923349, 668970.3891526636, 670477.7228139304,
+            682782.2476615612, 666077.5713819722
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 11352.729185898537
+          "stdDevOpsPerSec": 18116.81501709378
         },
         "react-class-variants": {
-          "maxOpsPerSec": 5783385.541536146,
-          "meanOpsPerSec": 5034236.72803873,
-          "minOpsPerSec": 3378366.892684405,
-          "opsPerSec": 5320592.496892621,
-          "relativeMarginOfErrorPct": 17.151842000297318,
+          "maxOpsPerSec": 6081914.150034947,
+          "meanOpsPerSec": 6025224.109732932,
+          "minOpsPerSec": 5922173.603500548,
+          "opsPerSec": 6056589.145218747,
+          "relativeMarginOfErrorPct": 0.9367384418942487,
           "sampleOpsPerSec": [
-            5783385.541536146, 5320592.496892621, 5734296.3452834,
-            3378366.892684405, 4954542.3637970835
+            6003954.822500869, 6061488.827409554, 6081914.150034947,
+            6056589.145218747, 5922173.603500548
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 985084.151499947
+          "stdDevOpsPerSec": 64390.30455500719
         }
       },
       "simpleDefaults": {
         "react-class-variants": {
-          "maxOpsPerSec": 15102738.239340838,
-          "meanOpsPerSec": 14873652.716691691,
-          "minOpsPerSec": 14627605.054663524,
-          "opsPerSec": 14929417.752707649,
-          "relativeMarginOfErrorPct": 1.3343029409367957,
+          "maxOpsPerSec": 15617388.360602247,
+          "meanOpsPerSec": 15363090.855404627,
+          "minOpsPerSec": 15158787.77697112,
+          "opsPerSec": 15356669.831598623,
+          "relativeMarginOfErrorPct": 1.0987563333469452,
           "sampleOpsPerSec": [
-            15064214.190330977, 14644288.346415473, 14627605.054663524,
-            15102738.239340838, 14929417.752707649
+            15617388.360602247, 15356669.831598623, 15158787.77697112,
+            15484393.56921026, 15198214.738640884
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 226412.81849014378
+          "stdDevOpsPerSec": 192578.99730341882
         },
         "class-variance-authority": {
-          "maxOpsPerSec": 8002317.114266734,
-          "meanOpsPerSec": 7832123.148084709,
-          "minOpsPerSec": 7450812.477951555,
-          "opsPerSec": 7903931.488721856,
-          "relativeMarginOfErrorPct": 2.4482408288799213,
+          "maxOpsPerSec": 7902959.157507076,
+          "meanOpsPerSec": 7607190.007151803,
+          "minOpsPerSec": 6856828.579285516,
+          "opsPerSec": 7750727.45341983,
+          "relativeMarginOfErrorPct": 4.913582941570064,
           "sampleOpsPerSec": [
-            7903931.488721856, 8002317.114266734, 7934908.7485493915,
-            7868645.910934008, 7450812.477951555
+            7825488.7451693, 7750727.45341983, 6856828.579285516,
+            7902959.157507076, 7699946.100377293
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 218757.3101271449
+          "stdDevOpsPerSec": 426433.66807249363
         },
         "classname-variants": {
-          "maxOpsPerSec": 6126145.402716321,
-          "meanOpsPerSec": 5906332.489229718,
-          "minOpsPerSec": 5610392.214990566,
-          "opsPerSec": 6086829.568772077,
-          "relativeMarginOfErrorPct": 3.9941466029941695,
+          "maxOpsPerSec": 6075878.482430352,
+          "meanOpsPerSec": 6044216.771179173,
+          "minOpsPerSec": 5986556.994782385,
+          "opsPerSec": 6059315.297371396,
+          "relativeMarginOfErrorPct": 0.5028441109721692,
           "sampleOpsPerSec": [
-            6126145.402716321, 5610392.214990566, 5613511.624488669,
-            6086829.568772077, 6094783.635180952
+            6075878.482430352, 5986556.994782385, 6039801.701230544,
+            6059315.297371396, 6059531.380081188
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 269135.3989229041
+          "stdDevOpsPerSec": 34673.871124849815
         },
         "tailwind-variants/lite": {
-          "maxOpsPerSec": 1935463.8765062094,
-          "meanOpsPerSec": 1884321.1014118716,
-          "minOpsPerSec": 1857262.354825059,
-          "opsPerSec": 1872967.8448880385,
-          "relativeMarginOfErrorPct": 1.5310212705266035,
+          "maxOpsPerSec": 1862319.9477985825,
+          "meanOpsPerSec": 1806926.6734045506,
+          "minOpsPerSec": 1776246.871326558,
+          "opsPerSec": 1800088.5503637623,
+          "relativeMarginOfErrorPct": 1.6607700583808958,
           "sampleOpsPerSec": [
-            1857262.354825059, 1858266.6016368647, 1872967.8448880385,
-            1897644.8292031863, 1935463.8765062094
+            1776246.871326558, 1782624.4580706675, 1800088.5503637623,
+            1813353.5394631824, 1862319.9477985825
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 32912.81788938091
+          "stdDevOpsPerSec": 34235.68061185685
         }
       },
       "simpleExplicit": {
         "classname-variants": {
-          "maxOpsPerSec": 6698647.1956495,
-          "meanOpsPerSec": 6485144.073696259,
-          "minOpsPerSec": 6192396.783498107,
-          "opsPerSec": 6639961.24918615,
-          "relativeMarginOfErrorPct": 3.4151285933869016,
+          "maxOpsPerSec": 6613353.0024490645,
+          "meanOpsPerSec": 6491692.4718346875,
+          "minOpsPerSec": 6426566.206781043,
+          "opsPerSec": 6481773.137940173,
+          "relativeMarginOfErrorPct": 0.9956504608864964,
           "sampleOpsPerSec": [
-            6192396.783498107, 6226832.9216190465, 6639961.24918615,
-            6698647.1956495, 6667882.218528491
+            6613353.0024490645, 6426566.206781043, 6495969.676813548,
+            6440800.335189613, 6481773.137940173
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 252671.12898637215
+          "stdDevOpsPerSec": 73738.40985004422
         },
         "tailwind-variants/lite": {
-          "maxOpsPerSec": 1804948.3143755593,
-          "meanOpsPerSec": 1651181.9950153977,
-          "minOpsPerSec": 1406884.9260446094,
-          "opsPerSec": 1686939.2701862734,
-          "relativeMarginOfErrorPct": 9.116488646556398,
+          "maxOpsPerSec": 1775100.9113883818,
+          "meanOpsPerSec": 1721691.319810026,
+          "minOpsPerSec": 1620076.821904114,
+          "opsPerSec": 1751375.0533369677,
+          "relativeMarginOfErrorPct": 3.254072887773025,
           "sampleOpsPerSec": [
-            1686939.2701862734, 1804948.3143755593, 1406884.9260446094,
-            1552346.9773017527, 1804790.487168794
+            1751375.0533369677, 1775100.9113883818, 1763435.9967382909,
+            1698467.8156823763, 1620076.821904114
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 171732.09600496318
+          "stdDevOpsPerSec": 63916.28096414096
         },
         "react-class-variants": {
-          "maxOpsPerSec": 16889580.597934593,
-          "meanOpsPerSec": 16514567.551115954,
-          "minOpsPerSec": 16173638.81029809,
-          "opsPerSec": 16463511.560539022,
-          "relativeMarginOfErrorPct": 1.6689229541534916,
+          "maxOpsPerSec": 15774311.167379946,
+          "meanOpsPerSec": 15680241.845697427,
+          "minOpsPerSec": 15629419.085751422,
+          "opsPerSec": 15656525.10628047,
+          "relativeMarginOfErrorPct": 0.3188045217853204,
           "sampleOpsPerSec": [
-            16889580.597934593, 16262417.285063844, 16173638.81029809,
-            16463511.560539022, 16783689.501744214
+            15629419.085751422, 15690782.965090025, 15774311.167379946,
+            15656525.10628047, 15650170.903985273
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 314436.1170228992
+          "stdDevOpsPerSec": 57030.366192965615
         },
         "class-variance-authority": {
-          "maxOpsPerSec": 6281126.113959667,
-          "meanOpsPerSec": 6106405.282477888,
-          "minOpsPerSec": 5528333.835772787,
-          "opsPerSec": 6250133.331511719,
-          "relativeMarginOfErrorPct": 4.659195229724666,
+          "maxOpsPerSec": 6231791.234993627,
+          "meanOpsPerSec": 5569088.330662262,
+          "minOpsPerSec": 3865468.498081513,
+          "opsPerSec": 5896755.284655686,
+          "relativeMarginOfErrorPct": 15.169730777459614,
           "sampleOpsPerSec": [
-            6270584.034537485, 6201849.096607782, 6281126.113959667,
-            5528333.835772787, 6250133.331511719
+            3865468.498081513, 5846700.85939723, 6004725.776183251,
+            6231791.234993627, 5896755.284655686
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 324582.7717285655
+          "stdDevOpsPerSec": 963808.8511423946
         }
       }
     },
     "tailwindAware": {
       "complexExplicit": {
         "classname-variants + twMerge": {
-          "maxOpsPerSec": 1513851.3942917308,
-          "meanOpsPerSec": 1500875.0399932854,
-          "minOpsPerSec": 1486251.8682487956,
-          "opsPerSec": 1498107.120058029,
-          "relativeMarginOfErrorPct": 0.6917407299376764,
+          "maxOpsPerSec": 1369487.932063543,
+          "meanOpsPerSec": 1290201.646961226,
+          "minOpsPerSec": 1161330.448436211,
+          "opsPerSec": 1308137.7183874636,
+          "relativeMarginOfErrorPct": 5.23263290629722,
           "sampleOpsPerSec": [
-            1486251.8682487956, 1513851.3942917308, 1498107.120058029,
-            1494095.2045782653, 1512069.6127896055
+            1308480.8144879823, 1161330.448436211, 1369487.932063543,
+            1303571.3214309292, 1308137.7183874636
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 11844.502225320492
+          "stdDevOpsPerSec": 77020.58107042535
         },
         "tailwind-variants": {
-          "maxOpsPerSec": 499510.3378943483,
-          "meanOpsPerSec": 488131.58202596114,
-          "minOpsPerSec": 482358.7583261628,
-          "opsPerSec": 487176.2102113029,
-          "relativeMarginOfErrorPct": 1.208736163939135,
+          "maxOpsPerSec": 454505.9346602749,
+          "meanOpsPerSec": 434267.04970637977,
+          "minOpsPerSec": 410996.00788543024,
+          "opsPerSec": 432378.16490267235,
+          "relativeMarginOfErrorPct": 3.2528419167379843,
           "sampleOpsPerSec": [
-            487638.2543385075, 483974.34935948404, 487176.2102113029,
-            482358.7583261628, 499510.3378943483
+            430726.2734452269, 410996.00788543024, 432378.16490267235,
+            442728.86763829435, 454505.9346602749
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 6731.275316312368
+          "stdDevOpsPerSec": 16115.684880384977
         },
         "react-class-variants + twMerge": {
-          "maxOpsPerSec": 2026740.5516461392,
-          "meanOpsPerSec": 1994928.167138875,
-          "minOpsPerSec": 1933192.9090484092,
-          "opsPerSec": 2014122.0511569404,
-          "relativeMarginOfErrorPct": 1.7758583245615625,
+          "maxOpsPerSec": 1869458.855856383,
+          "meanOpsPerSec": 1754970.9697671086,
+          "minOpsPerSec": 1544728.942468647,
+          "opsPerSec": 1803827.4314372893,
+          "relativeMarginOfErrorPct": 6.32606165082438,
           "sampleOpsPerSec": [
-            2014122.0511569404, 2025639.43618036, 2026740.5516461392,
-            1974945.8876625255, 1933192.9090484092
+            1803827.4314372893, 1737352.4272791129, 1544728.942468647,
+            1819487.19179411, 1869458.855856383
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 40417.04041132528
+          "stdDevOpsPerSec": 126657.90134721785
         },
         "class-variance-authority + twMerge": {
-          "maxOpsPerSec": 594914.4410682872,
-          "meanOpsPerSec": 580723.0720128578,
-          "minOpsPerSec": 550056.3050185975,
-          "opsPerSec": 583298.4347092554,
-          "relativeMarginOfErrorPct": 2.7415157243992274,
+          "maxOpsPerSec": 571321.1952567146,
+          "meanOpsPerSec": 537643.1707041125,
+          "minOpsPerSec": 473112.4741922745,
+          "opsPerSec": 543761.6496935198,
+          "relativeMarginOfErrorPct": 6.406477583711648,
           "sampleOpsPerSec": [
-            550056.3050185975, 593776.4431691468, 594914.4410682872,
-            583298.4347092554, 581569.7360990023
+            533658.1023308957, 473112.4741922745, 543761.6496935198,
+            566362.4320471575, 571321.1952567146
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 18163.04892621454
+          "stdDevOpsPerSec": 39295.45984347862
         }
       },
       "complexNoCompound": {
         "react-class-variants + twMerge": {
-          "maxOpsPerSec": 3824720.1528758546,
-          "meanOpsPerSec": 3750660.5529524116,
-          "minOpsPerSec": 3691395.7921607583,
-          "opsPerSec": 3737628.7338626077,
-          "relativeMarginOfErrorPct": 1.144897629177086,
+          "maxOpsPerSec": 3553445.2524535577,
+          "meanOpsPerSec": 3523507.811808524,
+          "minOpsPerSec": 3488554.0511585316,
+          "opsPerSec": 3527895.3344012205,
+          "relativeMarginOfErrorPct": 0.6980956191912808,
           "sampleOpsPerSec": [
-            3737628.7338626077, 3735092.6399561586, 3691395.7921607583,
-            3764465.44590668, 3824720.1528758546
+            3546321.61375332, 3488554.0511585316, 3527895.3344012205,
+            3553445.2524535577, 3501322.8072759924
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 48989.53843893465
+          "stdDevOpsPerSec": 28062.02984344741
         },
         "class-variance-authority + twMerge": {
-          "maxOpsPerSec": 805020.2132257399,
-          "meanOpsPerSec": 774711.3269630738,
-          "minOpsPerSec": 725213.4982950707,
-          "opsPerSec": 788958.1852161837,
-          "relativeMarginOfErrorPct": 3.5269735099058783,
+          "maxOpsPerSec": 725278.9973531978,
+          "meanOpsPerSec": 680655.0919772123,
+          "minOpsPerSec": 638694.489432703,
+          "opsPerSec": 689364.4977283666,
+          "relativeMarginOfErrorPct": 4.85016181457058,
           "sampleOpsPerSec": [
-            789491.707001534, 805020.2132257399, 788958.1852161837,
-            725213.4982950707, 764873.0310768412
+            725278.9973531978, 704813.5768089341, 645123.8985628607,
+            638694.489432703, 689364.4977283666
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 31172.456991071453
+          "stdDevOpsPerSec": 37662.7698803939
         },
         "classname-variants + twMerge": {
-          "maxOpsPerSec": 2241468.1299469797,
-          "meanOpsPerSec": 2209054.1377605046,
-          "minOpsPerSec": 2174273.892114257,
-          "opsPerSec": 2204087.869092606,
-          "relativeMarginOfErrorPct": 0.9903729955247006,
+          "maxOpsPerSec": 1987073.161145978,
+          "meanOpsPerSec": 1903599.511547143,
+          "minOpsPerSec": 1798400.1509040482,
+          "opsPerSec": 1902553.7070631997,
+          "relativeMarginOfErrorPct": 3.704574312833937,
           "sampleOpsPerSec": [
-            2174273.892114257, 2241468.1299469797, 2203233.387921096,
-            2204087.869092606, 2222207.4097275864
+            1976611.9278269857, 1798400.1509040482, 1853358.610795504,
+            1987073.161145978, 1902553.7070631997
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 24959.396493570035
+          "stdDevOpsPerSec": 80453.10808701039
         },
         "tailwind-variants": {
-          "maxOpsPerSec": 728974.2438820152,
-          "meanOpsPerSec": 716487.990168199,
-          "minOpsPerSec": 681316.5723059207,
-          "opsPerSec": 724992.6759149054,
-          "relativeMarginOfErrorPct": 2.4318062407856686,
+          "maxOpsPerSec": 662566.1278471054,
+          "meanOpsPerSec": 657423.3360251695,
+          "minOpsPerSec": 648557.5194824742,
+          "opsPerSec": 658184.6432359042,
+          "relativeMarginOfErrorPct": 0.7059573937224206,
           "sampleOpsPerSec": [
-            724992.6759149054, 728974.2438820152, 726288.3003027355,
-            720868.1584354184, 681316.5723059207
+            657873.4957040481, 659934.8938563155, 662566.1278471054,
+            648557.5194824742, 658184.6432359042
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 19877.73125058081
+          "stdDevOpsPerSec": 5294.836301466174
         }
       },
       "complexWithCompound": {
         "tailwind-variants": {
-          "maxOpsPerSec": 599456.094303044,
-          "meanOpsPerSec": 576312.402039943,
-          "minOpsPerSec": 524831.5290791655,
-          "opsPerSec": 587217.9624316462,
-          "relativeMarginOfErrorPct": 4.490247145705707,
+          "maxOpsPerSec": 535891.439024366,
+          "meanOpsPerSec": 525019.4203015277,
+          "minOpsPerSec": 513197.6530400166,
+          "opsPerSec": 523966.5936964918,
+          "relativeMarginOfErrorPct": 1.4300704646147668,
           "sampleOpsPerSec": [
-            587217.9624316462, 581180.8948026596, 524831.5290791655,
-            588875.5295831996, 599456.094303044
+            535891.439024366, 530046.5480003038, 523966.5936964918,
+            513197.6530400166, 521994.86774646
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 29522.772630965206
+          "stdDevOpsPerSec": 8565.677836772778
         },
         "react-class-variants + twMerge": {
-          "maxOpsPerSec": 2526948.9931026176,
-          "meanOpsPerSec": 2494189.281468337,
-          "minOpsPerSec": 2433920.9168919856,
-          "opsPerSec": 2517177.5269925804,
-          "relativeMarginOfErrorPct": 1.432402668330247,
+          "maxOpsPerSec": 2323529.6991430377,
+          "meanOpsPerSec": 2277016.8492561136,
+          "minOpsPerSec": 2186375.2152505587,
+          "opsPerSec": 2297020.6057005976,
+          "relativeMarginOfErrorPct": 2.075489950942096,
           "sampleOpsPerSec": [
-            2433920.9168919856, 2469982.2266070447, 2517177.5269925804,
-            2526948.9931026176, 2522916.7437474574
+            2297020.6057005976, 2305769.646848369, 2272389.079338005,
+            2186375.2152505587, 2323529.6991430377
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 40758.994410461186
+          "stdDevOpsPerSec": 53915.76976054152
         },
         "class-variance-authority + twMerge": {
-          "maxOpsPerSec": 731607.0041288062,
-          "meanOpsPerSec": 712720.6314375558,
-          "minOpsPerSec": 697128.7757472395,
-          "opsPerSec": 713456.8224904197,
-          "relativeMarginOfErrorPct": 1.6427681436861057,
+          "maxOpsPerSec": 660925.2745129939,
+          "meanOpsPerSec": 649813.3464791445,
+          "minOpsPerSec": 643383.5172610047,
+          "opsPerSec": 648862.6978106209,
+          "relativeMarginOfErrorPct": 0.8984250347716413,
           "sampleOpsPerSec": [
-            703451.90667231, 697128.7757472395, 713456.8224904197,
-            717958.6481490037, 731607.0041288062
+            649490.3022402022, 660925.2745129939, 648862.6978106209,
+            643383.5172610047, 646404.9405709009
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 13357.480043126247
+          "stdDevOpsPerSec": 6660.386056951234
         },
         "classname-variants + twMerge": {
-          "maxOpsPerSec": 1775585.9901658448,
-          "meanOpsPerSec": 1739018.4809586108,
-          "minOpsPerSec": 1706229.9502982332,
-          "opsPerSec": 1738410.5960264897,
-          "relativeMarginOfErrorPct": 1.2482177422494403,
+          "maxOpsPerSec": 1592326.7529693637,
+          "meanOpsPerSec": 1560772.9253245017,
+          "minOpsPerSec": 1510653.7203789484,
+          "opsPerSec": 1587210.0732757177,
+          "relativeMarginOfErrorPct": 2.3069739504570546,
           "sampleOpsPerSec": [
-            1775585.9901658448, 1706229.9502982332, 1733226.6773322667,
-            1738410.5960264897, 1741639.1909702192
+            1510653.7203789484, 1592278.4582007285, 1592326.7529693637,
+            1521395.62179775, 1587210.0732757177
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 24764.153058349493
+          "stdDevOpsPerSec": 41078.19424604573
         }
       },
       "simpleDefaults": {
         "classname-variants + twMerge": {
-          "maxOpsPerSec": 3959302.4975976055,
-          "meanOpsPerSec": 3849543.8901221366,
-          "minOpsPerSec": 3523890.1673912625,
-          "opsPerSec": 3924332.863413219,
-          "relativeMarginOfErrorPct": 4.16855675169488,
+          "maxOpsPerSec": 3614991.569839659,
+          "meanOpsPerSec": 3513830.269298253,
+          "minOpsPerSec": 3432230.6174558676,
+          "opsPerSec": 3490664.8961699675,
+          "relativeMarginOfErrorPct": 2.054743167025256,
           "sampleOpsPerSec": [
-            3523890.1673912625, 3924332.863413219, 3934527.8566572014,
-            3959302.4975976055, 3905666.0655513946
+            3585287.7180596287, 3445976.5449661445, 3614991.569839659,
+            3490664.8961699675, 3432230.6174558676
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 183072.84254656037
+          "stdDevOpsPerSec": 82369.65659364848
         },
         "tailwind-variants": {
-          "maxOpsPerSec": 1536142.3164436053,
-          "meanOpsPerSec": 1516467.0018812795,
-          "minOpsPerSec": 1480949.6477119776,
-          "opsPerSec": 1520444.022275262,
-          "relativeMarginOfErrorPct": 1.27238712283937,
+          "maxOpsPerSec": 1358572.049804312,
+          "meanOpsPerSec": 1318571.237808528,
+          "minOpsPerSec": 1215253.0228549482,
+          "opsPerSec": 1352898.9621202636,
+          "relativeMarginOfErrorPct": 4.051556982868919,
           "sampleOpsPerSec": [
-            1480949.6477119776, 1512312.4059922418, 1532486.6169833106,
-            1536142.3164436053, 1520444.022275262
+            1358572.049804312, 1310873.9358753348, 1215253.0228549482,
+            1355258.2183877802, 1352898.9621202636
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 22013.09767244652
+          "stdDevOpsPerSec": 60947.30133281513
         },
         "react-class-variants + twMerge": {
-          "maxOpsPerSec": 5699863.203283123,
-          "meanOpsPerSec": 5574225.0807167785,
-          "minOpsPerSec": 5442775.931800439,
-          "opsPerSec": 5607480.388437287,
-          "relativeMarginOfErrorPct": 1.8561435412201994,
+          "maxOpsPerSec": 5192029.96265802,
+          "meanOpsPerSec": 4932471.679231584,
+          "minOpsPerSec": 4235483.982515442,
+          "opsPerSec": 5116330.97385353,
+          "relativeMarginOfErrorPct": 7.048524247007582,
           "sampleOpsPerSec": [
-            5699863.203283123, 5663426.113705048, 5607480.388437287,
-            5442775.931800439, 5457579.766357995
+            5116330.97385353, 4235483.982515442, 4987969.254157517,
+            5130544.22297341, 5192029.96265802
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 118038.85560742843
+          "stdDevOpsPerSec": 396635.6342711933
         },
         "class-variance-authority + twMerge": {
-          "maxOpsPerSec": 4354162.555207429,
-          "meanOpsPerSec": 4242500.844837049,
-          "minOpsPerSec": 4155413.3886027574,
-          "opsPerSec": 4233223.897663498,
-          "relativeMarginOfErrorPct": 1.8353614803446434,
+          "maxOpsPerSec": 4004678.952897704,
+          "meanOpsPerSec": 3869145.479992114,
+          "minOpsPerSec": 3777976.6974397297,
+          "opsPerSec": 3847561.378002908,
+          "relativeMarginOfErrorPct": 1.8889940811361423,
           "sampleOpsPerSec": [
-            4233223.897663498, 4310049.63405569, 4155413.3886027574,
-            4159654.748655863, 4354162.555207429
+            3871969.674733507, 3777976.6974397297, 4004678.952897704,
+            3847561.378002908, 3843540.696886723
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 88832.62199556243
+          "stdDevOpsPerSec": 83382.43766289481
         }
       },
       "simpleExplicit": {
         "react-class-variants + twMerge": {
-          "maxOpsPerSec": 5867624.472033789,
-          "meanOpsPerSec": 5822680.794764479,
-          "minOpsPerSec": 5745285.67714119,
-          "opsPerSec": 5830360.596014156,
-          "relativeMarginOfErrorPct": 0.7004249697275414,
+          "maxOpsPerSec": 5327542.705044368,
+          "meanOpsPerSec": 5277005.640766953,
+          "minOpsPerSec": 5191165.966511156,
+          "opsPerSec": 5299122.105039101,
+          "relativeMarginOfErrorPct": 0.9061030703655305,
           "sampleOpsPerSec": [
-            5823157.575439876, 5867624.472033789, 5830360.596014156,
-            5745285.67714119, 5846975.653193381
+            5299122.105039101, 5327542.705044368, 5191165.966511156,
+            5310096.391517248, 5257101.035722889
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 46527.90875253819
+          "stdDevOpsPerSec": 54549.916638800656
         },
         "class-variance-authority + twMerge": {
-          "maxOpsPerSec": 3699125.1569003933,
-          "meanOpsPerSec": 3635730.4621318234,
-          "minOpsPerSec": 3560309.299995799,
-          "opsPerSec": 3618145.509811241,
-          "relativeMarginOfErrorPct": 1.4313818563792848,
+          "maxOpsPerSec": 3521035.262323623,
+          "meanOpsPerSec": 3464050.9398639314,
+          "minOpsPerSec": 3369542.860859153,
+          "opsPerSec": 3477333.5064414875,
+          "relativeMarginOfErrorPct": 1.4822525052884026,
           "sampleOpsPerSec": [
-            3699125.1569003933, 3607846.074855063, 3693226.2690966227,
-            3560309.299995799, 3618145.509811241
+            3369542.860859153, 3452972.9563158057, 3499370.1133795907,
+            3477333.5064414875, 3521035.262323623
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 59371.23976135158
+          "stdDevOpsPerSec": 58578.115187270625
         },
         "classname-variants + twMerge": {
-          "maxOpsPerSec": 4107572.12242715,
-          "meanOpsPerSec": 4014241.4020628855,
-          "minOpsPerSec": 3883295.1819244805,
-          "opsPerSec": 4077550.1157406294,
-          "relativeMarginOfErrorPct": 2.428789378181525,
+          "maxOpsPerSec": 3691485.0378372218,
+          "meanOpsPerSec": 3634708.821432711,
+          "minOpsPerSec": 3582478.161901023,
+          "opsPerSec": 3623851.847771367,
+          "relativeMarginOfErrorPct": 1.0043146593537857,
           "sampleOpsPerSec": [
-            3883295.1819244805, 3903178.3809508095, 4077550.1157406294,
-            4107572.12242715, 4099611.209271357
+            3691485.0378372218, 3658456.1315125013, 3623851.847771367,
+            3617272.928141445, 3582478.161901023
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 111230.08563461121
+          "stdDevOpsPerSec": 41645.5265673884
         },
         "tailwind-variants": {
-          "maxOpsPerSec": 1473294.7809338004,
-          "meanOpsPerSec": 1369294.2329376114,
-          "minOpsPerSec": 1000313.7847436661,
-          "opsPerSec": 1462126.870469523,
-          "relativeMarginOfErrorPct": 13.223899439137519,
+          "maxOpsPerSec": 1316718.443461798,
+          "meanOpsPerSec": 1243163.085557364,
+          "minOpsPerSec": 1188504.393667841,
+          "opsPerSec": 1239795.0172510282,
+          "relativeMarginOfErrorPct": 3.6866059265434923,
           "sampleOpsPerSec": [
-            1462126.870469523, 1473294.7809338004, 1000313.7847436661,
-            1443102.3903132253, 1467633.3382278432
+            1316718.443461798, 1200719.228618457, 1270078.3447876945,
+            1239795.0172510282, 1188504.393667841
           ],
           "samples": 5,
-          "stdDevOpsPerSec": 206578.56099345736
+          "stdDevOpsPerSec": 52285.79953229558
         }
       }
     }

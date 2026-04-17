@@ -64,6 +64,7 @@ export function compileStrictRootRecipe(
     compileClassName: (context, value) =>
       compileRootClassNameStrict(context, value, options.validate),
     defaultVariants: config.defaultVariants,
+    mode: 'root',
     validate: options.validate,
     variants: config.variants,
   });
@@ -95,6 +96,7 @@ export function compileLeanRootRecipe(
   const variantTable = compileVariants({
     compileClassName: (_context, value) => compileRootClassNameLean(value),
     defaultVariants: config.defaultVariants,
+    mode: 'root',
     validate: false,
     variants: config.variants,
   });
@@ -157,7 +159,7 @@ function resolveStrictRootClassName(
     input,
     'recipe',
     allowUnknownProps,
-    true
+    ['className']
   );
   let className = compiled.base;
 
