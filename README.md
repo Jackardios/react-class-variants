@@ -197,13 +197,11 @@ const buttonRecipe = recipe({
 });
 
 function ButtonView({ host, classes }) {
-  const { icon, label } = classes;
-
   return host.render({
     children: (
       <>
-        <span aria-hidden="true" className={icon()} />
-        <span className={label()}>{host.children}</span>
+        <span aria-hidden="true" className={classes.icon()} />
+        <span className={classes.label()}>{host.children}</span>
       </>
     ),
   });
@@ -232,7 +230,8 @@ Key points:
 - `view` is required for slotted recipes
 - `view` is a normal React component, so hooks and context work inside it
 - prefer a named component such as `ButtonView` when you use hooks
-- `classes` is an enumerable slot render map and behaves like a normal object
+- use `classes.slotName()` for the most direct slot lookup in `view`
+- `classes` is still an enumerable slot render map and may be safely destructured when that reads better
 - external component `className` is routed automatically to the host slot
 - if the recipe has no `root` slot, provide `hostSlot`
 - call `host.render(...)` directly as a method
@@ -251,6 +250,63 @@ Use `recipe.resolve()` when you need class resolution plus a full prop bag:
 - headless abstractions
 - host prop aliasing such as `propAliases: { size: 'htmlSize' }`
 - explicit forwarding of resolved variant values with `forwardProps`
+
+Example:
+
+```tsx
+import type { ComponentPropsWithoutRef } from 'react';
+import { recipe, type VariantProps } from 'react-class-variants';
+
+const inputRecipe = recipe({
+  base: 'block w-full rounded-md border',
+  variants: {
+    size: {
+      sm: 'h-9 px-3 text-sm',
+      md: 'h-10 px-4 text-base',
+    },
+    invalid: {
+      true: 'border-red-500 ring-1 ring-red-500',
+    },
+  },
+  defaultVariants: {
+    size: 'md',
+    invalid: false,
+  },
+});
+
+type InputProps = Omit<ComponentPropsWithoutRef<'input'>, 'size'> &
+  VariantProps<typeof inputRecipe> & {
+    htmlSize?: number;
+  };
+
+export function Input(props: InputProps) {
+  const resolved = inputRecipe.resolve(props, {
+    propAliases: {
+      size: 'htmlSize',
+    },
+  });
+
+  return (
+    <input
+      {...resolved.resolvedProps}
+      aria-invalid={resolved.variants.invalid || undefined}
+    />
+  );
+}
+```
+
+Usage:
+
+```tsx
+<Input size="sm" htmlSize={20} invalid type="email" />
+```
+
+What `resolve()` gives you here:
+
+- `resolved.resolvedProps` is the host-ready prop bag, including the merged `className`
+- `propAliases` lets the public API accept `htmlSize` while `resolvedProps` receives the native `size` prop
+- `resolved.variants` gives you the effective variant selection after defaults and boolean fallbacks
+- for slot recipes, `resolve()` returns `slots` plus `resolvedProps` instead of one root `className`
 
 Alias names must not collide with existing host props, reserved React public props, or declared variant keys.
 
