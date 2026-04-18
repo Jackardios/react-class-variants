@@ -15,6 +15,7 @@ The current v2 alpha surface is built around:
 
 - one adaptive `recipe()` primitive
 - one React builder, `styled()`
+- explicit view-consumed component props through `defineViewProps()`
 - explicit `render` polymorphism
 - explicit merge configuration through `defineConfig()`
 - a dedicated `core` subpath for recipe-only modules
@@ -41,15 +42,16 @@ pnpm add tailwind-merge
 
 ## Mental Model
 
-| Need                                     | Use                              |
-| ---------------------------------------- | -------------------------------- |
-| Compute one root class string            | `recipe(input)`                  |
-| Compute slot class strings               | `recipe(input).slotName()`       |
-| Split variant props from a full prop bag | `recipe.resolve(input, options)` |
-| Build a React component from a recipe    | `styled(base, recipe, options?)` |
-| Share merge or validate behavior         | `defineConfig(options)`          |
-| Keep typed config objects around         | `defineRecipeConfig(config)`     |
-| Avoid React runtime imports              | `react-class-variants/core`      |
+| Need                                       | Use                              |
+| ------------------------------------------ | -------------------------------- |
+| Compute one root class string              | `recipe(input)`                  |
+| Compute slot class strings                 | `recipe(input).slotName()`       |
+| Split variant props from a full prop bag   | `recipe.resolve(input, options)` |
+| Build a React component from a recipe      | `styled(base, recipe, options?)` |
+| Declare component props consumed by `view` | `defineViewProps<T>(...keys)`    |
+| Share merge or validate behavior           | `defineConfig(options)`          |
+| Keep typed config objects around           | `defineRecipeConfig(config)`     |
+| Avoid React runtime imports                | `react-class-variants/core`      |
 
 Four rules explain most of the package:
 
@@ -260,6 +262,7 @@ Key points:
 - `view` is required for slotted recipes
 - `view` is a normal React component, so hooks and context work inside it
 - prefer a named component such as `ButtonView` when you use hooks
+- use `defineViewProps()` when a `view` needs component-level props such as `icon`, `startIcon`, `endIcon`, or `shortcut`; those props stay on `host.props` and are stripped before the rendered host receives its props
 - use `classes.slotName()` for the most direct slot lookup in `view`
 - `classes` is still an enumerable slot render map and may be safely destructured when that reads better
 - top-level `slotClassNames` applies to matching slots, while top-level `className` still routes only to the host slot
@@ -397,6 +400,7 @@ Most users will work with these package-root APIs from `react-class-variants`:
 - `styled()`
 - `defineConfig()`
 - `defineRecipeConfig()`
+- `defineViewProps()`
 - public core and React types
 
 Package root also exports `mergeProps`, `mergeRefs`, `useMergeRefs`, and

@@ -2,7 +2,8 @@
 
 This document covers the primary user-facing v2 alpha APIs and public helpers:
 `recipe()`, `recipe.resolve()`, `styled()`, `defineConfig()`,
-`defineRecipeConfig()`, `view`, `render`, and the exported utilities.
+`defineRecipeConfig()`, `defineViewProps()`, `view`, `render`, and the
+exported utilities.
 
 Use this page as a reference, not as a tutorial. For guided examples and recommended patterns, start with the [recipes and components guide](./recipes-and-components.md).
 
@@ -12,6 +13,7 @@ Use this page as a reference, not as a tutorial. For guided examples and recomme
 import {
   defineConfig,
   defineRecipeConfig,
+  defineViewProps,
   recipe,
   styled,
 } from 'react-class-variants';
@@ -416,8 +418,11 @@ stacks, or profiling output.
 type RootStyledOptions = StyledOptionsCommon & {
   withRender?: boolean;
   view?: ComponentType<RootStyledViewProps<...>>;
+  viewProps?: ViewPropsDescriptor;
 };
 ```
+
+`viewProps` requires `view`.
 
 ### Slot recipe options
 
@@ -425,6 +430,7 @@ type RootStyledOptions = StyledOptionsCommon & {
 type SlotStyledOptions = StyledOptionsCommon & {
   withRender?: boolean;
   view: ComponentType<SlotStyledViewProps<...>>;
+  viewProps?: ViewPropsDescriptor;
 } & (
   'root' extends SlotNames<TRecipe>
     ? {
@@ -438,6 +444,61 @@ type SlotStyledOptions = StyledOptionsCommon & {
 
 If the recipe does not declare a `root` slot, `hostSlot` is required.
 When you provide `hostSlot`, it must be one of the declared slot names.
+
+## `defineViewProps<T>(...keys)`
+
+Use `defineViewProps()` when a `styled(..., { view })` component needs extra
+public props that belong to the component surface, not to the rendered host.
+This is most useful for intrinsic hosts, where leaking those props to the DOM
+would be invalid.
+
+Notes:
+
+- `defineViewProps()` is a React-layer helper and is exported from the package root, not from `react-class-variants/core`
+- it only affects `styled(..., { view })`; `recipe.resolve()` does not consume `viewProps`
+- it also works with custom bases when `view` should consume props before the base receives its forwarded prop bag
+
+Example:
+
+```tsx
+import { defineViewProps, recipe, styled } from 'react-class-variants';
+
+const buttonRecipe = recipe({
+  slots: {
+    root: 'inline-flex items-center gap-2',
+    icon: 'size-4',
+    label: 'truncate',
+  },
+});
+
+const Button = styled('button', buttonRecipe, {
+  viewProps: defineViewProps<{
+    icon?: (props: { className?: string }) => JSX.Element | null;
+    shortcut?: string;
+  }>('icon', 'shortcut'),
+  view({ host, classes }) {
+    const { icon: Icon, shortcut } = host.props;
+
+    return host.render({
+      'data-shortcut': shortcut,
+      children: (
+        <>
+          {Icon ? <Icon className={classes.icon()} /> : null}
+          <span className={classes.label()}>{host.children}</span>
+        </>
+      ),
+    });
+  },
+});
+```
+
+Behavior:
+
+- declared keys are added to the component's public prop surface
+- declared keys are available in `host.props`
+- declared keys are consumed before `host.render()` forwards props to the rendered host
+- declared keys must not collide with host props, reserved React public props, variant keys, or public `propAliases`
+- `viewProps` compose with `propAliases`, `forwardProps`, and `withRender`; `host.props` reflects the same normalized prop-routing rules before `view` renders
 
 ## `view` Model
 
@@ -486,10 +547,12 @@ Behavior:
 - `host.props` contains normalized pass-through props
 - aliased base props appear here under their resolved base names, not their public alias names
 - forwarded variant keys reappear here with their resolved values
+- consumed `viewProps` also appear here and stay available to `view`
 - `host.className` is already final for the rendered host
 - `host.render()` renders the base with optional overrides
 - `host.render({ className })` appends to the resolved host class string
 - `host.render()` reuses the current `host.children` unless you override `children`
+- declared `viewProps` are stripped before props reach the rendered host or `render` target
 - for slotted recipes, external component `className` is routed automatically to the host slot
 - for slotted recipes, top-level `slotClassNames` applies to the matching slots before local slot-function `className` overrides
 
@@ -683,6 +746,7 @@ refs.
 
 - `AnyElementType`
 - `PropAliases`
+- `ViewPropsDescriptor`
 - `RenderFunctionProps`
 - `RenderProp`
 - `StyledComponentProps`

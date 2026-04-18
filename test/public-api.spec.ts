@@ -8,6 +8,7 @@ describe('public api', () => {
     expect(typeof packageRoot.styled).toBe('function');
     expect(typeof packageRoot.defineConfig).toBe('function');
     expect(typeof packageRoot.defineRecipeConfig).toBe('function');
+    expect(typeof packageRoot.defineViewProps).toBe('function');
     expect(typeof packageRoot.hasOwnProperty).toBe('function');
     expect(typeof packageRoot.mergeProps).toBe('function');
     expect(typeof packageRoot.mergeRefs).toBe('function');

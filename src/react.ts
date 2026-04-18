@@ -11,6 +11,7 @@ import type {
   RootStyledOptions,
   SlotStyledOptions,
   StyledFn,
+  ViewPropsDescriptor,
 } from './internal/react-types';
 
 export { defineRecipeConfig, recipe } from './core';
@@ -61,14 +62,25 @@ export type {
   SlotStyledViewProps,
   StyledComponentProps,
   StyledFn,
+  ViewPropsDescriptor,
 } from './internal/react-types';
+
+export function defineViewProps<
+  TViewProps extends Record<string, unknown>,
+  const Keys extends readonly (keyof TViewProps &
+    string)[] = readonly (keyof TViewProps & string)[]
+>(...keys: Keys): ViewPropsDescriptor<Pick<TViewProps, Keys[number]>> {
+  return {
+    keys: [...new Set(keys)],
+  } as ViewPropsDescriptor<Pick<TViewProps, Keys[number]>>;
+}
 
 function styledImpl(
   base: AnyElementType,
   inputRecipe: AnyRootRecipe | AnySlotRecipe,
   options?:
-    | RootStyledOptions<any, any, any, any, any>
-    | SlotStyledOptions<any, any, any, any, any>
+    | RootStyledOptions<any, any, any, any, any, any>
+    | SlotStyledOptions<any, any, any, any, any, any>
 ) {
   const compiled = getCompiledRecipe(inputRecipe as AnyRootRecipe);
   const isSlotRecipe = compiled.mode === 'slot';
@@ -89,14 +101,20 @@ function styledImpl(
     return createSlotStyled(
       base,
       inputRecipe as AnySlotRecipe,
-      options as SlotStyledOptions<any, any, any, any, any>
+      options as SlotStyledOptions<any, any, any, any, any, any>
+    );
+  }
+
+  if (options?.viewProps && !options?.view) {
+    throw new Error(
+      'react-class-variants: viewProps require a view component.'
     );
   }
 
   return createRootStyled(
     base,
     inputRecipe as AnyRootRecipe,
-    options as RootStyledOptions<any, any, any, any, any> | undefined
+    options as RootStyledOptions<any, any, any, any, any, any> | undefined
   );
 }
 

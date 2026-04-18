@@ -6,7 +6,13 @@ import {
   type ComponentPropsWithoutRef,
 } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { defineConfig, recipe, styled, type RootStyledViewProps } from '../src';
+import {
+  defineConfig,
+  defineViewProps,
+  recipe,
+  styled,
+  type RootStyledViewProps,
+} from '../src';
 
 describe('styled()', () => {
   it('renders root recipes through the simple fast path', () => {
@@ -63,6 +69,135 @@ describe('styled()', () => {
     const badge = screen.getByText('Info');
     expect(badge).toHaveAttribute('data-tone', 'info');
     expect(badge.className).toBe('inline-flex bg-sky-100');
+  });
+
+  it('supports viewProps on intrinsic bases without leaking consumed props to the DOM', () => {
+    const buttonRecipe = recipe({
+      slots: {
+        root: 'inline-flex items-center gap-2',
+        icon: 'size-4',
+        label: 'truncate',
+        shortcut: 'text-xs opacity-70',
+      },
+      variants: {
+        tone: {
+          primary: {
+            root: 'bg-blue text-white',
+            icon: 'text-blue-100',
+          },
+        },
+      },
+      defaultVariants: {
+        tone: 'primary',
+      },
+    });
+
+    function StartIcon({ className }: { className?: string }) {
+      return <svg data-testid="start-icon" className={className} />;
+    }
+
+    const Button = styled('button', buttonRecipe, {
+      viewProps: defineViewProps<{
+        icon?: typeof StartIcon;
+        shortcut?: { key: string };
+      }>('icon', 'shortcut'),
+      view({ host, classes }) {
+        const { icon: Icon, shortcut } = host.props;
+
+        return host.render({
+          'data-shortcut': shortcut?.key,
+          children: (
+            <>
+              {Icon ? <Icon className={classes.icon()} /> : null}
+              <span className={classes.label()}>{host.children}</span>
+              {shortcut ? (
+                <kbd className={classes.shortcut()}>{shortcut.key}</kbd>
+              ) : null}
+            </>
+          ),
+        });
+      },
+    });
+
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      render(
+        <Button icon={StartIcon} shortcut={{ key: 'K' }}>
+          Save
+        </Button>
+      );
+
+      const button = screen.getByRole('button', { name: /Save/ });
+      expect(button).toHaveAttribute('data-shortcut', 'K');
+      expect(button).not.toHaveAttribute('icon');
+      expect(button).not.toHaveAttribute('shortcut');
+      expect(screen.getByTestId('start-icon')).toHaveAttribute(
+        'class',
+        'size-4 text-blue-100'
+      );
+      expect(errorSpy).not.toHaveBeenCalled();
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it('keeps viewProps out of render targets when withRender is enabled', () => {
+    const buttonRecipe = recipe({
+      base: 'inline-flex items-center',
+      variants: {
+        loading: {
+          true: 'opacity-50',
+          false: null,
+        },
+      },
+      defaultVariants: {
+        loading: false,
+      },
+    });
+
+    const renderSpy = vi.fn((props: Record<string, unknown>) => (
+      <a className={String(props.className)} href="/docs">
+        {props.children as string}
+      </a>
+    ));
+
+    const Button = styled('button', buttonRecipe, {
+      withRender: true,
+      forwardProps: ['loading'],
+      viewProps: defineViewProps<{
+        shortcut?: string;
+      }>('shortcut'),
+      view({ host, variants }) {
+        expect(host.props.shortcut).toBe('K');
+        expect(host.props.loading).toBe(true);
+
+        return host.render({
+          'data-shortcut': host.props.shortcut,
+          'aria-busy': variants.loading || undefined,
+        });
+      },
+    });
+
+    render(
+      <Button loading shortcut="K" render={renderSpy}>
+        Docs
+      </Button>
+    );
+
+    expect(renderSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        className: 'inline-flex items-center opacity-50',
+        'aria-busy': true,
+        'data-shortcut': 'K',
+        loading: true,
+      })
+    );
+    expect(renderSpy.mock.calls[0]?.[0]).not.toHaveProperty('shortcut');
+    expect(screen.getByRole('link', { name: 'Docs' })).toHaveAttribute(
+      'href',
+      '/docs'
+    );
   });
 
   it('supports custom component bases', () => {
@@ -385,6 +520,26 @@ describe('styled()', () => {
     ).toThrow(/prop alias target "className" conflicts with a reserved/);
   });
 
+  it('rejects viewProps keys that conflict with declared variants in strict mode', () => {
+    const strict = defineConfig({ validate: 'always' });
+    const buttonRecipe = strict.recipe({
+      variants: {
+        icon: {
+          true: 'opacity-50',
+        },
+      },
+    });
+
+    expect(() =>
+      strict.styled('button', buttonRecipe, {
+        viewProps: defineViewProps<{ icon?: () => null }>('icon'),
+        view() {
+          return null;
+        },
+      } as never)
+    ).toThrow(/viewProps key "icon" conflicts with a declared variant key/);
+  });
+
   it('requires a view component for slotted recipes and routes className to the host slot', () => {
     const buttonRecipe = recipe({
       slots: {
@@ -572,6 +727,18 @@ describe('styled()', () => {
 
     expect(screen.getByTestId('icon').className).toBe('size-4 text-slate-500');
     expect(screen.getByTestId('label').className).toBe('truncate');
+  });
+
+  it('requires a view component when viewProps are declared', () => {
+    const buttonRecipe = recipe({
+      base: 'inline-flex items-center',
+    });
+
+    expect(() =>
+      styled('button', buttonRecipe, {
+        viewProps: defineViewProps<{ icon?: () => null }>('icon'),
+      } as never)
+    ).toThrow(/viewProps require a view component/);
   });
 
   it('normalizes className arrays passed to host.render overrides', () => {

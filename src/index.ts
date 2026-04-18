@@ -1,6 +1,7 @@
 export {
   defineConfig,
   defineRecipeConfig,
+  defineViewProps,
   mergeProps,
   mergeRefs,
   styled,
@@ -54,6 +55,7 @@ export type {
   SlotStyledViewProps,
   StyledFn,
   StyledComponentProps,
+  ViewPropsDescriptor,
 } from './internal/react-types';
 
 export { hasOwnProperty } from './internal/core-utils';

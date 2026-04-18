@@ -1,6 +1,7 @@
 import {
   defineConfig,
   defineRecipeConfig,
+  defineViewProps,
   recipe,
   styled,
   type RecipeConfigOf,
@@ -306,6 +307,27 @@ Input({
   // @ts-expect-error overlap keys are variant-first and require propAliases
   size: 20,
   value: 'typed input',
+});
+
+const IconGlyph = (_props: { className?: string }) => null;
+
+const ViewPropButton = styled('button', badge, {
+  viewProps: defineViewProps<{
+    icon?: typeof IconGlyph;
+    shortcut?: string;
+  }>('icon', 'shortcut'),
+  view: ({ host }) =>
+    host.render({
+      'data-shortcut': host.props.shortcut,
+      children: host.children,
+    }),
+});
+
+ViewPropButton({
+  tone: 'info',
+  icon: IconGlyph,
+  shortcut: 'K',
+  children: 'Save',
 });
 
 styled(

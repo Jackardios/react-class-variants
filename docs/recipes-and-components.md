@@ -454,6 +454,49 @@ Usage:
 </ActionButton>
 ```
 
+When the prop belongs to the component surface but should not reach the rendered
+host, declare it with `defineViewProps()`. This is especially useful for
+intrinsic hosts, where leaking extra props to the DOM would be invalid:
+
+```tsx
+import { defineViewProps, recipe, styled } from 'react-class-variants';
+
+const buttonRecipe = recipe({
+  slots: {
+    root: 'inline-flex items-center gap-2',
+    icon: 'size-4',
+    label: 'truncate',
+  },
+});
+
+const Button = styled('button', buttonRecipe, {
+  viewProps: defineViewProps<{
+    icon?: (props: { className?: string }) => JSX.Element | null;
+    shortcut?: string;
+  }>('icon', 'shortcut'),
+  view({ host, classes }) {
+    const { icon: Icon, shortcut } = host.props;
+
+    return host.render({
+      'data-shortcut': shortcut,
+      children: (
+        <>
+          {Icon ? <Icon className={classes.icon()} /> : null}
+          <span className={classes.label()}>{host.children}</span>
+        </>
+      ),
+    });
+  },
+});
+```
+
+`viewProps` are added to the public component props, stay readable through
+`host.props`, and are consumed before props are forwarded to the rendered host.
+This is a React-surface helper, so it is available from `react-class-variants`,
+not from `react-class-variants/core`. It also works with custom bases when
+`view` should consume props before the base receives its forwarded prop bag. It
+composes normally with `propAliases`, `forwardProps`, and `withRender`.
+
 ## 7. Custom Component Bases
 
 You can pass custom React components as the base:
@@ -559,6 +602,7 @@ When you are inside `view`, `host.props` follows the resolved shape:
 
 - `propAliases` change the public prop name, but `host.props` uses the resolved base prop key
 - `forwardProps` re-add selected variant keys to `host.props` with their resolved values
+- `viewProps` add component-level props to `host.props` and are consumed before `host.render()` forwards props
 
 ## 9. `render`
 

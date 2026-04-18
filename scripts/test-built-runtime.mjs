@@ -86,6 +86,8 @@ assertImportsWithoutProcess(corePath);
 const packageRoot = await import(pathToFileURL(packageRootPath).href);
 const core = await import(pathToFileURL(corePath).href);
 
+assert.equal(typeof packageRoot.defineViewProps, 'function');
+
 const coreSource = readFileSync(corePath, 'utf8');
 assert.equal(/from ['"]react['"]/.test(coreSource), false);
 
@@ -222,6 +224,40 @@ assert.match(
   badgeMarkup,
   /class="inline-flex items-center bg-transparent text-slate-900"/
 );
+
+const RuntimeIcon = props =>
+  React.createElement('svg', { ...props, 'data-slot': 'icon' });
+
+const ViewPropButton = packageRoot.styled('button', slotRecipe, {
+  viewProps: packageRoot.defineViewProps('icon', 'shortcut'),
+  view: ({ host, classes }) =>
+    host.render({
+      'data-shortcut': host.props.shortcut,
+      children: [
+        host.props.icon
+          ? React.createElement(host.props.icon, {
+              className: classes.spinner({ tone: 'ghost' }),
+              key: 'icon',
+            })
+          : null,
+        React.createElement(
+          'span',
+          { className: classes.label(), key: 'label' },
+          host.children
+        ),
+      ],
+    }),
+});
+const viewPropButtonMarkup = renderToStaticMarkup(
+  React.createElement(
+    ViewPropButton,
+    { icon: RuntimeIcon, shortcut: 'K' },
+    'Shortcut'
+  )
+);
+assert.match(viewPropButtonMarkup, /data-shortcut="K"/);
+assert.doesNotMatch(viewPropButtonMarkup, /\sicon=/);
+assert.doesNotMatch(viewPropButtonMarkup, /\sshortcut=/);
 
 const SlotButton = packageRoot.styled('button', slotRecipe, {
   view: ({ host, classes, variants }) =>

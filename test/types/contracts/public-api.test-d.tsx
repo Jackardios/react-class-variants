@@ -6,6 +6,7 @@ import {
 } from 'tsd';
 import {
   defineRecipeConfig,
+  defineViewProps,
   hasOwnProperty,
   recipe,
   type AnyRecipe,
@@ -135,6 +136,7 @@ type LinkResolvedVariants = ResolvedVariantProps<typeof link>;
 expectAssignable<AnyRecipe>(link);
 expectAssignable<StyledFn>(styled);
 expectAssignable<LinkConfig>(linkConfig);
+defineViewProps<{ icon?: string }>('icon');
 expectType<typeof linkConfig>(defineRecipeConfig(linkConfig));
 expectAssignable<LinkConfig>({
   base: 'inline-flex',

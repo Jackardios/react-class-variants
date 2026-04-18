@@ -619,6 +619,9 @@ Re-test these areas carefully after migration:
   variant share the same name, use `propAliases`.
 - `withRender` is intrinsic-only. Custom React component bases cannot use
   `render`.
+- If a `styled(..., { view })` component needs extra component-level props that
+  only `view` should consume, use `defineViewProps()` instead of introducing a
+  wrapper only to widen props and strip them before the host renders.
 - `styled(..., { view })` routes component-level `className` to the host slot,
   but raw slot `resolve()` does not choose a host slot for you.
 
@@ -643,6 +646,8 @@ Re-test these areas carefully after migration:
 - [ ] Add `propAliases` anywhere variant keys collide with base props
 - [ ] Add `forwardProps` anywhere the base component needs resolved variant
       values
+- [ ] Replace wrapper-only view prop widening/stripping with `defineViewProps()`
+      where it simplifies intrinsic or view-driven components
 - [ ] Decide whether you need `defineConfig({ merge: twMerge })`
 - [ ] Re-test any code that relied on permissive v1 runtime behavior
 

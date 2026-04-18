@@ -52,6 +52,7 @@ type HostRuntimeState = {
   base: AnyElementType;
   children: ReactNode;
   className: string;
+  consumedPropKeys: readonly string[] | undefined;
   forwardedRef: ForwardedRef<unknown> | undefined;
   props: Record<string, unknown>;
   render: RenderProp | undefined;
@@ -84,6 +85,25 @@ type SlotClassAccessor = readonly [
 
 function isIntrinsicBase(base: AnyElementType): base is AnyIntrinsicElement {
   return typeof base === 'string';
+}
+
+function omitConsumedProps(
+  props: Record<string, unknown>,
+  consumedPropKeys: readonly string[] | undefined
+) {
+  if (!consumedPropKeys || consumedPropKeys.length === 0) {
+    return props;
+  }
+
+  let nextProps: Record<string, unknown> | undefined;
+
+  for (const key of consumedPropKeys) {
+    if (!(key in props)) continue;
+    nextProps ??= { ...props };
+    delete nextProps[key];
+  }
+
+  return nextProps ?? props;
 }
 
 function splitResolvedProps(props: Record<string, unknown>) {
@@ -184,7 +204,7 @@ function renderHostView(
 
   return renderBase(
     state.base,
-    mergedProps,
+    omitConsumedProps(mergedProps, state.consumedPropKeys),
     mergedRef,
     state.withRender
       ? (overrideRender as RenderProp | undefined) ?? state.render
@@ -201,6 +221,7 @@ function createHostView(
   props: Record<string, unknown>,
   className: string,
   children: ReactNode,
+  consumedPropKeys: readonly string[] | undefined,
   forwardedRef: ForwardedRef<unknown> | undefined,
   render: RenderProp | undefined,
   withRender: boolean
@@ -210,6 +231,7 @@ function createHostView(
     base,
     children,
     className,
+    consumedPropKeys,
     forwardedRef,
     props,
     render,
@@ -305,6 +327,63 @@ function getHostSlotIndex(
   );
 }
 
+function getConsumedViewPropKeys(
+  compiled: RootCompiledRecipe | SlotCompiledRecipe,
+  options:
+    | {
+        propAliases?: Partial<Record<string, string>> | undefined;
+        viewProps?: { keys: readonly string[] } | undefined;
+      }
+    | undefined
+) {
+  const consumedPropKeys = options?.viewProps?.keys;
+
+  if (!consumedPropKeys || consumedPropKeys.length === 0) {
+    return undefined;
+  }
+
+  if (!compiled.validate) {
+    return consumedPropKeys;
+  }
+
+  const aliasPublicKeys = new Set(
+    Object.values(options?.propAliases ?? {}).filter((value): value is string =>
+      Boolean(value)
+    )
+  );
+  const variantKeys = new Set(
+    compiled.variantTable.map(variant => variant.key)
+  );
+
+  for (const key of consumedPropKeys) {
+    if (
+      key === 'children' ||
+      key === 'className' ||
+      key === 'ref' ||
+      key === 'render' ||
+      (compiled.mode === 'slot' && key === 'slotClassNames')
+    ) {
+      throw new Error(
+        `react-class-variants: viewProps key "${key}" conflicts with a reserved public prop.`
+      );
+    }
+
+    if (variantKeys.has(key)) {
+      throw new Error(
+        `react-class-variants: viewProps key "${key}" conflicts with a declared variant key.`
+      );
+    }
+
+    if (aliasPublicKeys.has(key)) {
+      throw new Error(
+        `react-class-variants: viewProps key "${key}" conflicts with a prop alias public key.`
+      );
+    }
+  }
+
+  return consumedPropKeys;
+}
+
 function ensureRenderSupported(
   validate: boolean,
   withRender: boolean,
@@ -321,7 +400,8 @@ function createIntrinsicRootFastStyled<
   Base extends AnyIntrinsicElement,
   TRecipe extends AnyRootRecipeLike,
   Aliases extends PropAliases<Base>,
-  Forwarded extends string
+  Forwarded extends string,
+  ViewProps extends Record<string, unknown>
 >(
   base: Base,
   compiled: RootCompiledRecipe,
@@ -330,7 +410,7 @@ function createIntrinsicRootFastStyled<
 ) {
   const Component = forwardRef<
     unknown,
-    StyledComponentProps<Base, TRecipe, false, Aliases, Forwarded>
+    StyledComponentProps<Base, TRecipe, false, Aliases, Forwarded, ViewProps>
   >(function StyledIntrinsicRootComponent(rawProps, ref) {
     ensureRenderSupported(
       compiled.validate,
@@ -365,7 +445,8 @@ function createRootRenderStyled<
   TRecipe extends AnyRootRecipeLike,
   WithRender extends boolean,
   Aliases extends PropAliases<Base>,
-  Forwarded extends string
+  Forwarded extends string,
+  ViewProps extends Record<string, unknown>
 >(
   base: Base,
   compiled: RootCompiledRecipe,
@@ -375,7 +456,14 @@ function createRootRenderStyled<
 ) {
   const Component = forwardRef<
     unknown,
-    StyledComponentProps<Base, TRecipe, WithRender, Aliases, Forwarded>
+    StyledComponentProps<
+      Base,
+      TRecipe,
+      WithRender,
+      Aliases,
+      Forwarded,
+      ViewProps
+    >
   >(function StyledRootRenderComponent(rawProps, ref) {
     ensureRenderSupported(
       compiled.validate,
@@ -412,20 +500,36 @@ function createRootViewStyled<
   TRecipe extends AnyRootRecipeLike,
   WithRender extends boolean,
   Aliases extends PropAliases<Base>,
-  Forwarded extends string
+  Forwarded extends string,
+  ViewProps extends Record<string, unknown>
 >(
   base: Base,
   compiled: RootCompiledRecipe,
-  options: RootStyledOptions<Base, TRecipe, WithRender, Aliases, Forwarded>,
+  options: RootStyledOptions<
+    Base,
+    TRecipe,
+    WithRender,
+    Aliases,
+    Forwarded,
+    ViewProps
+  >,
   resolveOptions: ReturnType<typeof normalizeResolveOptions> | undefined,
   withRender: WithRender,
   displayName: string
 ) {
   const View = options.view!;
+  const consumedPropKeys = getConsumedViewPropKeys(compiled, options);
 
   const Component = forwardRef<
     unknown,
-    StyledComponentProps<Base, TRecipe, WithRender, Aliases, Forwarded>
+    StyledComponentProps<
+      Base,
+      TRecipe,
+      WithRender,
+      Aliases,
+      Forwarded,
+      ViewProps
+    >
   >(function StyledRootViewComponent(rawProps, ref) {
     ensureRenderSupported(
       compiled.validate,
@@ -447,6 +551,7 @@ function createRootViewStyled<
         otherResolvedProps,
         flattenClassName(className),
         children,
+        consumedPropKeys,
         ref,
         render,
         withRender === true
@@ -464,11 +569,19 @@ function createSlotViewStyled<
   TRecipe extends AnySlotRecipeLike,
   WithRender extends boolean,
   Aliases extends PropAliases<Base>,
-  Forwarded extends string
+  Forwarded extends string,
+  ViewProps extends Record<string, unknown>
 >(
   base: Base,
   recipe: TRecipe,
-  options: SlotStyledOptions<Base, TRecipe, WithRender, Aliases, Forwarded>,
+  options: SlotStyledOptions<
+    Base,
+    TRecipe,
+    WithRender,
+    Aliases,
+    Forwarded,
+    ViewProps
+  >,
   resolveOptions: ReturnType<typeof normalizeResolveOptions> | undefined,
   withRender: WithRender,
   displayName: string
@@ -479,10 +592,18 @@ function createSlotViewStyled<
   const View = options.view;
   const hostSlotIndex = getHostSlotIndex(compiled, options.hostSlot);
   const slotClassAccessors = createSlotClassAccessors(compiled.slotNames);
+  const consumedPropKeys = getConsumedViewPropKeys(compiled, options);
 
   const Component = forwardRef<
     unknown,
-    StyledComponentProps<Base, TRecipe, WithRender, Aliases, Forwarded>
+    StyledComponentProps<
+      Base,
+      TRecipe,
+      WithRender,
+      Aliases,
+      Forwarded,
+      ViewProps
+    >
   >(function StyledSlotViewComponent(rawProps, ref) {
     ensureRenderSupported(
       compiled.validate,
@@ -516,6 +637,7 @@ function createSlotViewStyled<
           className ? { className } : undefined
         ),
         children,
+        consumedPropKeys,
         ref,
         render,
         withRender === true
@@ -533,12 +655,27 @@ export function createRootStyled<
   TRecipe extends AnyRootRecipeLike,
   WithRender extends boolean,
   Aliases extends PropAliases<Base>,
-  Forwarded extends string
+  Forwarded extends string,
+  ViewProps extends Record<string, unknown>
 >(
   base: Base,
   recipe: TRecipe,
-  options?: RootStyledOptions<Base, TRecipe, WithRender, Aliases, Forwarded>
-): StyledComponentType<Base, TRecipe, WithRender, Aliases, Forwarded> {
+  options?: RootStyledOptions<
+    Base,
+    TRecipe,
+    WithRender,
+    Aliases,
+    Forwarded,
+    ViewProps
+  >
+): StyledComponentType<
+  Base,
+  TRecipe,
+  WithRender,
+  Aliases,
+  Forwarded,
+  ViewProps
+> {
   const compiled = getCompiledRecipe(
     recipe as unknown as AnyRootRecipe
   ) as RootCompiledRecipe;
@@ -555,27 +692,62 @@ export function createRootStyled<
       compiled,
       resolveOptions,
       displayName
-    ) as StyledComponentType<Base, TRecipe, WithRender, Aliases, Forwarded>;
+    ) as StyledComponentType<
+      Base,
+      TRecipe,
+      WithRender,
+      Aliases,
+      Forwarded,
+      ViewProps
+    >;
   }
 
   if (!options?.view) {
-    return createRootRenderStyled(
+    return createRootRenderStyled<
+      Base,
+      TRecipe,
+      WithRender,
+      Aliases,
+      Forwarded,
+      ViewProps
+    >(
       base,
       compiled,
       resolveOptions,
       withRender as WithRender,
       displayName
-    ) as StyledComponentType<Base, TRecipe, WithRender, Aliases, Forwarded>;
+    ) as StyledComponentType<
+      Base,
+      TRecipe,
+      WithRender,
+      Aliases,
+      Forwarded,
+      ViewProps
+    >;
   }
 
-  return createRootViewStyled(
+  return createRootViewStyled<
+    Base,
+    TRecipe,
+    WithRender,
+    Aliases,
+    Forwarded,
+    ViewProps
+  >(
     base,
     compiled,
     options,
     resolveOptions,
     withRender as WithRender,
     displayName
-  ) as StyledComponentType<Base, TRecipe, WithRender, Aliases, Forwarded>;
+  ) as StyledComponentType<
+    Base,
+    TRecipe,
+    WithRender,
+    Aliases,
+    Forwarded,
+    ViewProps
+  >;
 }
 
 export function createSlotStyled<
@@ -583,12 +755,27 @@ export function createSlotStyled<
   TRecipe extends AnySlotRecipeLike,
   WithRender extends boolean,
   Aliases extends PropAliases<Base>,
-  Forwarded extends string
+  Forwarded extends string,
+  ViewProps extends Record<string, unknown>
 >(
   base: Base,
   recipe: TRecipe,
-  options: SlotStyledOptions<Base, TRecipe, WithRender, Aliases, Forwarded>
-): StyledComponentType<Base, TRecipe, WithRender, Aliases, Forwarded> {
+  options: SlotStyledOptions<
+    Base,
+    TRecipe,
+    WithRender,
+    Aliases,
+    Forwarded,
+    ViewProps
+  >
+): StyledComponentType<
+  Base,
+  TRecipe,
+  WithRender,
+  Aliases,
+  Forwarded,
+  ViewProps
+> {
   const compiled = getCompiledRecipe(
     recipe as unknown as AnySlotRecipe
   ) as SlotCompiledRecipe;
@@ -599,12 +786,26 @@ export function createSlotStyled<
   );
   const displayName = options.displayName ?? `Styled(${String(base)})`;
 
-  return createSlotViewStyled(
+  return createSlotViewStyled<
+    Base,
+    TRecipe,
+    WithRender,
+    Aliases,
+    Forwarded,
+    ViewProps
+  >(
     base,
     recipe,
     options,
     resolveOptions,
     withRender as WithRender,
     displayName
-  ) as StyledComponentType<Base, TRecipe, WithRender, Aliases, Forwarded>;
+  ) as StyledComponentType<
+    Base,
+    TRecipe,
+    WithRender,
+    Aliases,
+    Forwarded,
+    ViewProps
+  >;
 }

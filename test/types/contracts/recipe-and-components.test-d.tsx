@@ -12,6 +12,7 @@ import {
 import { recipe as coreRecipe } from '../../../dist/core';
 import {
   defineConfig,
+  defineViewProps,
   recipe,
   styled,
   type RecipeInput,
@@ -628,6 +629,68 @@ const ViewedInput = styled('input', viewedInputRecipe, {
   },
 });
 
+const IconGlyph = (_props: { className?: string }) => null;
+
+const ViewPropButton = styled('button', badge, {
+  viewProps: defineViewProps<{
+    icon?: typeof IconGlyph;
+    shortcut?: string;
+  }>('icon', 'shortcut'),
+  view: ({ host }) => {
+    expectType<typeof IconGlyph | undefined>(host.props.icon);
+    expectType<string | undefined>(host.props.shortcut);
+
+    return host.render({
+      'data-shortcut': host.props.shortcut,
+      children: host.children,
+    });
+  },
+});
+
+expectType<ReactNode>(
+  ViewPropButton({
+    tone: 'info',
+    icon: IconGlyph,
+    shortcut: 'K',
+    children: 'Save',
+  })
+);
+
+const ComposedViewPropInput = styled('input', viewedInputRecipe, {
+  withRender: true,
+  forwardProps: ['disabled'],
+  propAliases: {
+    size: 'htmlSize',
+  },
+  viewProps: defineViewProps<{
+    shortcut?: string;
+  }>('shortcut'),
+  view: ({ host }) => {
+    expectType<number | undefined>(host.props.size);
+    expectType<boolean>(host.props.disabled);
+    expectType<string | undefined>(host.props.shortcut);
+
+    return host.render({
+      'data-shortcut': host.props.shortcut,
+    });
+  },
+});
+
+expectType<ReactNode>(
+  ComposedViewPropInput({
+    tone: 'info',
+    size: 'sm',
+    disabled: true,
+    htmlSize: 12,
+    shortcut: 'K',
+    render: props => {
+      expectType<boolean>(props.disabled);
+      expectError(props.shortcut);
+      return <a {...props} href="/" />;
+    },
+  })
+);
+
 expectError(
   styled(
     'input',
@@ -644,6 +707,43 @@ expectError(
       },
     }
   )
+);
+
+expectError(
+  styled('button', badge, {
+    viewProps: defineViewProps<{ className?: string }>('className'),
+    view: ({ host }) => host.render(),
+  })
+);
+
+expectError(
+  styled('button', badge, {
+    viewProps: defineViewProps<{ tone?: string }>('tone'),
+    view: ({ host }) => host.render(),
+  })
+);
+
+expectError(
+  styled('input', badge, {
+    propAliases: {
+      size: 'htmlSize',
+    },
+    viewProps: defineViewProps<{ htmlSize?: number }>('htmlSize'),
+    view: ({ host }) => host.render(),
+  })
+);
+
+expectError(
+  styled('button', badge, {
+    viewProps: defineViewProps<{ type?: 'button' }>('type'),
+    view: ({ host }) => host.render(),
+  })
+);
+
+expectError(
+  styled('button', badge, {
+    viewProps: defineViewProps<{ icon?: typeof IconGlyph }>('icon'),
+  })
 );
 
 expectError(
