@@ -1,5 +1,14 @@
 # react-class-variants
 
+## 2.0.0-alpha.7
+
+### Minor Changes
+
+- 2d139f9: Add `defineViewProps()` for declaring intrinsic `styled(..., { view })`
+  component props that are consumed by `view`, exposed through `host.props`, and
+  filtered before they reach the rendered host.
+- 88ddebd: Add top-level `slotClassNames` overrides for slotted recipes, `resolve()`, and slotted `styled()` components.
+
 ## 2.0.0-alpha.6
 
 ### Major Changes
