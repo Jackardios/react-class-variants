@@ -57,8 +57,7 @@
     "release:dist-tags:preflight": "node scripts/verify-dist-tag-auth.mjs",
     "release:github:preflight": "node scripts/verify-github-release.mjs",
     "release:github-releases": "node scripts/sync-github-releases.mjs",
-    "release:branch-ci": "node scripts/trigger-release-branch-ci.mjs",
-    "release:reconcile": "node scripts/reconcile-release.mjs"
+    "release:branch-ci": "node scripts/trigger-release-branch-ci.mjs"
   },
   "license": "MIT",
   "author": {

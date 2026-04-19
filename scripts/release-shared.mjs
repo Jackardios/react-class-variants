@@ -9,18 +9,21 @@ export function isPrereleaseVersion(version) {
 }
 
 export function extractReleaseNotes(changelog, version) {
-  const escapedVersion = version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const sectionMatch = changelog.match(
-    new RegExp(`^## ${escapedVersion}\\r?\\n([\\s\\S]*?)(?=^## \\S|\\Z)`, 'm')
-  );
+  const normalized = changelog.replace(/\r\n/g, '\n');
+  const header = `## ${version}\n`;
+  const startIndex = normalized.indexOf(header);
 
-  if (!sectionMatch) {
+  if (startIndex === -1) {
     throw new Error(
       `Could not find CHANGELOG.md section for version ${version}.`
     );
   }
 
-  const notes = sectionMatch[1].trim();
+  const sectionStart = startIndex + header.length;
+  const nextSectionIndex = normalized.indexOf('\n## ', sectionStart);
+  const notes = normalized
+    .slice(sectionStart, nextSectionIndex === -1 ? undefined : nextSectionIndex)
+    .trim();
 
   if (!notes) {
     throw new Error(`CHANGELOG.md section for version ${version} is empty.`);

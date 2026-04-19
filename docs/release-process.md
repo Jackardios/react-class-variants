@@ -28,6 +28,7 @@ Defined in `.github/workflows/main.yml`.
 Defined in `.github/workflows/changeset-check.yml`.
 
 - runs on pull requests targeting `next`
+- also runs on pull requests targeting `main`
 - executes `scripts/check-changeset.cjs`
 - verifies that release-affecting changes are covered by a changeset
 
@@ -42,12 +43,12 @@ Defined in `.github/workflows/release.yml`.
 - validates GitHub release/changelog readiness with `scripts/verify-github-release.mjs`
 - validates npm dist-tag auth before publish with `scripts/verify-dist-tag-auth.mjs`
 - publishes through the rerunnable `scripts/release-publish.mjs` wrapper
-- reconciles npm dist-tags and GitHub Releases after publish with `scripts/reconcile-release.mjs`
+- reconciles npm dist-tags and GitHub Releases in separate workflow steps so both are attempted before the job fails
 
 The release workflow has two paths:
 
 1. If pending changesets exist on `next`, `changesets/action` opens or updates the `Version Packages` release PR, then `scripts/trigger-release-branch-ci.mjs` waits for `changeset-release/next` to appear and dispatches the normal `CI` workflow on that branch.
-2. If no pending changesets remain on `next`, the workflow validates GitHub release/changelog readiness, validates npm dist-tag auth, runs the rerunnable publish wrapper, pushes any `v*` tags created on that commit, then reconciles npm dist-tags and GitHub Releases in the same post-publish phase.
+2. If no pending changesets remain on `next`, the workflow validates GitHub release/changelog readiness, validates npm dist-tag auth, runs the rerunnable publish wrapper, pushes any `v*` tags created on that commit, then runs npm dist-tag sync and GitHub Release sync as separate post-publish steps before applying a final failure gate.
 
 In practice, this means the version-package PR is the staging step and the publish happens after that PR is merged back into `next`.
 
@@ -79,6 +80,7 @@ In practice, this means the version-package PR is the staging step and the publi
 - the release workflow validates both GitHub release/changelog readiness and npm dist-tag credentials before publish so obvious metadata failures stop before npm publication
 - the publish wrapper is safe to rerun after a partial success: it skips duplicate publishes, treats an already-tagged earlier release commit as a no-op on newer commits, and only recreates a missing local tag when it has provenance for the current `HEAD`
 - post-publish npm lookups retry through short registry propagation delays before deciding that a version or dist-tag update is missing
+- the same release path works for the stable `2.0.0` publish from `next`; if you later move day-to-day releases from `next` to `main`, update workflow branch filters in the same change
 - avoid manual `npm publish` unless it is explicitly required
 
 Important notes:

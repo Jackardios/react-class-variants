@@ -94,8 +94,23 @@ jobs:
           for tag in "${tags[@]}"; do
             git push origin "$tag"
           done
-      - name: Reconcile release metadata
+      - name: Sync npm dist-tags
         if: steps.changesets.outputs.hasChangesets == 'false'
+        id: sync_dist_tags
+        continue-on-error: true
+        run: pnpm run release:dist-tags
+      - name: Create or update GitHub releases
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        id: sync_github_releases
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm run release:reconcile
+        run: pnpm run release:github-releases
+      - name: Verify release reconciliation
+        if: |
+          steps.changesets.outputs.hasChangesets == 'false' &&
+          (steps.sync_dist_tags.outcome == 'failure' || steps.sync_github_releases.outcome == 'failure')
+        run: |
+          echo "sync_dist_tags outcome: ${{ steps.sync_dist_tags.outcome }}"
+          echo "sync_github_releases outcome: ${{ steps.sync_github_releases.outcome }}"
+          exit 1

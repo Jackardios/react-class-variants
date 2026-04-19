@@ -1,5 +1,7 @@
 import { execFile } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import {
   execAuthenticatedNpm,
@@ -10,27 +12,9 @@ import {
 
 const execFileAsync = promisify(execFile);
 const args = process.argv.slice(2).filter(arg => arg !== '--');
-
-const packageJson = JSON.parse(
-  await readFile(new URL('../package.json', import.meta.url), 'utf8')
-);
-
-let prereleaseTag = 'alpha';
-
-try {
-  const prereleaseConfig = JSON.parse(
-    await readFile(new URL('../.changeset/pre.json', import.meta.url), 'utf8')
-  );
-
-  if (typeof prereleaseConfig.tag === 'string' && prereleaseConfig.tag) {
-    prereleaseTag = prereleaseConfig.tag;
-  }
-} catch {}
-
-const packageName = process.env.RELEASE_PACKAGE_NAME ?? packageJson.name;
-const publishedVersion =
-  args[0] ?? process.env.RELEASE_VERSION ?? packageJson.version;
-const registryUrl = getReleaseRegistryUrl(process.env);
+const isMain =
+  process.argv[1] &&
+  fileURLToPath(import.meta.url) === resolve(process.argv[1]);
 
 function delay(ms) {
   return new Promise(resolvePromise => {
@@ -85,6 +69,27 @@ function normalizeArray(value) {
   return [];
 }
 
+export function computeDesiredDistTags({
+  prereleaseTag,
+  publishedVersion,
+  publishedVersions,
+}) {
+  const stableVersions = normalizeArray(publishedVersions)
+    .filter(version => !isPrerelease(version) && parseStableVersion(version))
+    .sort(compareStableVersions);
+  const latestStableVersion = stableVersions.at(-1);
+  const desiredDistTags = new Map();
+
+  if (isPrerelease(publishedVersion)) {
+    desiredDistTags.set(prereleaseTag, publishedVersion);
+    desiredDistTags.set('latest', latestStableVersion ?? publishedVersion);
+  } else {
+    desiredDistTags.set('latest', publishedVersion);
+  }
+
+  return desiredDistTags;
+}
+
 async function npmJson(...args) {
   const { stdout } = await execFileAsync('npm', args, {
     env: sanitizeNpmCliEnv(process.env),
@@ -131,85 +136,110 @@ async function addDistTag(tag, version, auth) {
   }
 }
 
-const publishedVersions = normalizeArray(
-  await waitForJson({
-    commandArgs: ['view', packageName, 'versions', '--json'],
-    predicate: value => normalizeArray(value).includes(publishedVersion),
-  })
-);
-
-if (!publishedVersions.includes(publishedVersion)) {
-  throw new Error(
-    `npm registry did not report ${packageName}@${publishedVersion} after publish.`
+async function readReleaseConfig() {
+  const packageJson = JSON.parse(
+    await readFile(new URL('../package.json', import.meta.url), 'utf8')
   );
-}
+  let prereleaseTag = 'alpha';
 
-const currentDistTags =
-  (await waitForJson({
-    commandArgs: ['view', packageName, 'dist-tags', '--json'],
-    predicate: value => value !== null,
-  })) ?? {};
-const stableVersions = publishedVersions
-  .filter(version => !isPrerelease(version) && parseStableVersion(version))
-  .sort(compareStableVersions);
-const latestStableVersion = stableVersions.at(-1);
-const desiredDistTags = new Map();
-
-if (isPrerelease(publishedVersion)) {
-  desiredDistTags.set(prereleaseTag, publishedVersion);
-  desiredDistTags.set('latest', latestStableVersion ?? publishedVersion);
-} else {
-  desiredDistTags.set('latest', publishedVersion);
-}
-
-const pendingUpdates = [...desiredDistTags].filter(
-  ([tag, version]) => currentDistTags[tag] !== version
-);
-
-if (pendingUpdates.length === 0) {
-  console.log(
-    `npm dist-tags already match policy for ${packageName}@${publishedVersion}.`
-  );
-  process.exit(0);
-}
-
-const auth = await resolveReleaseAuth({
-  packageName,
-  registryUrl,
-});
-
-console.log(
-  `Using ${
-    auth.source === 'oidc' ? 'npm OIDC exchange' : 'token'
-  } auth for dist-tag updates.`
-);
-
-for (const [tag, version] of pendingUpdates) {
-  console.log(`Setting npm dist-tag ${tag} -> ${version}`);
-  await addDistTag(tag, version, auth);
-}
-
-const finalDistTags =
-  (await waitForJson({
-    commandArgs: ['view', packageName, 'dist-tags', '--json'],
-    predicate: value =>
-      [...desiredDistTags].every(
-        ([tag, version]) =>
-          value && typeof value === 'object' && value[tag] === version
-      ),
-  })) ?? {};
-
-for (const [tag, version] of desiredDistTags) {
-  if (finalDistTags[tag] !== version) {
-    console.error(
-      `Expected npm dist-tag ${tag} -> ${version}, received ${
-        finalDistTags[tag] ?? 'unset'
-      }.`
+  try {
+    const prereleaseConfig = JSON.parse(
+      await readFile(new URL('../.changeset/pre.json', import.meta.url), 'utf8')
     );
-    process.exit(1);
-  }
+
+    if (typeof prereleaseConfig.tag === 'string' && prereleaseConfig.tag) {
+      prereleaseTag = prereleaseConfig.tag;
+    }
+  } catch {}
+
+  return {
+    packageName: process.env.RELEASE_PACKAGE_NAME ?? packageJson.name,
+    prereleaseTag,
+    publishedVersion:
+      args[0] ?? process.env.RELEASE_VERSION ?? packageJson.version,
+    registryUrl: getReleaseRegistryUrl(process.env),
+  };
 }
 
-console.log(
-  `npm dist-tags now match policy for ${packageName}@${publishedVersion}.`
-);
+export async function syncDistTags() {
+  const { packageName, prereleaseTag, publishedVersion, registryUrl } =
+    await readReleaseConfig();
+  const publishedVersions = normalizeArray(
+    await waitForJson({
+      commandArgs: ['view', packageName, 'versions', '--json'],
+      predicate: value => normalizeArray(value).includes(publishedVersion),
+    })
+  );
+
+  if (!publishedVersions.includes(publishedVersion)) {
+    throw new Error(
+      `npm registry did not report ${packageName}@${publishedVersion} after publish.`
+    );
+  }
+
+  const currentDistTags =
+    (await waitForJson({
+      commandArgs: ['view', packageName, 'dist-tags', '--json'],
+      predicate: value => value !== null,
+    })) ?? {};
+  const desiredDistTags = computeDesiredDistTags({
+    prereleaseTag,
+    publishedVersion,
+    publishedVersions,
+  });
+
+  const pendingUpdates = [...desiredDistTags].filter(
+    ([tag, version]) => currentDistTags[tag] !== version
+  );
+
+  if (pendingUpdates.length === 0) {
+    console.log(
+      `npm dist-tags already match policy for ${packageName}@${publishedVersion}.`
+    );
+    return;
+  }
+
+  const auth = await resolveReleaseAuth({
+    packageName,
+    registryUrl,
+  });
+
+  console.log(
+    `Using ${
+      auth.source === 'oidc' ? 'npm OIDC exchange' : 'token'
+    } auth for dist-tag updates.`
+  );
+
+  for (const [tag, version] of pendingUpdates) {
+    console.log(`Setting npm dist-tag ${tag} -> ${version}`);
+    await addDistTag(tag, version, auth);
+  }
+
+  const finalDistTags =
+    (await waitForJson({
+      commandArgs: ['view', packageName, 'dist-tags', '--json'],
+      predicate: value =>
+        [...desiredDistTags].every(
+          ([tag, version]) =>
+            value && typeof value === 'object' && value[tag] === version
+        ),
+    })) ?? {};
+
+  for (const [tag, version] of desiredDistTags) {
+    if (finalDistTags[tag] !== version) {
+      throw new Error(
+        `Expected npm dist-tag ${tag} -> ${version}, received ${
+          finalDistTags[tag] ?? 'unset'
+        }.`
+      );
+    }
+  }
+
+  console.log(
+    `npm dist-tags now match policy for ${packageName}@${publishedVersion}.`
+  );
+}
+
+if (isMain) {
+  await syncDistTags();
+}

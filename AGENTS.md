@@ -249,6 +249,7 @@ For changes that touch recipe resolution, class merging, `styled()` behavior, pr
 - Dist-tags follow an explicit policy in CI: prereleases move `alpha` to the published version and keep `latest` on the newest stable release when one exists, otherwise `latest` remains on the published prerelease. Stable publishes move `latest`.
 - Post-publish reconciliation attempts both npm dist-tag sync and GitHub Release sync before failing the job, so one post-publish error does not mask the other repair path.
 - npm registry reads in the release path are retry-aware so short propagation delays after publish do not immediately look like missing versions or broken dist-tags.
+- The current automation covers alpha releases and the stable `2.0.0` publish from `next`; if the release branch changes after alpha, update the workflow branch filters in the same change.
 
 Post-publish verification:
 

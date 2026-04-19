@@ -48,16 +48,19 @@ async function getReleaseByTag(repository, tag) {
   return response;
 }
 
-async function upsertRelease(repository, tag, notes) {
+export function buildGitHubReleasePayload(tag, notes) {
   const version = tag.replace(/^v/, '');
-  const prerelease = isPrereleaseVersion(version);
-  const existingRelease = await getReleaseByTag(repository, tag);
-  const payload = {
+  return {
     body: notes,
     name: tag,
-    prerelease,
+    prerelease: isPrereleaseVersion(version),
     tag_name: tag,
   };
+}
+
+async function upsertRelease(repository, tag, notes) {
+  const existingRelease = await getReleaseByTag(repository, tag);
+  const payload = buildGitHubReleasePayload(tag, notes);
 
   if (existingRelease) {
     await githubApi(`/repos/${repository}/releases/${existingRelease.id}`, {
