@@ -1,5 +1,5 @@
 ---
-"react-class-variants": minor
+'react-class-variants': minor
 ---
 
 Add `defineViewProps()` for declaring intrinsic `styled(..., { view })`
