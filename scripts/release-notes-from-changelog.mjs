@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { extractReleaseNotes, readChangelog } from './release-shared.mjs';
 
 const args = process.argv.slice(2).filter(arg => arg !== '--');
 const version = args[0] ?? process.env.RELEASE_VERSION;
@@ -9,25 +9,6 @@ if (!version) {
   );
 }
 
-const changelog = await readFile(
-  new URL('../CHANGELOG.md', import.meta.url),
-  'utf8'
-);
-const escapedVersion = version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const sectionMatch = changelog.match(
-  new RegExp(`^## ${escapedVersion}\\r?\\n([\\s\\S]*?)(?=^## \\S|\\Z)`, 'm')
-);
+const changelog = await readChangelog(import.meta.url);
 
-if (!sectionMatch) {
-  throw new Error(
-    `Could not find CHANGELOG.md section for version ${version}.`
-  );
-}
-
-const notes = sectionMatch[1].trim();
-
-if (!notes) {
-  throw new Error(`CHANGELOG.md section for version ${version} is empty.`);
-}
-
-process.stdout.write(`${notes}\n`);
+process.stdout.write(extractReleaseNotes(changelog, version));

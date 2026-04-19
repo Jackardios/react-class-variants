@@ -39,13 +39,15 @@ Defined in `.github/workflows/release.yml`.
 - runs the same `pnpm run verify` matrix as CI on Node `20.x`, `22.x`, and `24.x`
 - uses `changesets/action`
 - uses npm trusted publishing via GitHub Actions OIDC
-- syncs npm dist-tags after publish with `scripts/sync-dist-tags.mjs`
-- creates or updates GitHub Releases from the matching `CHANGELOG.md` section with `scripts/release-notes-from-changelog.mjs`
+- validates GitHub release/changelog readiness with `scripts/verify-github-release.mjs`
+- validates npm dist-tag auth before publish with `scripts/verify-dist-tag-auth.mjs`
+- publishes through the rerunnable `scripts/release-publish.mjs` wrapper
+- reconciles npm dist-tags and GitHub Releases after publish with `scripts/reconcile-release.mjs`
 
 The release workflow has two paths:
 
-1. If pending changesets exist on `next`, `changesets/action` opens or updates the `Version Packages` release PR, then manually dispatches the `CI` workflow on `changeset-release/next` so that release PRs receive the normal `build` checks even though the branch update came from the default GitHub Actions token.
-2. If no pending changesets remain on `next`, the workflow runs `pnpm run release:publish`, pushes any `v*` tags created on that commit, synchronizes npm dist-tags, and creates or updates the corresponding GitHub release entries from `CHANGELOG.md`.
+1. If pending changesets exist on `next`, `changesets/action` opens or updates the `Version Packages` release PR, then `scripts/trigger-release-branch-ci.mjs` waits for `changeset-release/next` to appear and dispatches the normal `CI` workflow on that branch.
+2. If no pending changesets remain on `next`, the workflow validates GitHub release/changelog readiness, validates npm dist-tag auth, runs the rerunnable publish wrapper, pushes any `v*` tags created on that commit, then reconciles npm dist-tags and GitHub Releases in the same post-publish phase.
 
 In practice, this means the version-package PR is the staging step and the publish happens after that PR is merged back into `next`.
 
@@ -74,13 +76,15 @@ In practice, this means the version-package PR is the staging step and the publi
 - v2 releases are published from `next`
 - prerelease mode stays active under the `alpha` tag until the stable `2.0.0` transition
 - publishing happens from GitHub Actions through npm trusted publishing
-- the release workflow validates npm dist-tag credentials before publish so a bad dist-tag auth setup cannot leave a half-completed release
+- the release workflow validates both GitHub release/changelog readiness and npm dist-tag credentials before publish so obvious metadata failures stop before npm publication
+- the publish wrapper is safe to rerun after a partial success: it skips duplicate publishes, treats an already-tagged earlier release commit as a no-op on newer commits, and only recreates a missing local tag when it has provenance for the current `HEAD`
 - avoid manual `npm publish` unless it is explicitly required
 
 Important notes:
 
 - do not assume npm dist-tags are in the state you want after a publish unless the sync step has completed successfully
 - `npm publish` and `npm dist-tag` are separate operations, so the workflow exchanges its GitHub Actions OIDC token for a short-lived npm registry token before mutating dist-tags
+- GitHub Releases are reconciled in the same post-publish phase, so a dist-tag failure should not prevent the workflow from still attempting release-page repair
 - if a prerelease redesign invalidates pending changesets, rewrite or delete the stale `.changeset/*.md` files before the next alpha so `changeset pre exit` does not pull obsolete notes into the stable release plan
 
 ## Post-Publish Verification
@@ -118,6 +122,13 @@ That keeps these surfaces aligned:
 - the merged version-package PR diff
 - `CHANGELOG.md` in the published package
 - the GitHub Releases page
+
+If a publish partially succeeds and the workflow is rerun on the same commit, the publish wrapper will:
+
+- skip `changeset publish` when the version is already present on npm
+- compare the published release tag or any registry provenance signal it has with the current `HEAD`
+- recreate the local `v*` tag only when provenance matches
+- continue with dist-tag and GitHub Release reconciliation instead of failing on a duplicate publish
 
 ## Stable Release Checklist
 

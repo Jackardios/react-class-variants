@@ -244,7 +244,10 @@ For changes that touch recipe resolution, class merging, `styled()` behavior, pr
 - The `Release` workflow verifies the same Node `20.x` / `22.x` / `24.x` matrix as CI before publishing.
 - The `Release` workflow manually dispatches `CI` on `changeset-release/next` after `changesets/action` updates the release branch, because pushes made with the default GitHub Actions token do not trigger `push` or `pull_request` workflows.
 - GitHub release bodies are generated from the matching `CHANGELOG.md` section for each `v*` tag.
+- Before publish, the workflow validates changeset file structure, GitHub release/changelog readiness, and npm dist-tag credentials.
+- The publish path is rerunnable after a partial success: if the version is already on npm, the workflow skips republishing, treats an already-tagged earlier release commit as a clean no-op on newer commits, and restores the local release tag only when it has a provenance signal for the current `HEAD`.
 - Dist-tags follow an explicit policy in CI: prereleases move `alpha` to the published version and keep `latest` on the newest stable release when one exists, otherwise `latest` remains on the published prerelease. Stable publishes move `latest`.
+- Post-publish reconciliation attempts both npm dist-tag sync and GitHub Release sync before failing the job, so one post-publish error does not mask the other repair path.
 
 Post-publish verification:
 

@@ -51,10 +51,14 @@
     "verify": "pnpm run lint && pnpm run lint:all && pnpm run lint:eslint && pnpm run lint:format && pnpm run test && pnpm run test:types && pnpm run lint:pkg",
     "ci": "pnpm run check:changeset && pnpm run verify",
     "release": "pnpm run verify && pnpm run release:publish",
-    "release:publish": "changeset publish",
+    "release:publish": "node scripts/release-publish.mjs",
     "release:notes": "node scripts/release-notes-from-changelog.mjs",
     "release:dist-tags": "node scripts/sync-dist-tags.mjs",
-    "release:dist-tags:preflight": "node scripts/verify-dist-tag-auth.mjs"
+    "release:dist-tags:preflight": "node scripts/verify-dist-tag-auth.mjs",
+    "release:github:preflight": "node scripts/verify-github-release.mjs",
+    "release:github-releases": "node scripts/sync-github-releases.mjs",
+    "release:branch-ci": "node scripts/trigger-release-branch-ci.mjs",
+    "release:reconcile": "node scripts/reconcile-release.mjs"
   },
   "license": "MIT",
   "author": {

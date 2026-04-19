@@ -69,11 +69,14 @@ jobs:
       - name: Trigger CI for release branch
         if: steps.changesets.outputs.pullRequestNumber != ''
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_BRANCH: changeset-release/${{ github.ref_name }}
-        run: |
-          gh workflow run main.yml --ref "$RELEASE_BRANCH"
-          echo "Triggered CI workflow for $RELEASE_BRANCH."
+        run: pnpm run release:branch-ci
+      - name: Validate GitHub release auth and notes
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm run release:github:preflight
       - name: Validate npm dist-tag auth
         if: steps.changesets.outputs.hasChangesets == 'false'
         run: pnpm run release:dist-tags:preflight
@@ -91,38 +94,8 @@ jobs:
           for tag in "${tags[@]}"; do
             git push origin "$tag"
           done
-      - name: Sync npm dist-tags
-        if: steps.changesets.outputs.hasChangesets == 'false'
-        run: pnpm run release:dist-tags
-      - name: Create or update GitHub releases
+      - name: Reconcile release metadata
         if: steps.changesets.outputs.hasChangesets == 'false'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          mapfile -t tags < <(git tag --points-at HEAD 'v*')
-          if [ "${#tags[@]}" -eq 0 ]; then
-            echo "No release tags found on HEAD."
-            exit 0
-          fi
-          for tag in "${tags[@]}"; do
-            notes_file="$(mktemp)"
-            pnpm run --silent release:notes -- "${tag#v}" > "$notes_file"
-            if gh release view "$tag" >/dev/null 2>&1; then
-              gh release edit "$tag" \
-                --title "$tag" \
-                --notes-file "$notes_file"
-              rm -f "$notes_file"
-              continue
-            fi
-            if [[ "$tag" == *-* ]]; then
-              gh release create "$tag" \
-                --prerelease \
-                --title "$tag" \
-                --notes-file "$notes_file"
-            else
-              gh release create "$tag" \
-                --title "$tag" \
-                --notes-file "$notes_file"
-            fi
-            rm -f "$notes_file"
-          done
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm run release:reconcile

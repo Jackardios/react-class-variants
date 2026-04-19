@@ -4,6 +4,7 @@ import { promisify } from 'node:util';
 import {
   execAuthenticatedNpm,
   resolveReleaseAuth,
+  sanitizeNpmCliEnv,
 } from './npm-release-auth.mjs';
 
 const execFileAsync = promisify(execFile);
@@ -16,7 +17,7 @@ const packageName = process.env.RELEASE_PACKAGE_NAME ?? packageJson.name;
 async function packageExistsOnRegistry() {
   try {
     await execFileAsync('npm', ['view', packageName, 'version', '--json'], {
-      env: process.env,
+      env: sanitizeNpmCliEnv(process.env),
       maxBuffer: 1024 * 1024 * 10,
     });
     return true;

@@ -57,34 +57,130 @@ function isChangesetFile(file) {
   );
 }
 
-const baseBranch = readBaseBranch();
-const baseRef = resolveBaseRef(baseBranch);
-const mergeBase = git(['merge-base', 'HEAD', baseRef]);
-const changedFiles = git(['diff', '--name-only', `${mergeBase}...HEAD`])
-  .split('\n')
-  .map(file => file.trim())
-  .filter(Boolean);
+function parseChangesetFile(filePath, contents) {
+  const normalized = contents.replace(/\r\n/g, '\n');
 
-const releaseAffectingFiles = changedFiles.filter(isReleaseAffecting);
-const hasChangeset = changedFiles.some(isChangesetFile);
+  if (!normalized.startsWith('---\n')) {
+    throw new Error(`${filePath} must start with YAML frontmatter ('---').`);
+  }
 
-if (releaseAffectingFiles.length === 0) {
-  console.log(
-    `No release-affecting files changed compared to ${baseRef}. Changeset not required.`
+  const frontmatterMatch = /^---\n([\s\S]*?)^---(?:\n|$)/m.exec(normalized);
+
+  if (!frontmatterMatch) {
+    throw new Error(
+      `${filePath} is missing the closing YAML frontmatter delimiter ('---').`
+    );
+  }
+
+  const frontmatter = frontmatterMatch[1].trim();
+  const bodyStart = frontmatterMatch[0].length;
+  const body = normalized.slice(bodyStart).trim();
+  const releases = [];
+
+  if (frontmatter) {
+    for (const rawLine of frontmatter.split('\n')) {
+      const line = rawLine.trim();
+
+      if (!line || line.startsWith('#')) {
+        continue;
+      }
+
+      const match =
+        /^(?:'([^']+)'|"([^"]+)"|([A-Za-z0-9@/_.-]+)):\s*(major|minor|patch)\s*$/.exec(
+          line
+        );
+
+      if (!match) {
+        throw new Error(
+          `${filePath} has invalid frontmatter line "${line}". Expected <package>: major|minor|patch.`
+        );
+      }
+
+      releases.push({
+        packageName: match[1] || match[2] || match[3],
+        type: match[4],
+      });
+    }
+  }
+
+  if (!body) {
+    throw new Error(`${filePath} must include a non-empty summary body.`);
+  }
+
+  return { body, releases };
+}
+
+function validateChangesetFiles(rootDir = process.cwd()) {
+  const changesetDir = path.join(rootDir, '.changeset');
+  const errors = [];
+
+  for (const entry of fs.readdirSync(changesetDir)) {
+    if (!entry.endsWith('.md') || entry === 'README.md') {
+      continue;
+    }
+
+    const filePath = path.join('.changeset', entry);
+    const absolutePath = path.join(rootDir, filePath);
+
+    try {
+      parseChangesetFile(filePath, fs.readFileSync(absolutePath, 'utf8'));
+    } catch (error) {
+      errors.push(error.message);
+    }
+  }
+
+  return errors;
+}
+
+function main() {
+  const changesetErrors = validateChangesetFiles();
+
+  if (changesetErrors.length > 0) {
+    console.error('Invalid changeset files:');
+    for (const error of changesetErrors) {
+      console.error(`- ${error}`);
+    }
+    process.exit(1);
+  }
+
+  const baseBranch = readBaseBranch();
+  const baseRef = resolveBaseRef(baseBranch);
+  const mergeBase = git(['merge-base', 'HEAD', baseRef]);
+  const changedFiles = git(['diff', '--name-only', `${mergeBase}...HEAD`])
+    .split('\n')
+    .map(file => file.trim())
+    .filter(Boolean);
+
+  const releaseAffectingFiles = changedFiles.filter(isReleaseAffecting);
+  const hasChangeset = changedFiles.some(isChangesetFile);
+
+  if (releaseAffectingFiles.length === 0) {
+    console.log(
+      `No release-affecting files changed compared to ${baseRef}. Changeset not required.`
+    );
+    process.exit(0);
+  }
+
+  if (hasChangeset) {
+    console.log('Changeset present for release-affecting changes.');
+    process.exit(0);
+  }
+
+  console.error('Release-affecting files changed without a changeset:');
+  for (const file of releaseAffectingFiles) {
+    console.error(`- ${file}`);
+  }
+  console.error(
+    '\nAdd a .changeset/*.md file for release intent, or add an empty changeset if the PR should stay no-release by design.'
   );
-  process.exit(0);
+  process.exit(1);
 }
 
-if (hasChangeset) {
-  console.log('Changeset present for release-affecting changes.');
-  process.exit(0);
-}
+module.exports = {
+  parseChangesetFile,
+  validateChangesetFiles,
+};
 
-console.error('Release-affecting files changed without a changeset:');
-for (const file of releaseAffectingFiles) {
-  console.error(`- ${file}`);
+if (require.main === module) {
+  main();
 }
-console.error(
-  '\nAdd a .changeset/*.md file for release intent, or add an empty changeset if the PR should stay no-release by design.'
-);
-process.exit(1);

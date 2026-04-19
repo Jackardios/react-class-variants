@@ -5,6 +5,7 @@ import {
   execAuthenticatedNpm,
   getReleaseRegistryUrl,
   resolveReleaseAuth,
+  sanitizeNpmCliEnv,
 } from './npm-release-auth.mjs';
 
 const execFileAsync = promisify(execFile);
@@ -80,7 +81,7 @@ function normalizeArray(value) {
 
 async function npmJson(...args) {
   const { stdout } = await execFileAsync('npm', args, {
-    env: process.env,
+    env: sanitizeNpmCliEnv(process.env),
     maxBuffer: 1024 * 1024 * 10,
   });
 
