@@ -78,6 +78,7 @@ In practice, this means the version-package PR is the staging step and the publi
 - publishing happens from GitHub Actions through npm trusted publishing
 - the release workflow validates both GitHub release/changelog readiness and npm dist-tag credentials before publish so obvious metadata failures stop before npm publication
 - the publish wrapper is safe to rerun after a partial success: it skips duplicate publishes, treats an already-tagged earlier release commit as a no-op on newer commits, and only recreates a missing local tag when it has provenance for the current `HEAD`
+- post-publish npm lookups retry through short registry propagation delays before deciding that a version or dist-tag update is missing
 - avoid manual `npm publish` unless it is explicitly required
 
 Important notes:

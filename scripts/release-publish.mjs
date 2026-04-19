@@ -50,6 +50,30 @@ async function npmView(packageSpec, field) {
   }
 }
 
+function delay(ms) {
+  return new Promise(resolvePromise => {
+    setTimeout(resolvePromise, ms);
+  });
+}
+
+async function waitForPublishedValue({ field, packageSpec, predicate }) {
+  let lastValue = null;
+
+  for (let attempt = 1; attempt <= 8; attempt += 1) {
+    lastValue = await npmView(packageSpec, field);
+
+    if (predicate(lastValue)) {
+      return lastValue;
+    }
+
+    if (attempt < 8) {
+      await delay(attempt * 1500);
+    }
+  }
+
+  return lastValue;
+}
+
 export function planReleasePublish({
   headSha,
   headIntroducesVersion,
@@ -112,6 +136,14 @@ export function planReleasePublish({
   };
 }
 
+export function doesFirstParentIntroduceVersion(parentVersion, version) {
+  if (parentVersion === null) {
+    return true;
+  }
+
+  return parentVersion !== version;
+}
+
 async function finalizePublishedRelease({
   headSha,
   mode,
@@ -131,10 +163,11 @@ async function finalizePublishedRelease({
     console.log(`Release tag ${tag} already points at ${headSha}.`);
   }
 
-  const publishedVersion = await npmView(
-    `${packageName}@${version}`,
-    'version'
-  );
+  const publishedVersion = await waitForPublishedValue({
+    field: 'version',
+    packageSpec: `${packageName}@${version}`,
+    predicate: value => value === version,
+  });
 
   if (publishedVersion !== version) {
     throw new Error(
@@ -165,9 +198,15 @@ async function ensureLocalTagAtHead(tag, headSha) {
   return 'existing';
 }
 
-async function parentVersion(parentRef) {
+async function firstParentVersion() {
+  const firstParent = await gitMaybe(['rev-parse', '--verify', 'HEAD^1']);
+
+  if (!firstParent) {
+    return null;
+  }
+
   try {
-    const packageJson = await git(['show', `${parentRef}:package.json`]);
+    const packageJson = await git(['show', `${firstParent}:package.json`]);
     return JSON.parse(packageJson).version ?? null;
   } catch {
     return null;
@@ -175,21 +214,9 @@ async function parentVersion(parentRef) {
 }
 
 async function headIntroducesVersion(version) {
-  const lineage = await git(['rev-list', '--parents', '-n', '1', 'HEAD']);
-  const [, ...parents] = lineage
-    .split(' ')
-    .map(part => part.trim())
-    .filter(Boolean);
+  const parentVersion = await firstParentVersion();
 
-  if (parents.length === 0) {
-    return true;
-  }
-
-  const versions = await Promise.all(
-    parents.map(parent => parentVersion(parent))
-  );
-
-  return versions.some(parentVersionValue => parentVersionValue !== version);
+  return doesFirstParentIntroduceVersion(parentVersion, version);
 }
 
 export async function publishRelease() {
@@ -200,7 +227,11 @@ export async function publishRelease() {
   const headSha = await git(['rev-parse', 'HEAD']);
   const localTagTarget = await gitMaybe(['rev-parse', '--verify', `${tag}^{}`]);
   const versionPublished =
-    (await npmView(`${packageName}@${version}`, 'version')) === version;
+    (await waitForPublishedValue({
+      field: 'version',
+      packageSpec: `${packageName}@${version}`,
+      predicate: value => value === version,
+    })) === version;
   const publishedGitHead = versionPublished
     ? await npmView(`${packageName}@${version}`, 'gitHead')
     : null;

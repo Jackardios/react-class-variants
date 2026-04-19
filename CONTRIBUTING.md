@@ -184,6 +184,7 @@ Do not treat any one of those layers as authoritative on its own. The shipped co
 - The publish step is intentionally rerunnable: if npm publication already succeeded on a prior attempt, the workflow skips republishing, treats an already-tagged earlier release commit as a clean no-op on newer commits, and only recreates the local `v*` tag when it has a provenance signal for the current `HEAD`.
 - After a successful alpha publish, the release workflow syncs npm dist-tags to the repo policy: prereleases move `alpha` to the new version and keep `latest` on the newest stable release when one exists, otherwise `latest` remains on the published prerelease.
 - Post-publish reconciliation attempts npm dist-tag sync and GitHub Release sync in the same run, so one failure does not prevent the other repair path from executing.
+- The npm post-publish path waits through short registry propagation delays before deciding that a freshly published version or dist-tag update is still missing.
 - If that sync step fails, verify npm dist-tags explicitly because prerelease tagging affects install behavior.
 - Keep already-published alpha history in `CHANGELOG.md`; do not rely on superseded pending changesets to document a redesign that has since been replaced.
 

@@ -32,6 +32,12 @@ const publishedVersion =
   args[0] ?? process.env.RELEASE_VERSION ?? packageJson.version;
 const registryUrl = getReleaseRegistryUrl(process.env);
 
+function delay(ms) {
+  return new Promise(resolvePromise => {
+    setTimeout(resolvePromise, ms);
+  });
+}
+
 function isPrerelease(version) {
   return version.includes('-');
 }
@@ -88,6 +94,24 @@ async function npmJson(...args) {
   return stdout.trim() ? JSON.parse(stdout) : null;
 }
 
+async function waitForJson({ commandArgs, predicate }) {
+  let lastValue = null;
+
+  for (let attempt = 1; attempt <= 8; attempt += 1) {
+    lastValue = await npmJson(...commandArgs);
+
+    if (predicate(lastValue)) {
+      return lastValue;
+    }
+
+    if (attempt < 8) {
+      await delay(attempt * 1500);
+    }
+  }
+
+  return lastValue;
+}
+
 async function addDistTag(tag, version, auth) {
   try {
     await execAuthenticatedNpm(
@@ -108,10 +132,23 @@ async function addDistTag(tag, version, auth) {
 }
 
 const publishedVersions = normalizeArray(
-  await npmJson('view', packageName, 'versions', '--json')
+  await waitForJson({
+    commandArgs: ['view', packageName, 'versions', '--json'],
+    predicate: value => normalizeArray(value).includes(publishedVersion),
+  })
 );
+
+if (!publishedVersions.includes(publishedVersion)) {
+  throw new Error(
+    `npm registry did not report ${packageName}@${publishedVersion} after publish.`
+  );
+}
+
 const currentDistTags =
-  (await npmJson('view', packageName, 'dist-tags', '--json')) ?? {};
+  (await waitForJson({
+    commandArgs: ['view', packageName, 'dist-tags', '--json'],
+    predicate: value => value !== null,
+  })) ?? {};
 const stableVersions = publishedVersions
   .filter(version => !isPrerelease(version) && parseStableVersion(version))
   .sort(compareStableVersions);
@@ -153,7 +190,14 @@ for (const [tag, version] of pendingUpdates) {
 }
 
 const finalDistTags =
-  (await npmJson('view', packageName, 'dist-tags', '--json')) ?? {};
+  (await waitForJson({
+    commandArgs: ['view', packageName, 'dist-tags', '--json'],
+    predicate: value =>
+      [...desiredDistTags].every(
+        ([tag, version]) =>
+          value && typeof value === 'object' && value[tag] === version
+      ),
+  })) ?? {};
 
 for (const [tag, version] of desiredDistTags) {
   if (finalDistTags[tag] !== version) {

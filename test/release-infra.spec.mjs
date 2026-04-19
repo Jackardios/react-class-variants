@@ -1,6 +1,9 @@
 import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
-import { planReleasePublish } from '../scripts/release-publish.mjs';
+import {
+  doesFirstParentIntroduceVersion,
+  planReleasePublish,
+} from '../scripts/release-publish.mjs';
 import { extractReleaseNotes } from '../scripts/release-shared.mjs';
 
 const require = createRequire(import.meta.url);
@@ -38,6 +41,16 @@ describe('release notes extraction', () => {
 });
 
 describe('release publish planning', () => {
+  it('uses only the first-parent version to identify the release-introducing commit', () => {
+    expect(doesFirstParentIntroduceVersion(null, '2.0.0-alpha.8')).toBe(true);
+    expect(
+      doesFirstParentIntroduceVersion('2.0.0-alpha.7', '2.0.0-alpha.8')
+    ).toBe(true);
+    expect(
+      doesFirstParentIntroduceVersion('2.0.0-alpha.8', '2.0.0-alpha.8')
+    ).toBe(false);
+  });
+
   it('skips republish and recreates the local tag when registry provenance matches HEAD', () => {
     expect(
       planReleasePublish({
