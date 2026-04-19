@@ -9,3 +9,5 @@ The release workflow now also validates GitHub release/changelog readiness befor
 It also waits through short npm registry propagation delays before deciding that a freshly published version or dist-tag update is still missing.
 
 The post-publish reconciliation path is now simpler too: the workflow runs npm dist-tag sync and GitHub Release sync as separate steps and applies the final failure gate afterward.
+
+Release tooling is also covered by ESLint now, which caught and prevents a latent dist-tag update bug in the non-no-op npm mutation path.

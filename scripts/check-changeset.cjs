@@ -27,7 +27,7 @@ function resolveBaseRef(baseBranch) {
     try {
       git(['rev-parse', '--verify', ref]);
       return ref;
-    } catch (_error) {
+    } catch {
       continue;
     }
   }

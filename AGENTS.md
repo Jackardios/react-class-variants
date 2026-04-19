@@ -42,7 +42,7 @@ pnpm test          # runtime tests once
 pnpm test:coverage # runtime tests with coverage
 pnpm lint          # TypeScript publish-surface check for src/
 pnpm lint:all      # TypeScript check for src/ plus runtime test files
-pnpm lint:eslint   # ESLint for src/ and test/
+pnpm lint:eslint   # ESLint for src/, test/, and scripts/
 pnpm lint:format   # Prettier check
 pnpm build         # tsup build -> dist/ (ESM + d.ts)
 ```

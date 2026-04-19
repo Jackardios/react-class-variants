@@ -40,7 +40,7 @@
     "build": "pnpm run build:js && pnpm run build:dts",
     "lint": "tsc --project tsconfig.build.json",
     "lint:all": "tsc --project tsconfig.test.json",
-    "lint:eslint": "eslint src test --max-warnings=0",
+    "lint:eslint": "eslint src test scripts --max-warnings=0",
     "lint:format": "prettier --check .",
     "lint:pkg": "publint",
     "format": "prettier --write .",

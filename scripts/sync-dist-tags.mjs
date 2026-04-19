@@ -117,7 +117,7 @@ async function waitForJson({ commandArgs, predicate }) {
   return lastValue;
 }
 
-async function addDistTag(tag, version, auth) {
+async function addDistTag(packageName, tag, version, auth) {
   try {
     await execAuthenticatedNpm(
       ['dist-tag', 'add', `${packageName}@${version}`, tag],
@@ -212,7 +212,7 @@ export async function syncDistTags() {
 
   for (const [tag, version] of pendingUpdates) {
     console.log(`Setting npm dist-tag ${tag} -> ${version}`);
-    await addDistTag(tag, version, auth);
+    await addDistTag(packageName, tag, version, auth);
   }
 
   const finalDistTags =

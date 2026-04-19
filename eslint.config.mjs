@@ -2,6 +2,17 @@ import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import prettierConfig from 'eslint-config-prettier';
 
+const scriptGlobals = {
+  URL: 'readonly',
+  console: 'readonly',
+  fetch: 'readonly',
+  module: 'readonly',
+  performance: 'readonly',
+  process: 'readonly',
+  require: 'readonly',
+  setTimeout: 'readonly',
+};
+
 export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
@@ -29,6 +40,20 @@ export default tseslint.config(
       '@typescript-eslint/no-empty-object-type': 'off',
       '@typescript-eslint/no-unsafe-function-type': 'off',
       '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
+  {
+    files: ['scripts/**/*.mjs', 'scripts/**/*.cjs'],
+    languageOptions: {
+      globals: scriptGlobals,
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
+      'no-empty': ['error', { allowEmptyCatch: true }],
     },
   }
 );
