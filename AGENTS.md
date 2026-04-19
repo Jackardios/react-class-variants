@@ -26,6 +26,7 @@ Canonical repository guidance for LLMs and coding agents working in this repo.
 - Documentation-only changes usually do not need a changeset.
 - If a prerelease redesign invalidates pending `.changeset/*.md` files, rewrite or delete the stale ones before the next alpha so `changeset pre exit` does not resurrect obsolete notes.
 - Alpha publishing happens from GitHub Actions via npm trusted publishing; avoid manual `npm publish` unless explicitly required.
+- The release workflow validates dist-tag credentials before publish and uses npm's OIDC exchange flow for automated dist-tag sync on GitHub Actions.
 - After a successful alpha publish, verify npm dist-tags explicitly because prerelease tagging affects install behavior.
 - When the release process changes, keep `AGENTS.md`, `CONTRIBUTING.md`, and `docs/release-process.md` aligned.
 

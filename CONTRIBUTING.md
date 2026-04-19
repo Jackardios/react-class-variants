@@ -179,6 +179,7 @@ Do not treat any one of those layers as authoritative on its own. The shipped co
 - `changeset publish` produces the canonical `v*` git tag.
 - The release workflow dispatches `CI` for the `changeset-release/next` branch after it updates the version-package PR, so release PRs receive the same checks as normal PRs.
 - GitHub release bodies are generated from the matching `CHANGELOG.md` section.
+- Before publishing, the release workflow validates that it can obtain npm dist-tag credentials; on GitHub Actions it uses npm's OIDC exchange flow instead of a long-lived `NPM_TOKEN` secret.
 - After a successful alpha publish, the release workflow syncs npm dist-tags to the repo policy: prereleases move `alpha` to the new version and keep `latest` on the newest stable release when one exists, otherwise `latest` remains on the published prerelease.
 - If that sync step fails, verify npm dist-tags explicitly because prerelease tagging affects install behavior.
 - Keep already-published alpha history in `CHANGELOG.md`; do not rely on superseded pending changesets to document a redesign that has since been replaced.

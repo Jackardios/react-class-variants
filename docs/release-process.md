@@ -74,12 +74,13 @@ In practice, this means the version-package PR is the staging step and the publi
 - v2 releases are published from `next`
 - prerelease mode stays active under the `alpha` tag until the stable `2.0.0` transition
 - publishing happens from GitHub Actions through npm trusted publishing
+- the release workflow validates npm dist-tag credentials before publish so a bad dist-tag auth setup cannot leave a half-completed release
 - avoid manual `npm publish` unless it is explicitly required
 
 Important notes:
 
 - do not assume npm dist-tags are in the state you want after a publish unless the sync step has completed successfully
-- `npm publish` and `npm dist-tag` are separate operations, so trusted publishing alone does not fix prerelease tags
+- `npm publish` and `npm dist-tag` are separate operations, so the workflow exchanges its GitHub Actions OIDC token for a short-lived npm registry token before mutating dist-tags
 - if a prerelease redesign invalidates pending changesets, rewrite or delete the stale `.changeset/*.md` files before the next alpha so `changeset pre exit` does not pull obsolete notes into the stable release plan
 
 ## Post-Publish Verification
@@ -106,7 +107,7 @@ npm dist-tag add react-class-variants@<latest-stable-version> latest # only if a
 Why this matters:
 
 - prerelease tagging affects install behavior
-- trusted publishing covers package publication, not post-publish dist-tag management
+- trusted publishing covers package publication, while the release workflow uses npm's OIDC token-exchange API for post-publish dist-tag management
 
 ## GitHub Release Notes
 
@@ -143,9 +144,10 @@ These settings live outside the repository and should be reviewed periodically.
 ### npm
 
 - keep trusted publishing configured for `react-class-variants`
-- keep an `NPM_TOKEN` repository secret available for `npm dist-tag add` operations after prerelease publishes
+- keep the package's trusted publisher configuration pointed at `.github/workflows/release.yml` on `Jackardios/react-class-variants`
+- repository-level `NPM_TOKEN` is no longer required for automated release dist-tag sync on GitHub Actions
 - if legacy releases still matter, keep trusted publishing configured for `react-tailwind-variants`
-- optionally require 2FA and remove legacy publish tokens once trusted publishing is confirmed
+- optional manual repair still needs interactive npm auth or a valid npm token outside the trusted-publishing workflow
 
 Trusted publisher settings for the current v2 package:
 

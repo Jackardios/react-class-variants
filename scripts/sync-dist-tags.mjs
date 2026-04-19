@@ -1,6 +1,11 @@
 import { execFile } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
+import {
+  execAuthenticatedNpm,
+  getReleaseRegistryUrl,
+  resolveReleaseAuth,
+} from './npm-release-auth.mjs';
 
 const execFileAsync = promisify(execFile);
 const args = process.argv.slice(2).filter(arg => arg !== '--');
@@ -24,7 +29,7 @@ try {
 const packageName = process.env.RELEASE_PACKAGE_NAME ?? packageJson.name;
 const publishedVersion =
   args[0] ?? process.env.RELEASE_VERSION ?? packageJson.version;
-const authToken = process.env.NODE_AUTH_TOKEN ?? process.env.NPM_TOKEN ?? '';
+const registryUrl = getReleaseRegistryUrl(process.env);
 
 function isPrerelease(version) {
   return version.includes('-');
@@ -82,15 +87,23 @@ async function npmJson(...args) {
   return stdout.trim() ? JSON.parse(stdout) : null;
 }
 
-async function addDistTag(tag, version) {
-  await execFileAsync(
-    'npm',
-    ['dist-tag', 'add', `${packageName}@${version}`, tag],
-    {
-      env: process.env,
-      maxBuffer: 1024 * 1024 * 10,
+async function addDistTag(tag, version, auth) {
+  try {
+    await execAuthenticatedNpm(
+      ['dist-tag', 'add', `${packageName}@${version}`, tag],
+      {
+        auth,
+      }
+    );
+  } catch (error) {
+    if (auth.source === 'token') {
+      error.message = `${error.message}\n\nThe configured npm token could not update dist-tags. Refresh NODE_AUTH_TOKEN/NPM_TOKEN or switch this workflow to npm OIDC exchange.`;
+    } else {
+      error.message = `${error.message}\n\nnpm publish can use trusted publishing automatically, but dist-tag repair requires exchanging the GitHub Actions OIDC token for a short-lived npm registry token. Confirm this package still has a trusted publisher configured for this workflow.`;
     }
-  );
+
+    throw error;
+  }
 }
 
 const publishedVersions = normalizeArray(
@@ -122,20 +135,20 @@ if (pendingUpdates.length === 0) {
   process.exit(0);
 }
 
-if (!authToken) {
-  const desiredState = Object.fromEntries(desiredDistTags);
+const auth = await resolveReleaseAuth({
+  packageName,
+  registryUrl,
+});
 
-  console.error(
-    `npm dist-tags for ${packageName}@${publishedVersion} do not match policy and NODE_AUTH_TOKEN/NPM_TOKEN is not set.`
-  );
-  console.error(`Current dist-tags: ${JSON.stringify(currentDistTags)}`);
-  console.error(`Desired dist-tags: ${JSON.stringify(desiredState)}`);
-  process.exit(1);
-}
+console.log(
+  `Using ${
+    auth.source === 'oidc' ? 'npm OIDC exchange' : 'token'
+  } auth for dist-tag updates.`
+);
 
 for (const [tag, version] of pendingUpdates) {
   console.log(`Setting npm dist-tag ${tag} -> ${version}`);
-  await addDistTag(tag, version);
+  await addDistTag(tag, version, auth);
 }
 
 const finalDistTags =

@@ -74,6 +74,9 @@ jobs:
         run: |
           gh workflow run main.yml --ref "$RELEASE_BRANCH"
           echo "Triggered CI workflow for $RELEASE_BRANCH."
+      - name: Validate npm dist-tag auth
+        if: steps.changesets.outputs.hasChangesets == 'false'
+        run: pnpm run release:dist-tags:preflight
       - name: Publish package to npm
         if: steps.changesets.outputs.hasChangesets == 'false'
         run: pnpm run release:publish
@@ -90,8 +93,6 @@ jobs:
           done
       - name: Sync npm dist-tags
         if: steps.changesets.outputs.hasChangesets == 'false'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: pnpm run release:dist-tags
       - name: Create or update GitHub releases
         if: steps.changesets.outputs.hasChangesets == 'false'

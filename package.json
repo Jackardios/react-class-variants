@@ -53,7 +53,8 @@
     "release": "pnpm run verify && pnpm run release:publish",
     "release:publish": "changeset publish",
     "release:notes": "node scripts/release-notes-from-changelog.mjs",
-    "release:dist-tags": "node scripts/sync-dist-tags.mjs"
+    "release:dist-tags": "node scripts/sync-dist-tags.mjs",
+    "release:dist-tags:preflight": "node scripts/verify-dist-tag-auth.mjs"
   },
   "license": "MIT",
   "author": {
