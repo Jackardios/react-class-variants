@@ -38,6 +38,7 @@
     "build:js": "tsup src/index.ts src/core.ts --format esm --clean",
     "build:dts": "tsup src/index.ts --dts-only --format esm --out-dir dist --silent && tsup src/core.ts --dts-only --format esm --out-dir dist --silent",
     "build": "pnpm run build:js && pnpm run build:dts",
+    "prepack": "pnpm run build",
     "lint": "tsc --project tsconfig.build.json",
     "lint:all": "tsc --project tsconfig.test.json",
     "lint:eslint": "eslint src test scripts --max-warnings=0",

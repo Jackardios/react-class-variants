@@ -10,6 +10,16 @@ function git(args) {
   }).trim();
 }
 
+function gitLines(args) {
+  const output = git(args);
+  if (!output) return [];
+
+  return output
+    .split('\n')
+    .map(file => file.trim())
+    .filter(Boolean);
+}
+
 function readBaseBranch() {
   const explicit =
     process.env.GITHUB_BASE_REF || process.env.CHANGESET_BASE_REF || null;
@@ -146,17 +156,21 @@ function main() {
   const baseBranch = readBaseBranch();
   const baseRef = resolveBaseRef(baseBranch);
   const mergeBase = git(['merge-base', 'HEAD', baseRef]);
-  const changedFiles = git(['diff', '--name-only', `${mergeBase}...HEAD`])
-    .split('\n')
-    .map(file => file.trim())
-    .filter(Boolean);
+  const changedFiles = Array.from(
+    new Set([
+      ...gitLines(['diff', '--name-only', `${mergeBase}...HEAD`]),
+      ...gitLines(['diff', '--name-only', '--cached']),
+      ...gitLines(['diff', '--name-only']),
+      ...gitLines(['ls-files', '--others', '--exclude-standard']),
+    ])
+  ).sort();
 
   const releaseAffectingFiles = changedFiles.filter(isReleaseAffecting);
   const hasChangeset = changedFiles.some(isChangesetFile);
 
   if (releaseAffectingFiles.length === 0) {
     console.log(
-      `No release-affecting files changed compared to ${baseRef}. Changeset not required.`
+      `No release-affecting files changed compared to ${baseRef} or in the local working tree. Changeset not required.`
     );
     process.exit(0);
   }

@@ -27,6 +27,7 @@ Canonical repository guidance for LLMs and coding agents working in this repo.
 - If a prerelease redesign invalidates pending `.changeset/*.md` files, rewrite or delete the stale ones before the next alpha so `changeset pre exit` does not resurrect obsolete notes.
 - Alpha publishing happens from GitHub Actions via npm trusted publishing; avoid manual `npm publish` unless explicitly required.
 - The release workflow validates dist-tag credentials before publish and uses npm's OIDC exchange flow for automated dist-tag sync on GitHub Actions.
+- Package tarballs must remain valid from a clean checkout where `dist/` is gitignored; `pack`/`publish` therefore rely on a `prepack` build step.
 - After a successful alpha publish, verify npm dist-tags explicitly because prerelease tagging affects install behavior.
 - When the release process changes, keep `AGENTS.md`, `CONTRIBUTING.md`, and `docs/release-process.md` aligned.
 
@@ -54,7 +55,7 @@ pnpm test:built            # built runtime smoke test
 pnpm test:types            # build + built runtime + contracts + editor + exports + consumers
 pnpm test:types:contracts  # tsd contract tests
 pnpm test:types:editor     # editor/types tooling validation
-pnpm test:types:exports    # packed export validation
+pnpm test:types:exports    # standalone packed export validation, including clean-checkout prepack coverage
 pnpm test:types:consumers  # Bundler and NodeNext ESM consumer fixtures
 pnpm lint:pkg              # publint package-surface check
 ```
@@ -63,7 +64,7 @@ pnpm lint:pkg              # publint package-surface check
 
 ```bash
 pnpm run verify          # lint + lint:all + lint:eslint + lint:format + test + test:types + lint:pkg
-pnpm run check:changeset # release-affecting changes must include a changeset
+pnpm run check:changeset # release-affecting branch/worktree changes must include a changeset
 pnpm run ci              # check:changeset + verify
 ```
 

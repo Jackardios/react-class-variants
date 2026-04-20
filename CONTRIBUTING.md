@@ -79,7 +79,7 @@ What they do:
 - `pnpm test:types`: full type gate: build + built runtime + contracts + editor + exports + consumers
 - `pnpm test:types:contracts`: `tsd` contract tests against the built package
 - `pnpm test:types:editor`: editor/types tooling validation
-- `pnpm test:types:exports`: packed export validation
+- `pnpm test:types:exports`: standalone packed export validation, including clean-checkout prepack coverage
 - `pnpm test:types:consumers`: packaged Bundler and NodeNext ESM consumer fixtures
 - `pnpm lint:pkg`: `publint` package-surface validation
 
@@ -115,7 +115,7 @@ pnpm run ci
 ```
 
 - `pnpm run verify`: reusable package gate covering linting, runtime tests, type gates, formatting, and package validation
-- `pnpm run check:changeset`: verifies that release-affecting changes include a changeset
+- `pnpm run check:changeset`: verifies that release-affecting branch or local worktree changes include a changeset
 - `pnpm run ci`: `check:changeset` plus `verify`
 
 Useful Vitest shortcuts:
@@ -177,6 +177,7 @@ Do not treat any one of those layers as authoritative on its own. The shipped co
 - Publishing is handled by GitHub Actions via npm trusted publishing.
 - Avoid manual `npm publish` unless it is explicitly required.
 - `changeset publish` produces the canonical `v*` git tag.
+- `pack` and `publish` build `dist/` via `prepack`, because `dist/` is gitignored and the tarball must remain valid from a clean checkout.
 - The release workflow dispatches `CI` for the `changeset-release/next` branch after it updates the version-package PR, so release PRs receive the same checks as normal PRs.
 - GitHub release bodies are generated from the matching `CHANGELOG.md` section.
 - Before publishing, the release workflow validates both npm dist-tag credentials and GitHub release/changelog readiness.

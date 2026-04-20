@@ -43,6 +43,8 @@ Defined in `.github/workflows/release.yml`.
 - validates GitHub release/changelog readiness with `scripts/verify-github-release.mjs`
 - validates npm dist-tag auth before publish with `scripts/verify-dist-tag-auth.mjs`
 - publishes through the rerunnable `scripts/release-publish.mjs` wrapper
+- relies on the package `prepack` lifecycle to build `dist/` for clean-checkout tarballs because `dist/` is gitignored
+- relies on `scripts/test-types-exports.mjs` to validate packed exports in that same clean-checkout style locally
 - reconciles npm dist-tags and GitHub Releases in separate workflow steps so both are attempted before the job fails
 
 The release workflow has two paths:
