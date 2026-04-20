@@ -1,5 +1,21 @@
 # react-class-variants
 
+## 2.0.0-alpha.8
+
+### Patch Changes
+
+- 3c3fcc0: Harden release automation so npm dist-tag validation happens before publish and GitHub Actions can synchronize dist-tags with npm's OIDC exchange flow instead of relying on a long-lived repository token.
+
+  The release workflow now also validates GitHub release/changelog readiness before publish, recovers safely on reruns after partial publish success, and catches malformed `.changeset/*.md` files during normal changeset coverage checks instead of at release time.
+
+  It also waits through short npm registry propagation delays before deciding that a freshly published version or dist-tag update is still missing.
+
+  The post-publish reconciliation path is now simpler too: the workflow runs npm dist-tag sync and GitHub Release sync as separate steps and applies the final failure gate afterward.
+
+  Release tooling is also covered by ESLint now, which caught and prevents a latent dist-tag update bug in the non-no-op npm mutation path.
+
+- 7c72ce5: Fix package packing and publishing from a clean checkout so the tarball always includes the built `dist/` entrypoints even though `dist/` is gitignored. Packed-export validation now exercises that clean-checkout flow as a standalone check, and the local changeset gate now considers staged, unstaged, and untracked release-affecting files before it decides whether a changeset is required.
+
 ## 2.0.0-alpha.7
 
 ### Minor Changes
