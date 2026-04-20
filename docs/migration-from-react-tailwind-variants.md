@@ -656,4 +656,4 @@ Re-test these areas carefully after migration:
 - [README](../README.md)
 - [Recipes and components guide](./recipes-and-components.md)
 - [API reference](./api-reference.md)
-- [Legacy v1 reference](./react-tailwind-variants-v1.md)
+- [Legacy v1 docs entrypoint](./react-tailwind-variants-v1.md)

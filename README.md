@@ -8,8 +8,8 @@
 `react-class-variants` is a recipe-first, type-safe API for composing CSS classes in React components.
 
 This documentation describes the current `react-class-variants` v2.x surface.
-If you are looking for the legacy `react-tailwind-variants` v1.x docs, use the
-[v1 reference](./docs/react-tailwind-variants-v1.md).
+If you are looking for the legacy `react-tailwind-variants` v1.x docs, start
+with the [legacy v1 docs entrypoint](./docs/react-tailwind-variants-v1.md).
 
 The current v2 alpha surface is built around:
 
@@ -426,6 +426,6 @@ If you are new to the package, use this order:
 Other docs:
 
 - [Benchmarks guide](./docs/benchmarks.md)
-- [Legacy v1 reference](./docs/react-tailwind-variants-v1.md)
+- [Legacy v1 docs entrypoint](./docs/react-tailwind-variants-v1.md)
 - [Contributing](./CONTRIBUTING.md)
 - [Release process](./docs/release-process.md)
