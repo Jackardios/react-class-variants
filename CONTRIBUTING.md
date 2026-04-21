@@ -180,11 +180,11 @@ Do not treat any one of those layers as authoritative on its own. The shipped co
 - `pack` and `publish` build `dist/` via `prepack`, because `dist/` is gitignored and the tarball must remain valid from a clean checkout.
 - The release workflow dispatches `CI` for the `changeset-release/next` branch after it updates the version-package PR, so release PRs receive the same checks as normal PRs.
 - GitHub release bodies are generated from the matching `CHANGELOG.md` section.
-- Before publishing, the release workflow validates both npm dist-tag credentials and GitHub release/changelog readiness.
-- On GitHub Actions, npm dist-tag sync uses npm's OIDC exchange flow instead of a long-lived `NPM_TOKEN` secret.
+- Before publishing, the release workflow validates GitHub release/changelog readiness and checks whether automated npm dist-tag repair is available in the current environment.
+- On GitHub Actions, npm trusted publishing covers `npm publish`, but npm currently requires interactive auth or a token for `dist-tag` mutations, so OIDC-only runs log manual repair commands instead of attempting the mutation.
 - The publish step is intentionally rerunnable: if npm publication already succeeded on a prior attempt, the workflow skips republishing, treats an already-tagged earlier release commit as a clean no-op on newer commits, and only recreates the local `v*` tag when it has a provenance signal for the current `HEAD`.
-- After a successful alpha publish, the release workflow syncs npm dist-tags to the repo policy: prereleases move `alpha` to the new version and keep `latest` on the newest stable release when one exists, otherwise `latest` remains on the published prerelease.
-- Post-publish reconciliation attempts npm dist-tag sync and GitHub Release sync as separate workflow steps before the final failure gate, so one failure does not prevent the other repair path from executing.
+- After a successful alpha publish, verify npm dist-tags explicitly. Token-authenticated repair can sync them to repo policy automatically; OIDC-only runs leave any required `dist-tag add` commands in the logs for manual follow-up.
+- Post-publish reconciliation still attempts GitHub Release sync independently of npm tag state, so a manual npm follow-up does not block release-page repair.
 - The npm post-publish path waits through short registry propagation delays before deciding that a freshly published version or dist-tag update is still missing.
 - The current workflow is also valid for the stable `2.0.0` release from `next`; if the active release branch changes after alpha, update the workflow branch filters together with that policy change.
 - If that sync step fails, verify npm dist-tags explicitly because prerelease tagging affects install behavior.

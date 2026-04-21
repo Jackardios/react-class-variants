@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import {
   execAuthenticatedNpm,
+  getReleaseAuthStrategy,
   getReleaseRegistryUrl,
   resolveReleaseAuth,
   sanitizeNpmCliEnv,
@@ -136,6 +137,14 @@ async function addDistTag(packageName, tag, version, auth) {
   }
 }
 
+function formatDistTagCommands(packageName, updates) {
+  return updates
+    .map(
+      ([tag, version]) => `npm dist-tag add ${packageName}@${version} ${tag}`
+    )
+    .join('\n');
+}
+
 async function readReleaseConfig() {
   const packageJson = JSON.parse(
     await readFile(new URL('../package.json', import.meta.url), 'utf8')
@@ -199,16 +208,27 @@ export async function syncDistTags() {
     return;
   }
 
+  const authStrategy = getReleaseAuthStrategy(process.env);
+
+  if (authStrategy === 'oidc') {
+    console.warn(
+      `Skipping automated npm dist-tag repair for ${packageName}@${publishedVersion} because npm trusted publishing OIDC currently authenticates publish, but not dist-tag mutations.`
+    );
+    console.warn('Pending dist-tag updates:');
+    for (const [tag, version] of pendingUpdates) {
+      console.warn(`- ${tag} -> ${version}`);
+    }
+    console.warn('Repair manually with:');
+    console.warn(formatDistTagCommands(packageName, pendingUpdates));
+    return;
+  }
+
   const auth = await resolveReleaseAuth({
     packageName,
     registryUrl,
   });
 
-  console.log(
-    `Using ${
-      auth.source === 'oidc' ? 'npm OIDC exchange' : 'token'
-    } auth for dist-tag updates.`
-  );
+  console.log(`Using token auth for dist-tag updates.`);
 
   for (const [tag, version] of pendingUpdates) {
     console.log(`Setting npm dist-tag ${tag} -> ${version}`);

@@ -26,7 +26,7 @@ Canonical repository guidance for LLMs and coding agents working in this repo.
 - Documentation-only changes usually do not need a changeset.
 - If a prerelease redesign invalidates pending `.changeset/*.md` files, rewrite or delete the stale ones before the next alpha so `changeset pre exit` does not resurrect obsolete notes.
 - Alpha publishing happens from GitHub Actions via npm trusted publishing; avoid manual `npm publish` unless explicitly required.
-- The release workflow validates dist-tag credentials before publish and uses npm's OIDC exchange flow for automated dist-tag sync on GitHub Actions.
+- The release workflow checks whether automated dist-tag repair is available before publish. With npm trusted publishing only, dist-tag drift must be repaired manually because npm currently limits trusted publishing auth to `npm publish`.
 - Package tarballs must remain valid from a clean checkout where `dist/` is gitignored; `pack`/`publish` therefore rely on a `prepack` build step.
 - After a successful alpha publish, verify npm dist-tags explicitly because prerelease tagging affects install behavior.
 - When the release process changes, keep `AGENTS.md`, `CONTRIBUTING.md`, and `docs/release-process.md` aligned.
@@ -245,10 +245,10 @@ For changes that touch recipe resolution, class merging, `styled()` behavior, pr
 - The `Release` workflow verifies the same Node `20.x` / `22.x` / `24.x` matrix as CI before publishing.
 - The `Release` workflow manually dispatches `CI` on `changeset-release/next` after `changesets/action` updates the release branch, because pushes made with the default GitHub Actions token do not trigger `push` or `pull_request` workflows.
 - GitHub release bodies are generated from the matching `CHANGELOG.md` section for each `v*` tag.
-- Before publish, the workflow validates changeset file structure, GitHub release/changelog readiness, and npm dist-tag credentials.
+- Before publish, the workflow validates changeset file structure and GitHub release/changelog readiness, and it checks whether automated dist-tag repair is available in the current environment.
 - The publish path is rerunnable after a partial success: if the version is already on npm, the workflow skips republishing, treats an already-tagged earlier release commit as a clean no-op on newer commits, and restores the local release tag only when it has a provenance signal for the current `HEAD`.
 - Dist-tags follow an explicit policy in CI: prereleases move `alpha` to the published version and keep `latest` on the newest stable release when one exists, otherwise `latest` remains on the published prerelease. Stable publishes move `latest`.
-- Post-publish reconciliation attempts both npm dist-tag sync and GitHub Release sync before failing the job, so one post-publish error does not mask the other repair path.
+- Post-publish reconciliation always attempts GitHub Release sync. npm dist-tag sync is attempted only when token-based auth is available; OIDC-only runs log the required manual repair commands instead of failing the publish.
 - npm registry reads in the release path are retry-aware so short propagation delays after publish do not immediately look like missing versions or broken dist-tags.
 - The current automation covers alpha releases and the stable `2.0.0` publish from `next`; if the release branch changes after alpha, update the workflow branch filters in the same change.
 

@@ -77,7 +77,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm run release:github:preflight
-      - name: Validate npm dist-tag auth
+      - name: Check npm dist-tag repair availability
         if: steps.changesets.outputs.hasChangesets == 'false'
         run: pnpm run release:dist-tags:preflight
       - name: Publish package to npm

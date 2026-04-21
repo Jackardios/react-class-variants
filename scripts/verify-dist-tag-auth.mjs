@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
 import {
   execAuthenticatedNpm,
+  getReleaseAuthStrategy,
   resolveReleaseAuth,
   sanitizeNpmCliEnv,
 } from './npm-release-auth.mjs';
@@ -39,6 +40,15 @@ if (!(await packageExistsOnRegistry())) {
   process.exit(0);
 }
 
+const authStrategy = getReleaseAuthStrategy(process.env);
+
+if (authStrategy === 'oidc') {
+  console.log(
+    `npm trusted publishing OIDC is available for ${packageName}, but npm currently limits trusted publishing auth to the publish operation. Automated dist-tag repair will be skipped and any remaining drift must be repaired manually.`
+  );
+  process.exit(0);
+}
+
 const auth = await resolveReleaseAuth({ packageName });
 
 if (auth.source === 'token') {
@@ -50,7 +60,5 @@ if (auth.source === 'token') {
 }
 
 console.log(
-  `Validated npm OIDC exchange for dist-tag updates on ${packageName}${
-    auth.expiresAt ? ` (expires ${auth.expiresAt})` : ''
-  }.`
+  `npm dist-tag repair is unavailable for ${packageName} in the current environment.`
 );

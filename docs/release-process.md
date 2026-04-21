@@ -41,16 +41,16 @@ Defined in `.github/workflows/release.yml`.
 - uses `changesets/action`
 - uses npm trusted publishing via GitHub Actions OIDC
 - validates GitHub release/changelog readiness with `scripts/verify-github-release.mjs`
-- validates npm dist-tag auth before publish with `scripts/verify-dist-tag-auth.mjs`
+- checks whether automated npm dist-tag repair is available with `scripts/verify-dist-tag-auth.mjs`
 - publishes through the rerunnable `scripts/release-publish.mjs` wrapper
 - relies on the package `prepack` lifecycle to build `dist/` for clean-checkout tarballs because `dist/` is gitignored
 - relies on `scripts/test-types-exports.mjs` to validate packed exports in that same clean-checkout style locally
-- reconciles npm dist-tags and GitHub Releases in separate workflow steps so both are attempted before the job fails
+- reconciles GitHub Releases after publish, and attempts npm dist-tag repair only when token-based auth is available
 
 The release workflow has two paths:
 
 1. If pending changesets exist on `next`, `changesets/action` opens or updates the `Version Packages` release PR, then `scripts/trigger-release-branch-ci.mjs` waits for `changeset-release/next` to appear and dispatches the normal `CI` workflow on that branch.
-2. If no pending changesets remain on `next`, the workflow validates GitHub release/changelog readiness, validates npm dist-tag auth, runs the rerunnable publish wrapper, pushes any `v*` tags created on that commit, then runs npm dist-tag sync and GitHub Release sync as separate post-publish steps before applying a final failure gate.
+2. If no pending changesets remain on `next`, the workflow validates GitHub release/changelog readiness, checks npm dist-tag repair availability, runs the rerunnable publish wrapper, pushes any `v*` tags created on that commit, then runs npm dist-tag sync and GitHub Release sync as separate post-publish steps. In OIDC-only runs, the npm step reports any required manual `dist-tag add` commands instead of attempting the mutation.
 
 In practice, this means the version-package PR is the staging step and the publish happens after that PR is merged back into `next`.
 
@@ -79,7 +79,7 @@ In practice, this means the version-package PR is the staging step and the publi
 - v2 releases are published from `next`
 - prerelease mode stays active under the `alpha` tag until the stable `2.0.0` transition
 - publishing happens from GitHub Actions through npm trusted publishing
-- the release workflow validates both GitHub release/changelog readiness and npm dist-tag credentials before publish so obvious metadata failures stop before npm publication
+- the release workflow validates GitHub release/changelog readiness before publish and checks whether automated npm dist-tag repair is available in the current environment
 - the publish wrapper is safe to rerun after a partial success: it skips duplicate publishes, treats an already-tagged earlier release commit as a no-op on newer commits, and only recreates a missing local tag when it has provenance for the current `HEAD`
 - post-publish npm lookups retry through short registry propagation delays before deciding that a version or dist-tag update is missing
 - the same release path works for the stable `2.0.0` publish from `next`; if you later move day-to-day releases from `next` to `main`, update workflow branch filters in the same change
@@ -88,13 +88,13 @@ In practice, this means the version-package PR is the staging step and the publi
 Important notes:
 
 - do not assume npm dist-tags are in the state you want after a publish unless the sync step has completed successfully
-- `npm publish` and `npm dist-tag` are separate operations, so the workflow exchanges its GitHub Actions OIDC token for a short-lived npm registry token before mutating dist-tags
-- GitHub Releases are reconciled in the same post-publish phase, so a dist-tag failure should not prevent the workflow from still attempting release-page repair
+- npm currently limits trusted publishing auth to `npm publish`, so OIDC-only runs cannot mutate dist-tags and must leave any repair commands for a maintainer to run manually
+- GitHub Releases are reconciled in the same post-publish phase, so a manual dist-tag follow-up does not prevent the workflow from still attempting release-page repair
 - if a prerelease redesign invalidates pending changesets, rewrite or delete the stale `.changeset/*.md` files before the next alpha so `changeset pre exit` does not pull obsolete notes into the stable release plan
 
 ## Post-Publish Verification
 
-After a successful alpha publish, the workflow verifies and, when needed, repairs npm dist-tags to this policy:
+After a successful alpha publish, verify npm dist-tags against this policy:
 
 - `alpha` points at the newest prerelease
 - `latest` points at the newest stable release when one exists
@@ -106,7 +106,7 @@ Manual audit remains worthwhile:
 npm view react-class-variants version dist-tags --json
 ```
 
-If the automated step cannot repair tags, update them explicitly:
+If the workflow logs pending dist-tag updates, repair them explicitly:
 
 ```bash
 npm dist-tag add react-class-variants@<published-version> alpha
@@ -116,7 +116,7 @@ npm dist-tag add react-class-variants@<latest-stable-version> latest # only if a
 Why this matters:
 
 - prerelease tagging affects install behavior
-- trusted publishing covers package publication, while the release workflow uses npm's OIDC token-exchange API for post-publish dist-tag management
+- trusted publishing covers package publication, but npm currently requires interactive auth or a token for post-publish dist-tag management
 
 ## GitHub Release Notes
 
@@ -161,7 +161,7 @@ These settings live outside the repository and should be reviewed periodically.
 
 - keep trusted publishing configured for `react-class-variants`
 - keep the package's trusted publisher configuration pointed at `.github/workflows/release.yml` on `Jackardios/react-class-variants`
-- repository-level `NPM_TOKEN` is no longer required for automated release dist-tag sync on GitHub Actions
+- repository-level `NPM_TOKEN` is not required for publish, but without a separate token or interactive maintainer auth the workflow cannot repair dist-tags automatically
 - if legacy releases still matter, keep trusted publishing configured for `react-tailwind-variants`
 - optional manual repair still needs interactive npm auth or a valid npm token outside the trusted-publishing workflow
 
