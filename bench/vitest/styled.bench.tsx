@@ -3,7 +3,7 @@ import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { bench, describe } from 'vitest';
-import { recipe, styled } from '../../src';
+import { defineConfig, recipe } from '../../src';
 import {
   complexRootConfig,
   rootScenarioInputs,
@@ -18,6 +18,7 @@ import {
   simpleComponentProps,
 } from '../fixtures/react.mjs';
 
+const { styled } = defineConfig();
 const simpleButtonRecipe = recipe(simpleRootConfig);
 const complexButtonRecipe = recipe(complexRootConfig);
 

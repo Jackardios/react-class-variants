@@ -10,9 +10,10 @@ import {
   defineConfig,
   defineViewProps,
   recipe,
-  styled,
   type RootStyledViewProps,
 } from '../src';
+
+const { styled } = defineConfig();
 
 describe('styled()', () => {
   it('renders root recipes through the simple fast path', () => {

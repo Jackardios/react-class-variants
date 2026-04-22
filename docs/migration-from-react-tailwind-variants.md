@@ -24,19 +24,19 @@ If you are learning v2 from scratch, start with the [README](../README.md), the
 
 ## High-Level Mapping
 
-| v1 export or pattern                 | v2 replacement                                              | Notes                                                   |
-| ------------------------------------ | ----------------------------------------------------------- | ------------------------------------------------------- |
-| `react-tailwind-variants`            | `react-class-variants@alpha`                                | package rename and new runtime requirements             |
-| `variants(config)`                   | `recipe(config)`                                            | use `react-class-variants/core` in recipe-only modules  |
-| `styled(base, config)`               | `const r = recipe(config)` then `styled(base, r, options?)` | config definition and component creation are separate   |
-| `variantProps(config)`               | `recipe.resolve(input, options?)`                           | returns structured output, not one merged prop object   |
-| `extractVariantsConfig(Component)`   | keep the config explicitly with `defineRecipeConfig()`      | no runtime extraction helper in v2                      |
-| `VariantPropsOf<typeof Component>`   | `VariantProps<typeof someRecipe>`                           | types are recipe-first and use the recipe instance      |
-| `VariantsConfigOf<typeof Component>` | `RecipeConfigOf<typeof someRecipe>`                         | the recipe carries the config type, not the config data |
-| `asChild`                            | `withRender: true` plus `render`, or a wrapper component    | intrinsic bases only                                    |
-| `cx()`                               | your own `clsx` or `tailwind-merge` utility                 | no v2 export                                            |
-| `tw`                                 | plain strings or your own tagged template                   | no v2 export                                            |
-| automatic `tailwind-merge`           | `defineConfig({ merge: twMerge })`                          | merge is explicit in v2                                 |
+| v1 export or pattern                 | v2 replacement                                                                           | Notes                                                   |
+| ------------------------------------ | ---------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `react-tailwind-variants`            | `react-class-variants@alpha`                                                             | package rename and new runtime requirements             |
+| `variants(config)`                   | `recipe(config)`                                                                         | use `react-class-variants/core` in recipe-only modules  |
+| `styled(base, config)`               | `const { styled } = defineConfig(); const r = recipe(config); styled(base, r, options?)` | config definition and component creation are separate   |
+| `variantProps(config)`               | `recipe.resolve(input, options?)`                                                        | returns structured output, not one merged prop object   |
+| `extractVariantsConfig(Component)`   | keep the config explicitly with `defineRecipeConfig()`                                   | no runtime extraction helper in v2                      |
+| `VariantPropsOf<typeof Component>`   | `VariantProps<typeof someRecipe>`                                                        | types are recipe-first and use the recipe instance      |
+| `VariantsConfigOf<typeof Component>` | `RecipeConfigOf<typeof someRecipe>`                                                      | the recipe carries the config type, not the config data |
+| `asChild`                            | `withRender: true` plus `render`, or a wrapper component                                 | intrinsic bases only                                    |
+| `cx()`                               | your own `clsx` or `tailwind-merge` utility                                              | no v2 export                                            |
+| `tw`                                 | plain strings or your own tagged template                                                | no v2 export                                            |
+| automatic `tailwind-merge`           | `defineConfig({ merge: twMerge })`                                                       | merge is explicit in v2                                 |
 
 ## A Pragmatic First Step
 
@@ -72,7 +72,9 @@ import { styled, variantProps, variants } from 'react-tailwind-variants';
 After:
 
 ```ts
-import { recipe, styled } from 'react-class-variants';
+import { defineConfig, recipe } from 'react-class-variants';
+
+const { styled } = defineConfig();
 ```
 
 If you only need recipe creation in a non-React module:
@@ -219,7 +221,9 @@ export const Button = styled('button', {
 After:
 
 ```tsx
-import { recipe, styled } from 'react-class-variants';
+import { defineConfig, recipe } from 'react-class-variants';
+
+const { styled } = defineConfig();
 
 const buttonRecipe = recipe({
   base: 'inline-flex items-center rounded-md font-medium',
@@ -592,7 +596,7 @@ There is no single replacement import for all of them.
 
 Use:
 
-- `recipe()` and `styled()` for the main API
+- `recipe()` and `defineConfig().styled()` for the main API
 - `recipe.resolve()` for prop splitting
 - `defineRecipeConfig()` and `RecipeConfigOf` for config retention
 - your own class utility for standalone `cx()`-style merging
@@ -634,7 +638,7 @@ Re-test these areas carefully after migration:
 - [ ] Rewrite every `compoundVariants` entry from `variants: { ... }` to flat
       selectors
 - [ ] Replace `styled(base, config)` with `recipe(config)` plus
-      `styled(base, recipe)`
+      `defineConfig().styled(base, recipe)`
 - [ ] Replace `variantProps()` with `recipe.resolve()`
 - [ ] Replace `asChild` with `withRender: true` plus `render`, or with a wrapper
 - [ ] Replace `extractVariantsConfig()` by keeping the config explicitly with

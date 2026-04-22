@@ -14,7 +14,6 @@ import {
   defineConfig,
   defineViewProps,
   recipe,
-  styled,
   type RecipeInput,
   type RecipeResolved,
   type ResolveOptions,
@@ -24,6 +23,8 @@ import {
   type SlotStyledViewProps,
   type VariantProps,
 } from '../../../dist';
+
+const { styled } = defineConfig();
 
 const badge = recipe({
   base: 'inline-flex rounded-full',

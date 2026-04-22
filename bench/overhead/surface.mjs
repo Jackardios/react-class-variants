@@ -37,7 +37,9 @@ export function getPublicSurface(coreModule, reactModule) {
       ? coreModule.defineConfig()
       : null;
   const reactFactory =
-    typeof reactModule.defineReactConfig === 'function'
+    typeof reactModule.defineConfig === 'function'
+      ? reactModule.defineConfig()
+      : typeof reactModule.defineReactConfig === 'function'
       ? reactModule.defineReactConfig()
       : null;
 
@@ -89,7 +91,10 @@ export function getPublicSurface(coreModule, reactModule) {
       }
     : reactFactory?.styled
     ? {
-        exportName: 'defineReactConfig',
+        exportName:
+          typeof reactModule.defineConfig === 'function'
+            ? 'defineConfig'
+            : 'defineReactConfig',
         kind: 'factory',
         module: 'react',
         property: 'styled',

@@ -4,7 +4,6 @@ export {
   defineViewProps,
   mergeProps,
   mergeRefs,
-  styled,
   useMergeRefs,
 } from './react';
 export { recipe } from './core';

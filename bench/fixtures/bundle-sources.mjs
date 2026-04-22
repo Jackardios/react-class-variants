@@ -56,7 +56,8 @@ console.log(button({ tone: 'secondary' }));`,
       'classname-variants/react': `import { styled } from 'classname-variants/react';
 const Button = styled('button', ${recipeConfig});
 console.log(Button);`,
-      'react-class-variants': `import { recipe, styled } from 'react-class-variants';
+      'react-class-variants': `import { defineConfig, recipe } from 'react-class-variants';
+const { styled } = defineConfig();
 const button = recipe(${recipeConfig});
 const Button = styled('button', button);
 console.log(Button);`,

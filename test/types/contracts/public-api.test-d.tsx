@@ -4,6 +4,7 @@ import {
   expectNotAssignable,
   expectType,
 } from 'tsd';
+import * as packageRoot from '../../../dist';
 import {
   defineRecipeConfig,
   defineViewProps,
@@ -23,7 +24,6 @@ import {
   mergeProps,
   mergeRefs,
   useMergeRefs,
-  styled,
 } from '../../../dist';
 import { recipe as coreRecipe } from '../../../dist/core';
 
@@ -99,6 +99,7 @@ const { recipe: configuredRecipe, styled: configuredStyled } = defineConfig({
 });
 const { recipe: strictConfiguredRecipe, styled: strictConfiguredStyled } =
   defineConfig({ validate: 'always' });
+const { styled } = defineConfig();
 const configuredLink = configuredRecipe({
   base: 'inline-flex',
   variants: {
@@ -134,10 +135,11 @@ type LinkVariants = VariantProps<typeof link>;
 type LinkResolvedVariants = ResolvedVariantProps<typeof link>;
 
 expectAssignable<AnyRecipe>(link);
-expectAssignable<StyledFn>(styled);
+expectAssignable<StyledFn>(configuredStyled);
 expectAssignable<LinkConfig>(linkConfig);
 defineViewProps<{ icon?: string }>('icon');
 expectType<typeof linkConfig>(defineRecipeConfig(linkConfig));
+expectError(packageRoot.styled);
 expectAssignable<LinkConfig>({
   base: 'inline-flex',
   variants: {

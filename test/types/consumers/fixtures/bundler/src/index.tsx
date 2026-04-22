@@ -3,7 +3,6 @@ import {
   defineRecipeConfig,
   defineViewProps,
   recipe,
-  styled,
   type RecipeConfigOf,
   type RecipeInput,
   type RootStyledViewProps,
@@ -22,6 +21,7 @@ type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
   : false;
 type Expect<T extends true> = T;
 
+const { styled } = defineConfig();
 const { recipe: configuredRecipe, styled: configuredStyled } = defineConfig();
 const { recipe: configuredCoreRecipe } = defineCoreConfig();
 const { recipe: strictConfiguredRecipe, styled: strictConfiguredStyled } =

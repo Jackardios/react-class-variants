@@ -14,7 +14,7 @@ with the [legacy v1 docs entrypoint](./docs/react-tailwind-variants-v1.md).
 The current v2 alpha surface is built around:
 
 - one adaptive `recipe()` primitive
-- one React builder, `styled()`
+- one React builder, `styled()`, exposed through `defineConfig()`
 - explicit view-consumed component props through `defineViewProps()`
 - explicit `render` polymorphism
 - explicit merge configuration through `defineConfig()`
@@ -42,28 +42,30 @@ pnpm add tailwind-merge
 
 ## Mental Model
 
-| Need                                       | Use                              |
-| ------------------------------------------ | -------------------------------- |
-| Compute one root class string              | `recipe(input)`                  |
-| Compute slot class strings                 | `recipe(input).slotName()`       |
-| Split variant props from a full prop bag   | `recipe.resolve(input, options)` |
-| Build a React component from a recipe      | `styled(base, recipe, options?)` |
-| Declare component props consumed by `view` | `defineViewProps<T>(...keys)`    |
-| Share merge or validate behavior           | `defineConfig(options)`          |
-| Keep typed config objects around           | `defineRecipeConfig(config)`     |
-| Avoid React runtime imports                | `react-class-variants/core`      |
+| Need                                       | Use                                 |
+| ------------------------------------------ | ----------------------------------- |
+| Compute one root class string              | `recipe(input)`                     |
+| Compute slot class strings                 | `recipe(input).slotName()`          |
+| Split variant props from a full prop bag   | `recipe.resolve(input, options)`    |
+| Build a React component from a recipe      | `const { styled } = defineConfig()` |
+| Declare component props consumed by `view` | `defineViewProps<T>(...keys)`       |
+| Share merge or validate behavior           | `defineConfig(options)`             |
+| Keep typed config objects around           | `defineRecipeConfig(config)`        |
+| Avoid React runtime imports                | `react-class-variants/core`         |
 
 Four rules explain most of the package:
 
 1. `recipe()` becomes a root recipe when you use `base`, and a slotted recipe when you use `slots`.
 2. `resolve()` is the full-prop-bag API. Direct recipe calls stay variant-oriented.
-3. `styled()` accepts intrinsic bases and custom React component bases.
+3. Get `styled()` from `defineConfig()`; it accepts intrinsic bases and custom React component bases.
 4. Slotted recipes require `view`, and `render` is opt-in through `withRender: true` for intrinsic bases only.
 
 ## Quick Start
 
 ```tsx
-import { recipe, styled } from 'react-class-variants';
+import { defineConfig, recipe } from 'react-class-variants';
+
+const { styled } = defineConfig();
 
 const buttonRecipe = recipe({
   base: 'inline-flex items-center justify-center rounded-md font-medium transition',
@@ -173,7 +175,9 @@ Tailwind project normally.
 Use `slots` when different parts of the component need different classes, then render them through a `view` component:
 
 ```tsx
-import { recipe, styled } from 'react-class-variants';
+import { defineConfig, recipe } from 'react-class-variants';
+
+const { styled } = defineConfig();
 
 const buttonRecipe = recipe({
   slots: {
@@ -397,8 +401,7 @@ import {
 Most users will work with these package-root APIs from `react-class-variants`:
 
 - `recipe()`
-- `styled()`
-- `defineConfig()`
+- `defineConfig()` for configured `recipe()` and `styled()`
 - `defineRecipeConfig()`
 - `defineViewProps()`
 - public core and React types

@@ -3,7 +3,6 @@ import { expectError, expectType } from 'tsd';
 import {
   defineConfig as defineRootConfig,
   recipe as rootRecipe,
-  styled,
 } from '../../../dist';
 import {
   defineConfig as defineCoreConfig,
@@ -40,6 +39,7 @@ const coreBadgeVariants: CoreBadgeVariants = { tone: 'info' };
 void coreBadgeVariants;
 
 const reactConfig = defineRootConfig();
+const { styled } = defineRootConfig();
 const buttonRecipe = rootRecipe({
   base: 'inline-flex',
   variants: {

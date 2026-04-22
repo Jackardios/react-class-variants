@@ -25,8 +25,10 @@ const nodeNextCompilerOptions = {
 
 const exactProbeFile = resolve(repoRoot, '__editor_probe_exact__.tsx');
 const exactProbeSource = `
-import { recipe, styled, type VariantProps } from 'react-class-variants';
+import { defineConfig, recipe, type VariantProps } from 'react-class-variants';
 import { recipe as coreRecipe } from 'react-class-variants/core';
+
+const { styled } = defineConfig();
 
 const badge = recipe({
   base: 'inline-flex rounded-full',
@@ -193,7 +195,9 @@ const completionProbeFile = resolve(
   '__editor_probe_completion__.tsx'
 );
 const completionProbeSource = `
-import { defineRecipeConfig, recipe, styled } from 'react-class-variants';
+import { defineConfig, defineRecipeConfig, recipe } from 'react-class-variants';
+
+const { styled } = defineConfig();
 
 const badge = recipe({
   base: 'inline-flex rounded-full',
@@ -493,25 +497,25 @@ const resolvedInputClassNameQuickInfo = quickInfoText(
   'resolvedInput.resolvedProps.className;\n\ntype InputVariants',
   'className'
 );
-const styledImportDefinitions = definitionSpans(
+const defineConfigImportDefinitions = definitionSpans(
   exactLanguageService,
   exactProbeFile,
   exactProbeSource,
-  "import { recipe, styled, type VariantProps } from 'react-class-variants';",
-  'styled'
+  "import { defineConfig, recipe, type VariantProps } from 'react-class-variants';",
+  'defineConfig'
 );
 const recipeImportDefinitions = definitionSpans(
   exactLanguageService,
   exactProbeFile,
   exactProbeSource,
-  "import { recipe, styled, type VariantProps } from 'react-class-variants';",
+  "import { defineConfig, recipe, type VariantProps } from 'react-class-variants';",
   'recipe'
 );
 const variantPropsImportDefinitions = definitionSpans(
   exactLanguageService,
   exactProbeFile,
   exactProbeSource,
-  "import { recipe, styled, type VariantProps } from 'react-class-variants';",
+  "import { defineConfig, recipe, type VariantProps } from 'react-class-variants';",
   'VariantProps'
 );
 const coreRecipeImportDefinitions = definitionSpans(
@@ -521,12 +525,12 @@ const coreRecipeImportDefinitions = definitionSpans(
   "import { recipe as coreRecipe } from 'react-class-variants/core';",
   'coreRecipe'
 );
-const nodeNextStyledImportDefinitions = definitionSpans(
+const nodeNextDefineConfigImportDefinitions = definitionSpans(
   nodeNextExactLanguageService,
   exactProbeFile,
   exactProbeSource,
-  "import { recipe, styled, type VariantProps } from 'react-class-variants';",
-  'styled'
+  "import { defineConfig, recipe, type VariantProps } from 'react-class-variants';",
+  'defineConfig'
 );
 const nodeNextCoreRecipeImportDefinitions = definitionSpans(
   nodeNextExactLanguageService,
@@ -572,19 +576,19 @@ assert.equal(
   'root recipe.resolve should always include a string className on resolvedProps.'
 );
 assert.equal(
-  styledImportDefinitions.length,
+  defineConfigImportDefinitions.length,
   1,
-  'styled should resolve to a single exported definition target.'
+  'defineConfig should resolve to a single exported definition target.'
 );
 assert.match(
-  styledImportDefinitions[0].fileName.replace(/\\/g, '/'),
+  defineConfigImportDefinitions[0].fileName.replace(/\\/g, '/'),
   /\/dist\/index\.d\.ts$/,
-  'styled should navigate to the root declaration surface.'
+  'defineConfig should navigate to the root declaration surface.'
 );
 assert.equal(
-  styledImportDefinitions[0].text,
-  'styled',
-  'styled should point to the exported const symbol instead of overload-only declarations.'
+  defineConfigImportDefinitions[0].text,
+  'defineConfig',
+  'defineConfig should point to the root declaration export.'
 );
 assert.equal(
   recipeImportDefinitions.length,
@@ -632,14 +636,14 @@ assert.equal(
   'core recipe should point to the subpath declaration export.'
 );
 assert.equal(
-  nodeNextStyledImportDefinitions.length,
+  nodeNextDefineConfigImportDefinitions.length,
   1,
-  'styled should resolve to a single exported definition target in NodeNext mode.'
+  'defineConfig should resolve to a single exported definition target in NodeNext mode.'
 );
 assert.match(
-  nodeNextStyledImportDefinitions[0].fileName.replace(/\\/g, '/'),
+  nodeNextDefineConfigImportDefinitions[0].fileName.replace(/\\/g, '/'),
   /\/dist\/index\.d\.ts$/,
-  'styled should navigate to the root declaration surface in NodeNext mode.'
+  'defineConfig should navigate to the root declaration surface in NodeNext mode.'
 );
 assert.equal(
   nodeNextCoreRecipeImportDefinitions.length,

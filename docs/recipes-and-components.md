@@ -6,14 +6,14 @@ If you want exact option shapes, exported types, or runtime rules, use the [API 
 
 ## When to Use What
 
-| You need to...                           | Use                              |
-| ---------------------------------------- | -------------------------------- |
-| compute one class string                 | `recipe(input)`                  |
-| compute many slot-specific class strings | `recipe(input).slotName()`       |
-| split variant props from a full prop bag | `recipe.resolve(input, options)` |
-| build a React component from a recipe    | `styled(base, recipe, options?)` |
-| share merge and validation behavior      | `defineConfig(options)`          |
-| keep recipe modules React-free           | `react-class-variants/core`      |
+| You need to...                           | Use                                             |
+| ---------------------------------------- | ----------------------------------------------- |
+| compute one class string                 | `recipe(input)`                                 |
+| compute many slot-specific class strings | `recipe(input).slotName()`                      |
+| split variant props from a full prop bag | `recipe.resolve(input, options)`                |
+| build a React component from a recipe    | `defineConfig().styled(base, recipe, options?)` |
+| share merge and validation behavior      | `defineConfig(options)`                         |
+| keep recipe modules React-free           | `react-class-variants/core`                     |
 
 ## 1. Start with a Root Recipe
 
@@ -103,8 +103,10 @@ Arrays in compound selectors mean “match any of these values”.
 ## 2. Turn It into a Component
 
 ```tsx
-import { styled } from 'react-class-variants';
+import { defineConfig } from 'react-class-variants';
 import { badgeRecipe } from './badge.recipe';
+
+const { styled } = defineConfig();
 
 export const Badge = styled('span', badgeRecipe);
 ```
@@ -129,7 +131,9 @@ For root recipes this is the default fast path:
 Use `propAliases` when the public variant name would otherwise collide with a host prop such as `size` on `<input>`.
 
 ```tsx
-import { recipe, styled } from 'react-class-variants';
+import { defineConfig, recipe } from 'react-class-variants';
+
+const { styled } = defineConfig();
 
 const inputRecipe = recipe({
   base: 'block rounded-md border',
@@ -221,7 +225,9 @@ export function InputField({ label, htmlSize, ...props }: InputFieldProps) {
 Use slot recipes when different parts of the component need different classes.
 
 ```tsx
-import { recipe, styled } from 'react-class-variants';
+import { defineConfig, recipe } from 'react-class-variants';
+
+const { styled } = defineConfig();
 
 const buttonRecipe = recipe({
   slots: {
@@ -404,7 +410,9 @@ Important note:
 Use `host.props` when your `view` needs a pass-through prop, use `host.render({ className })` when the wrapper needs extra host-level classes, and use top-level `slotClassNames` when callers need to target non-host slots from outside.
 
 ```tsx
-import { recipe, styled } from 'react-class-variants';
+import { defineConfig, recipe } from 'react-class-variants';
+
+const { styled } = defineConfig();
 
 const actionRecipe = recipe({
   base: 'inline-flex items-center rounded-md px-3 py-2 text-sm font-medium',
@@ -459,7 +467,9 @@ host, declare it with `defineViewProps()`. This is especially useful for
 intrinsic hosts, where leaking extra props to the DOM would be invalid:
 
 ```tsx
-import { defineViewProps, recipe, styled } from 'react-class-variants';
+import { defineConfig, defineViewProps, recipe } from 'react-class-variants';
+
+const { styled } = defineConfig();
 
 const buttonRecipe = recipe({
   slots: {
@@ -528,7 +538,9 @@ Use `forwardProps` when the base component needs a resolved variant value in its
 
 ```tsx
 import { forwardRef, type ComponentPropsWithoutRef } from 'react';
-import { recipe, styled } from 'react-class-variants';
+import { defineConfig, recipe } from 'react-class-variants';
+
+const { styled } = defineConfig();
 
 const NavLinkBase = forwardRef<
   HTMLAnchorElement,
@@ -609,7 +621,9 @@ When you are inside `view`, `host.props` follows the resolved shape:
 `render` remains opt-in through `withRender: true` and only exists for intrinsic bases.
 
 ```tsx
-import { recipe, styled } from 'react-class-variants';
+import { defineConfig, recipe } from 'react-class-variants';
+
+const { styled } = defineConfig();
 
 const linkRecipe = recipe({
   base: 'inline-flex items-center rounded-md font-medium',

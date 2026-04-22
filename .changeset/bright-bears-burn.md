@@ -4,7 +4,8 @@
 
 Replace the v2 alpha API with the RFC-backed root React surface:
 
-- export `recipe()`, `styled()`, `defineConfig()`, React utilities, and public types from `react-class-variants`
+- export `recipe()`, `defineConfig()`, React utilities, and public types from `react-class-variants`
+- expose `styled()` through `defineConfig()`
 - make `recipe()` adapt from config shape into root or slotted recipes
 - require explicit slot maps for slotted variant and compound class values
 - make `styled()` accept intrinsic tags and custom React component bases

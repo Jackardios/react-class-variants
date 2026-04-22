@@ -87,9 +87,12 @@ const packageRoot = await import(pathToFileURL(packageRootPath).href);
 const core = await import(pathToFileURL(corePath).href);
 
 assert.equal(typeof packageRoot.defineViewProps, 'function');
+assert.equal('styled' in packageRoot, false);
+assert.equal(typeof packageRoot.defineConfig().styled, 'function');
 
 const coreSource = readFileSync(corePath, 'utf8');
 assert.equal(/from ['"]react['"]/.test(coreSource), false);
+const defaultConfiguredPackage = packageRoot.defineConfig();
 
 const rootRecipe = core.recipe({
   base: 'inline-flex items-center',
@@ -202,7 +205,7 @@ assert.equal(
   'inline-flex items-center gap-2 bg-blue text-white rounded-md'
 );
 
-const Button = packageRoot.styled('button', rootRecipe);
+const Button = defaultConfiguredPackage.styled('button', rootRecipe);
 const buttonMarkup = renderToStaticMarkup(
   React.createElement(Button, { tone: 'primary', type: 'button' }, 'Press')
 );
@@ -212,7 +215,7 @@ assert.match(
 );
 assert.match(buttonMarkup, /type="button"/);
 
-const Badge = packageRoot.styled('span', rootRecipe, {
+const Badge = defaultConfiguredPackage.styled('span', rootRecipe, {
   view: ({ host, variants }) =>
     host.render({ 'data-tone': variants.tone, children: host.children }),
 });
@@ -228,7 +231,7 @@ assert.match(
 const RuntimeIcon = props =>
   React.createElement('svg', { ...props, 'data-slot': 'icon' });
 
-const ViewPropButton = packageRoot.styled('button', slotRecipe, {
+const ViewPropButton = defaultConfiguredPackage.styled('button', slotRecipe, {
   viewProps: packageRoot.defineViewProps('icon', 'shortcut'),
   view: ({ host, classes }) =>
     host.render({
@@ -259,7 +262,7 @@ assert.match(viewPropButtonMarkup, /data-shortcut="K"/);
 assert.doesNotMatch(viewPropButtonMarkup, /\sicon=/);
 assert.doesNotMatch(viewPropButtonMarkup, /\sshortcut=/);
 
-const SlotButton = packageRoot.styled('button', slotRecipe, {
+const SlotButton = defaultConfiguredPackage.styled('button', slotRecipe, {
   view: ({ host, classes, variants }) =>
     host.render({
       'aria-busy': variants.loading || undefined,

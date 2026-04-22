@@ -92,8 +92,7 @@ Use these only when you touch hot paths, entry points, or bundle-size-sensitive 
 Exports:
 
 - `recipe()`
-- `styled()`
-- `defineConfig()`
+- `defineConfig()` for `{ recipe, styled }`
 - `defineRecipeConfig()`
 - `hasOwnProperty()`
 - `mergeProps()`
@@ -159,7 +158,7 @@ Does not export React runtime helpers such as `styled()`, `mergeProps()`, or ref
 
 - `src/index.ts`: package-root surface
 - `src/core.ts`: core-only subpath surface without React runtime imports
-- `src/react.ts`: React surface module for `styled()` and root `defineConfig()`
+- `src/react.ts`: React surface module for `defineConfig().styled` and root `defineConfig()`
 
 ### Runtime and engine layers
 

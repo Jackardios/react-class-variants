@@ -1,7 +1,7 @@
 # API Reference
 
 This document covers the primary user-facing v2 alpha APIs and public helpers:
-`recipe()`, `recipe.resolve()`, `styled()`, `defineConfig()`,
+`recipe()`, `recipe.resolve()`, `defineConfig().styled`, `defineConfig()`,
 `defineRecipeConfig()`, `defineViewProps()`, `view`, `render`, and the
 exported utilities.
 
@@ -15,8 +15,9 @@ import {
   defineRecipeConfig,
   defineViewProps,
   recipe,
-  styled,
 } from 'react-class-variants';
+
+const { styled } = defineConfig();
 ```
 
 For recipe-only modules, the primary `react-class-variants/core` APIs covered
@@ -294,7 +295,8 @@ const Input = styled('input', inputRecipe, {
 
 ## `styled(base, recipe, options?)`
 
-`styled()` is the only high-level React builder.
+`styled()` is the only high-level React builder, and you get it from
+`defineConfig()`.
 
 ### Supported bases
 
@@ -461,7 +463,9 @@ Notes:
 Example:
 
 ```tsx
-import { defineViewProps, recipe, styled } from 'react-class-variants';
+import { defineConfig, defineViewProps, recipe } from 'react-class-variants';
+
+const { styled } = defineConfig();
 
 const buttonRecipe = recipe({
   slots: {
@@ -592,7 +596,9 @@ For slotted views:
 `render` is available only when `withRender: true` and the base is intrinsic.
 
 ```tsx
-import { recipe, styled } from 'react-class-variants';
+import { defineConfig, recipe } from 'react-class-variants';
+
+const { styled } = defineConfig();
 
 const linkRecipe = recipe({
   base: 'inline-flex items-center rounded-md font-medium',
