@@ -107,7 +107,12 @@ buttonRecipe({ tone: 'primary', className: 'w-full' });
 Use `defineRecipeConfig()` when you want the config itself to stay available as a typed source of truth, for example to power Storybook controls, docs, or test fixtures from the same declared variants:
 
 ```ts
-import { defineRecipeConfig, recipe } from 'react-class-variants';
+import {
+  defineRecipeConfig,
+  recipe,
+  variantNames,
+  variantOptions,
+} from 'react-class-variants';
 
 export const badgeConfig = defineRecipeConfig({
   base: 'inline-flex items-center rounded-full font-medium',
@@ -130,7 +135,8 @@ export const badgeConfig = defineRecipeConfig({
 
 export const badgeRecipe = recipe(badgeConfig);
 
-export const badgeToneOptions = Object.keys(badgeConfig.variants.tone);
+export const badgeToneOptions = variantOptions(badgeConfig, 'tone');
+export const badgeVariantNames = variantNames(badgeRecipe);
 ```
 
 `defineRecipeConfig()` is a zero-cost typed helper. Reach for it when you keep a config object in a variable and want `defaultVariants` completions plus exact key/value checks. In v2, recipe instances do not expose a runtime `.config` property, so this is the intended way to keep config data around.
@@ -403,6 +409,7 @@ Most users will work with these package-root APIs from `react-class-variants`:
 - `recipe()`
 - `defineConfig()` for configured `recipe()` and `styled()`
 - `defineRecipeConfig()`
+- `variantNames()` and `variantOptions()`
 - `defineViewProps()`
 - public core and React types
 
@@ -414,6 +421,7 @@ For recipe-only modules, the primary `react-class-variants/core` APIs are:
 - `recipe()`
 - core `defineConfig()`
 - `defineRecipeConfig()`
+- `variantNames()` and `variantOptions()`
 - core recipe types
 
 Use the `core` subpath when you want recipe modules without React runtime helpers.

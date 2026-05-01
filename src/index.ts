@@ -5,6 +5,8 @@ export {
   mergeProps,
   mergeRefs,
   useMergeRefs,
+  variantNames,
+  variantOptions,
 } from './react';
 export { recipe } from './core';
 
@@ -38,7 +40,10 @@ export type {
   SlotResolveResult,
   SystemOptions,
   ValidateMode,
+  VariantName,
+  VariantOption,
   VariantProps,
+  VariantSource,
 } from './internal/core-types';
 
 export type {

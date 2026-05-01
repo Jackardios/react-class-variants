@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { defineConfig, defineRecipeConfig, recipe } from '../src';
+import {
+  defineConfig,
+  defineRecipeConfig,
+  recipe,
+  variantNames,
+  variantOptions,
+} from '../src';
 
 describe('recipe()', () => {
   it('returns the original config reference from defineRecipeConfig()', () => {
@@ -17,6 +23,33 @@ describe('recipe()', () => {
     } as const;
 
     expect(defineRecipeConfig(config)).toBe(config);
+  });
+
+  it('reads variant names and option values from configs and recipes', () => {
+    const config = defineRecipeConfig({
+      base: 'inline-flex',
+      variants: {
+        tone: {
+          primary: 'text-blue-600',
+          secondary: 'text-slate-700',
+        },
+        disabled: {
+          true: 'opacity-50',
+        },
+      },
+      defaultVariants: {
+        disabled: false,
+      },
+    });
+    const input = recipe(config);
+
+    expect(variantNames(config)).toEqual(['tone', 'disabled']);
+    expect(variantNames(input)).toEqual(['tone', 'disabled']);
+    expect(variantOptions(config, 'tone')).toEqual(['primary', 'secondary']);
+    expect(variantOptions(input, 'tone')).toEqual(['primary', 'secondary']);
+    expect(variantOptions(config, 'disabled')).toEqual([true, false]);
+    expect(variantOptions(input, 'disabled')).toEqual([true, false]);
+    expect(variantOptions(input, 'missing' as never)).toEqual([]);
   });
 
   it('resolves root recipes with defaults, booleans, compounds, OR selectors, and className', () => {

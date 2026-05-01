@@ -550,6 +550,30 @@ export type RecipeConfigOf<TRecipe> = TRecipe extends RecipeBrand<
   ? Config
   : never;
 
+export type VariantSource = AnyRecipe | { variants?: AnyVariantsSchema };
+
+type VariantSchemaOfSource<TSource> = TSource extends AnyRecipe
+  ? RecipeConfigOf<TSource> extends { variants?: infer Variants }
+    ? NonNullable<Variants>
+    : {}
+  : TSource extends { variants?: infer Variants }
+  ? NonNullable<Variants>
+  : {};
+
+type VariantOptionKeys<TOptions> = Extract<keyof TOptions, string>;
+
+export type VariantName<TSource> = Extract<
+  keyof VariantSchemaOfSource<TSource>,
+  string
+>;
+
+export type VariantOption<TSource, Name extends VariantName<TSource>> = Extract<
+  VariantOptionKeys<VariantSchemaOfSource<TSource>[Name]>,
+  BooleanOptionKey
+> extends never
+  ? VariantOptionKeys<VariantSchemaOfSource<TSource>[Name]>
+  : boolean;
+
 export type RecipeInput<TRecipe> = TRecipe extends AnyRootRecipe
   ? RootRecipeInput<TRecipe>
   : TRecipe extends AnySlotRecipe

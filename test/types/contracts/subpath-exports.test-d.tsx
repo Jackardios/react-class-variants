@@ -7,6 +7,8 @@ import {
 import {
   defineConfig as defineCoreConfig,
   recipe as coreRecipe,
+  variantNames as coreVariantNames,
+  variantOptions as coreVariantOptions,
   type VariantProps,
 } from '../../../dist/core';
 
@@ -32,6 +34,8 @@ const configuredCoreBadge = coreConfig.recipe({
 
 expectType<string>(coreBadge({ tone: 'info' }));
 expectType<string>(configuredCoreBadge({ tone: 'danger' }));
+expectType<'tone'[]>(coreVariantNames(coreBadge));
+expectType<'info'[]>(coreVariantOptions(coreBadge, 'tone'));
 expectError(coreConfig.styled);
 
 type CoreBadgeVariants = VariantProps<typeof coreBadge>;

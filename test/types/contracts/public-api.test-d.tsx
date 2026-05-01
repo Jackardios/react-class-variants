@@ -19,11 +19,15 @@ import {
   type ResolvedVariantProps,
   type SlotNames,
   type StyledFn,
+  type VariantName,
+  type VariantOption,
   type VariantProps,
   defineConfig,
   mergeProps,
   mergeRefs,
   useMergeRefs,
+  variantNames,
+  variantOptions,
 } from '../../../dist';
 import { recipe as coreRecipe } from '../../../dist/core';
 
@@ -133,6 +137,9 @@ type LinkInput = RecipeInput<typeof link>;
 type LinkResolved = RecipeResolved<typeof link>;
 type LinkVariants = VariantProps<typeof link>;
 type LinkResolvedVariants = ResolvedVariantProps<typeof link>;
+type LinkVariantName = VariantName<typeof link>;
+type LinkToneOption = VariantOption<typeof link, 'tone'>;
+type LinkDisabledOption = VariantOption<typeof link, 'disabled'>;
 
 expectAssignable<AnyRecipe>(link);
 expectAssignable<StyledFn>(configuredStyled);
@@ -162,6 +169,12 @@ expectAssignable<LinkResolvedVariants>({
   tone: 'primary',
   disabled: false,
 });
+expectAssignable<LinkVariantName>('tone');
+expectNotAssignable<LinkVariantName>('size');
+expectAssignable<LinkToneOption>('primary');
+expectNotAssignable<LinkToneOption>('ghost');
+expectAssignable<LinkDisabledOption>(true);
+expectNotAssignable<LinkDisabledOption>('true');
 expectAssignable<LinkResolved>({
   variants: { tone: 'primary', disabled: false },
   resolvedProps: { className: 'inline-flex text-blue-600' },
@@ -169,6 +182,13 @@ expectAssignable<LinkResolved>({
 expectType<string>(resolvedLink.resolvedProps.className);
 expectType<string>(resolvedLink.resolvedProps.id);
 expectType<boolean>(resolvedLink.resolvedProps.disabled);
+expectType<('tone' | 'disabled')[]>(variantNames(linkConfig));
+expectType<('tone' | 'disabled')[]>(variantNames(link));
+expectType<('primary' | 'secondary')[]>(variantOptions(linkConfig, 'tone'));
+expectType<('primary' | 'secondary')[]>(variantOptions(link, 'tone'));
+expectType<boolean[]>(variantOptions(linkConfig, 'disabled'));
+expectType<boolean[]>(variantOptions(link, 'disabled'));
+expectError(variantOptions(link, 'size'));
 
 const Link = styled('a', link);
 const ConfiguredLink = configuredStyled('a', configuredLink);

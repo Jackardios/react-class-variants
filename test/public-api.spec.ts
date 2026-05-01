@@ -13,6 +13,8 @@ describe('public api', () => {
     expect(typeof packageRoot.mergeProps).toBe('function');
     expect(typeof packageRoot.mergeRefs).toBe('function');
     expect(typeof packageRoot.useMergeRefs).toBe('function');
+    expect(typeof packageRoot.variantNames).toBe('function');
+    expect(typeof packageRoot.variantOptions).toBe('function');
 
     expect('defineReactConfig' in packageRoot).toBe(false);
     expect('createSystem' in packageRoot).toBe(false);
@@ -29,6 +31,8 @@ describe('public api', () => {
     expect(typeof core.defineConfig).toBe('function');
     expect(typeof core.defineRecipeConfig).toBe('function');
     expect(typeof core.hasOwnProperty).toBe('function');
+    expect(typeof core.variantNames).toBe('function');
+    expect(typeof core.variantOptions).toBe('function');
     expect('styled' in core).toBe(false);
     expect('mergeProps' in core).toBe(false);
   });

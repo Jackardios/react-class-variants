@@ -14,7 +14,12 @@ import type {
   ViewPropsDescriptor,
 } from './internal/react-types';
 
-export { defineRecipeConfig, recipe } from './core';
+export {
+  defineRecipeConfig,
+  recipe,
+  variantNames,
+  variantOptions,
+} from './core';
 
 export type {
   AnyRecipe,
@@ -46,7 +51,10 @@ export type {
   SlotResolveResult,
   SystemOptions,
   ValidateMode,
+  VariantName,
+  VariantOption,
   VariantProps,
+  VariantSource,
 } from './internal/core-types';
 
 export type {

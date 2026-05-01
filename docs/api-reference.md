@@ -713,6 +713,29 @@ const buttonConfig = defineRecipeConfig({
 
 It returns the original config reference unchanged and preserves `defaultVariants` editor completions plus exact key/value checking when you keep a config object in a variable.
 
+## `variantNames(source)` and `variantOptions(source, variantName)`
+
+`variantNames()` returns declared variant keys from either a config object or a
+compiled recipe:
+
+```ts
+const names = variantNames(buttonRecipe);
+```
+
+`variantOptions()` returns the public values accepted for a single variant:
+
+```ts
+const tones = variantOptions(buttonConfig, 'tone');
+const disabled = variantOptions(buttonRecipe, 'disabled');
+```
+
+Named variants return string option keys. Boolean variants return boolean values
+`[true, false]`, matching the values accepted by recipe calls.
+
+- exported from both the package root and `react-class-variants/core`
+- accepts values returned by `defineRecipeConfig()` or `recipe()`
+- returns an empty array at runtime for an unknown variant key
+
 ## Utilities
 
 ### `hasOwnProperty(object, key)`
