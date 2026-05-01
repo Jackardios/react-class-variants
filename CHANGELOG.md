@@ -1,5 +1,20 @@
 # react-class-variants
 
+## 2.0.0-alpha.9
+
+### Major Changes
+
+- bd4cd9e: Require React builders to come from `defineConfig()` instead of the package-root
+  `styled` export.
+
+  - remove the top-level `styled` value export from `react-class-variants`
+  - keep `defineConfig().styled` as the supported React builder entrypoint
+  - update docs, fixtures, and editor/runtime checks to use configured builders
+
+### Minor Changes
+
+- 50cf2ef: Add `variantNames()` and `variantOptions()` helpers for reading variant metadata from configs and recipes.
+
 ## 2.0.0-alpha.8
 
 ### Patch Changes
