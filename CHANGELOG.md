@@ -1,5 +1,11 @@
 # react-class-variants
 
+## 2.0.0-alpha.11
+
+### Patch Changes
+
+- 366e695: Narrow the result cache to root recipes. Slotted recipes are no longer cached: each slot resolves into a few short class strings that `merge` (e.g. tailwind-merge) already caches internally, so memoizing per-slot results cost more than it saved. Root recipe caching is unchanged.
+
 ## 2.0.0-alpha.10
 
 ### Minor Changes
