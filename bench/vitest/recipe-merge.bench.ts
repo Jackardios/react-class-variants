@@ -55,8 +55,11 @@ describe('root resolve with bounded rotating className', () => {
   });
 });
 
-describe('slot resolve with twMerge (4 slots)', () => {
-  bench('cached (repeated input → hit)', () => {
+// Slotted recipes are not cached (root-only cache): both configs run merge per
+// slot, so this measures raw slot resolution and confirms the cache flag adds no
+// overhead to the slot path.
+describe('slot resolve with twMerge (4 slots, not cached)', () => {
+  bench('default config (merge per slot)', () => {
     const slots = cachedSlots(slotScenarioInputs.complex);
     slots.root();
     slots.label();
@@ -64,7 +67,7 @@ describe('slot resolve with twMerge (4 slots)', () => {
     slots.badge();
   });
 
-  bench('uncached (merge per slot)', () => {
+  bench('cache:false (merge per slot)', () => {
     const slots = uncachedSlots(slotScenarioInputs.complex);
     slots.root();
     slots.label();

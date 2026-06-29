@@ -166,20 +166,6 @@ export function buildRootResultCacheKey(
   return appendSelectionKey('', selection) + className;
 }
 
-export function buildSlotResultCacheKey(
-  slotIndex: number,
-  selection: readonly CompiledSelectionValue[],
-  slotClassName: string,
-  className: string
-): string {
-  return (
-    appendSelectionKey(slotIndex + RESULT_CACHE_KEY_SEPARATOR, selection) +
-    slotClassName +
-    RESULT_CACHE_KEY_SEPARATOR +
-    className
-  );
-}
-
 // FIFO eviction keeps the cache-hit path a pure Map.get (no per-hit reordering).
 export function storeResult(
   compiled: CompiledRecipe,

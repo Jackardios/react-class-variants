@@ -699,13 +699,16 @@ path explicitly.
 
 ### `cache`
 
-Memoizes resolved class names per recipe so repeated identical inputs skip
-variant resolution and the `merge` call entirely.
+Memoizes resolved class names of **root recipes** so repeated identical inputs
+skip variant resolution and the `merge` call entirely.
 
 - enabled automatically when `merge` is set and the runtime is lean (the default,
   and `validate: 'never'`); has no effect without `merge`
 - `cache: false` disables it; `cache: { maxSize }` bounds it (default `500`,
   FIFO eviction)
+- **slotted recipes are not cached**: a slot resolves into several short class
+  strings, and `merge` (e.g. tailwind-merge) already keeps its own cache for
+  those, so memoizing each slot result would cost more than it saves
 - never engages in strict mode (`validate: 'always'`), so validation always runs
 - assumes `merge` is a pure function of its input
 
