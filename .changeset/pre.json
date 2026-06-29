@@ -6,6 +6,7 @@
   },
   "changesets": [
     "add-define-recipe-config",
+    "add-result-cache",
     "blue-buses-float",
     "blue-windows-perform",
     "bright-bears-burn",
