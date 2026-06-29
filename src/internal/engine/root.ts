@@ -15,6 +15,7 @@ import {
 } from '../class-name';
 import {
   attachCompiled,
+  buildRootResultCacheKey,
   buildSelection,
   compileCompounds,
   compileLeanCompounds,
@@ -27,6 +28,8 @@ import {
   normalizeResolveOptions,
   normalizeSelectionValue,
   readVariantClassName,
+  resolveResultCacheMaxSize,
+  storeResult,
   type LeanRootCompiledRecipe,
   type NormalizedResolveOptions,
   type RootCompiledRecipe,
@@ -111,6 +114,7 @@ export function compileLeanRootRecipe(
     }),
     merge: options.merge,
     mode: 'root',
+    resultCacheMaxSize: resolveResultCacheMaxSize(options.merge, options.cache),
     runtime: 'lean',
     validate: false,
     variantTable,
@@ -194,6 +198,21 @@ function resolveLeanRootClassName(
   input: Record<string, unknown> | undefined
 ) {
   const selection = buildRootSelectionLean(compiled, input);
+  const userClassName = flattenUserClassName(
+    'input.className',
+    input?.className as ClassNameValue | undefined,
+    false
+  );
+
+  let key: string | undefined;
+  if (compiled.resultCacheMaxSize) {
+    key = buildRootResultCacheKey(selection, userClassName);
+    const cached = compiled.resultCache?.get(key);
+    if (cached !== undefined) {
+      return { className: cached, selection };
+    }
+  }
+
   let className = compiled.base;
 
   for (let index = 0; index < compiled.variantTable.length; index += 1) {
@@ -211,17 +230,11 @@ function resolveLeanRootClassName(
     }
   );
 
-  className = appendClassName(
-    className,
-    flattenUserClassName(
-      'input.className',
-      input?.className as ClassNameValue | undefined,
-      false
-    )
-  );
+  className = appendClassName(className, userClassName);
+  const merged = compiled.merge ? compiled.merge(className) : className;
 
   return {
-    className: compiled.merge ? compiled.merge(className) : className,
+    className: key !== undefined ? storeResult(compiled, key, merged) : merged,
     selection,
   };
 }

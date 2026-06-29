@@ -54,6 +54,8 @@ export type LeanCompiledCompounds<TClassName> = {
 
 type SharedCompiledRecipe = {
   merge?: (className: string) => string;
+  resultCache?: Map<string, string>;
+  resultCacheMaxSize?: number;
   runtime: RuntimeMode;
   validate: boolean;
   variantIndex?: VariantIndex;
@@ -118,6 +120,82 @@ export type RuntimeSystemOptions = Omit<SystemOptions, 'validate'> & {
 };
 
 const emptyVariantOptions: Record<string, never> = {};
+
+const DEFAULT_RESULT_CACHE_MAX_SIZE = 500;
+const RESULT_CACHE_KEY_SEPARATOR = '\x00';
+
+// The cache is sound only when the resolved className is a pure function of its
+// inputs and `merge` is pure. We therefore enable it only in lean mode (strict
+// mode validates per call) and only when a `merge` is configured (without merge
+// the result cache costs more than the work it would skip).
+export function resolveResultCacheMaxSize(
+  merge: ((className: string) => string) | undefined,
+  cache: SystemOptions['cache']
+): number {
+  if (!merge || cache === false) return 0;
+  if (cache === undefined || cache === true) {
+    return DEFAULT_RESULT_CACHE_MAX_SIZE;
+  }
+  const { maxSize } = cache;
+  if (maxSize === undefined) return DEFAULT_RESULT_CACHE_MAX_SIZE;
+  return Number.isFinite(maxSize) && maxSize >= 1 ? Math.floor(maxSize) : 0;
+}
+
+function selectionToken(value: CompiledSelectionValue): string {
+  if (value === undefined) return '';
+  if (value === true) return 'true';
+  if (value === false) return 'false';
+  return value;
+}
+
+function appendSelectionKey(
+  prefix: string,
+  selection: readonly CompiledSelectionValue[]
+): string {
+  let key = prefix;
+  for (let index = 0; index < selection.length; index += 1) {
+    key += selectionToken(selection[index]) + RESULT_CACHE_KEY_SEPARATOR;
+  }
+  return key;
+}
+
+export function buildRootResultCacheKey(
+  selection: readonly CompiledSelectionValue[],
+  className: string
+): string {
+  return appendSelectionKey('', selection) + className;
+}
+
+export function buildSlotResultCacheKey(
+  slotIndex: number,
+  selection: readonly CompiledSelectionValue[],
+  slotClassName: string,
+  className: string
+): string {
+  return (
+    appendSelectionKey(slotIndex + RESULT_CACHE_KEY_SEPARATOR, selection) +
+    slotClassName +
+    RESULT_CACHE_KEY_SEPARATOR +
+    className
+  );
+}
+
+// FIFO eviction keeps the cache-hit path a pure Map.get (no per-hit reordering).
+export function storeResult(
+  compiled: CompiledRecipe,
+  key: string,
+  value: string
+): string {
+  let cache = compiled.resultCache;
+  if (!cache) {
+    cache = new Map();
+    compiled.resultCache = cache;
+  } else if (cache.size >= (compiled.resultCacheMaxSize as number)) {
+    cache.delete(cache.keys().next().value as string);
+  }
+  cache.set(key, value);
+  return value;
+}
 
 export function hasOwnKey(object: object, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(object, key);

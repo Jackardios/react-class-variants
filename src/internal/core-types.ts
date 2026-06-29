@@ -5,6 +5,7 @@ export type ClassValue = ClassNameValue;
 export type ValidateMode = 'never' | 'always';
 
 export interface SystemOptions {
+  cache?: boolean | { maxSize?: number };
   merge?: (className: string) => string;
   validate?: ValidateMode;
 }

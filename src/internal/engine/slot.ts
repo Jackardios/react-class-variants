@@ -16,6 +16,7 @@ import {
 import {
   attachCompiled,
   buildSelection,
+  buildSlotResultCacheKey,
   compileCompounds,
   compileLeanCompounds,
   compileVariants,
@@ -31,6 +32,8 @@ import {
   normalizeResolveOptions,
   normalizeSelectionValue,
   readVariantClassName,
+  resolveResultCacheMaxSize,
+  storeResult,
   type CompiledSelectionValue,
   type LeanSlotClassTable,
   type NormalizedResolveOptions,
@@ -274,6 +277,7 @@ export function compileLeanSlotRecipe(
     compounds,
     merge: options.merge,
     mode: 'slot',
+    resultCacheMaxSize: resolveResultCacheMaxSize(options.merge, options.cache),
     runtime: 'lean',
     slotIndex: compiledBase.slotIndex,
     slotNames: compiledBase.slotNames,
@@ -437,6 +441,27 @@ function resolveLeanSlotClassName(
   slotClassNames?: SlotClassTable,
   className?: ClassNameValue
 ) {
+  const slotClassName = readSlotClassName(slotClassNames, slotIndex) ?? '';
+  const userClassName = flattenUserClassName(
+    'slot input.className',
+    className,
+    false
+  );
+
+  let key: string | undefined;
+  if (compiled.resultCacheMaxSize) {
+    key = buildSlotResultCacheKey(
+      slotIndex,
+      selection,
+      slotClassName,
+      userClassName
+    );
+    const cached = compiled.resultCache?.get(key);
+    if (cached !== undefined) {
+      return cached;
+    }
+  }
+
   let output = readSlotClassName(compiled.base, slotIndex) ?? '';
 
   for (let index = 0; index < compiled.variantTable.length; index += 1) {
@@ -460,17 +485,11 @@ function resolveLeanSlotClassName(
     }
   );
 
-  output = appendClassName(
-    output,
-    readSlotClassName(slotClassNames, slotIndex)
-  );
+  output = appendClassName(output, slotClassName);
+  output = appendClassName(output, userClassName);
+  const merged = compiled.merge ? compiled.merge(output) : output;
 
-  output = appendClassName(
-    output,
-    flattenUserClassName('slot input.className', className, false)
-  );
-
-  return compiled.merge ? compiled.merge(output) : output;
+  return key !== undefined ? storeResult(compiled, key, merged) : merged;
 }
 
 export function resolveSlotClassNameForRender(

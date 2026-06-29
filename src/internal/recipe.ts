@@ -46,6 +46,7 @@ export {
 
 function createLeanRecipeFactory(options: SystemOptions): RecipeFactory {
   const runtimeOptions: RuntimeSystemOptions = {
+    cache: options.cache,
     freeze: 'none',
     merge: options.merge,
     mode: 'lean',

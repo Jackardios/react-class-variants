@@ -669,6 +669,7 @@ Supported options:
 
 ```ts
 type SystemOptions = {
+  cache?: boolean | { maxSize?: number };
   merge?: (className: string) => string;
   validate?: 'never' | 'always';
 };
@@ -695,6 +696,24 @@ const lean = defineConfig({ validate: 'never' });
 Package root and core are lean by default. Use `'always'` in strict test
 fixtures or shared packages, and use `'never'` when you want to force the lean
 path explicitly.
+
+### `cache`
+
+Memoizes resolved class names per recipe so repeated identical inputs skip
+variant resolution and the `merge` call entirely.
+
+- enabled automatically when `merge` is set and the runtime is lean (the default,
+  and `validate: 'never'`); has no effect without `merge`
+- `cache: false` disables it; `cache: { maxSize }` bounds it (default `500`,
+  FIFO eviction)
+- never engages in strict mode (`validate: 'always'`), so validation always runs
+- assumes `merge` is a pure function of its input
+
+```ts
+const cached = defineConfig({ merge: twMerge }); // cache on by default
+const larger = defineConfig({ merge: twMerge, cache: { maxSize: 2000 } });
+const off = defineConfig({ merge: twMerge, cache: false });
+```
 
 ## `defineRecipeConfig(config)`
 

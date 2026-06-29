@@ -104,6 +104,10 @@ const { recipe: configuredRecipe, styled: configuredStyled } = defineConfig({
 const { recipe: strictConfiguredRecipe, styled: strictConfiguredStyled } =
   defineConfig({ validate: 'always' });
 const { styled } = defineConfig();
+defineConfig({ merge: className => className, cache: true });
+defineConfig({ merge: className => className, cache: false });
+defineConfig({ merge: className => className, cache: { maxSize: 200 } });
+defineConfig({ cache: true });
 const configuredLink = configuredRecipe({
   base: 'inline-flex',
   variants: {
@@ -213,6 +217,9 @@ expectError(
   })
 );
 expectError(defineConfig({ validate: 'dev' }));
+expectError(defineConfig({ cache: 'always' }));
+expectError(defineConfig({ cache: { maxSize: 'big' } }));
+expectError(defineConfig({ cache: { unknown: 1 } }));
 
 expectType<boolean>(hasOwnProperty({ foo: 1 }, 'foo'));
 expectType<string>(
