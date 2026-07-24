@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   defineConfig,
   defineRecipeConfig,
+  hasOwnProperty,
   recipe,
   variantNames,
   variantOptions,
@@ -1135,5 +1136,312 @@ describe('result cache', () => {
     expect(merge.mock.calls.length).toBeGreaterThan(callsAfterFirst);
 
     expect(slots.root({ className: 'mt-1' })).toBe('flex bg-blue p-2 mt-1');
+  });
+
+  it('distinguishes boolean true from the string "true" in the cache key', () => {
+    const config = {
+      base: 'btn',
+      variants: { disabled: { true: 'is-on', false: 'is-off' } },
+    } as const;
+    const cached = defineConfig({ merge: dedup }).recipe(config);
+    const uncached = defineConfig({ merge: dedup, cache: false }).recipe(
+      config
+    );
+
+    expect(cached({ disabled: true })).toBe('btn is-on');
+    expect(cached({ disabled: 'true' } as never)).toBe(
+      uncached({ disabled: 'true' } as never)
+    );
+  });
+
+  it('keeps cache keys injective for option keys containing control characters', () => {
+    const NUL = String.fromCharCode(0);
+    const config = {
+      base: 'btn',
+      variants: {
+        first: { [`x${NUL}y`]: 'first-a', x: 'first-b' },
+        second: { [`y${NUL}z`]: 'second-a', z: 'second-b' },
+      },
+    };
+    const cached = defineConfig({ merge: dedup }).recipe(config as never);
+    const uncached = defineConfig({ merge: dedup, cache: false }).recipe(
+      config as never
+    );
+
+    const inputs = [
+      { first: `x${NUL}y`, second: 'z' },
+      { first: 'x', second: `y${NUL}z` },
+    ];
+
+    for (const input of inputs) {
+      expect(cached(input as never)).toBe(uncached(input as never));
+    }
+  });
+
+  it('distinguishes empty-string option values from unset variants', () => {
+    const config = {
+      base: 'btn',
+      variants: { tone: { '': 'blank' } },
+    };
+    const cached = defineConfig({ merge: dedup }).recipe(config as never);
+
+    expect(cached({ tone: '' } as never)).toBe('btn blank');
+    expect(cached({} as never)).toBe('btn');
+  });
+
+  it('keeps malformed non-string selections cacheable and consistent', () => {
+    const config = {
+      base: 'B',
+      variants: { f: { true: 'T', false: 'F' } },
+    } as const;
+    const cached = defineConfig({ merge: dedup }).recipe(config);
+    const uncached = defineConfig({ merge: dedup, cache: false }).recipe(
+      config
+    );
+
+    const inputs = [
+      { f: null },
+      { f: 12 },
+      { f: 1, className: '2' },
+      { f: ['a', 'b'] },
+      { f: 'a,', className: 'b' },
+      { f: Object.create(null) as never },
+      { f: { toString: null } },
+    ];
+
+    for (const input of inputs) {
+      expect(cached(input as never)).toBe(uncached(input as never));
+    }
+  });
+});
+
+describe('prototype-named keys', () => {
+  it('ignores prototype-named slot override keys in lean mode', () => {
+    const tabs = recipe({
+      slots: { root: 'flex', icon: 'size-4' },
+      variants: { tone: { red: { root: 'text-red' } } },
+      defaultVariants: { tone: 'red' },
+    });
+
+    expect(tabs().root({ constructor: 'x' } as never)).toBe('flex text-red');
+  });
+
+  it('rejects prototype-named slot override keys in strict mode', () => {
+    const tabs = defineConfig({ validate: 'always' }).recipe({
+      slots: { root: 'flex' },
+      variants: { tone: { red: { root: 'text-red' } } },
+      defaultVariants: { tone: 'red' },
+    });
+
+    expect(() => tabs().root({ constructor: 'x' } as never)).toThrow(
+      /unknown slot override prop "constructor"/
+    );
+  });
+
+  it('keeps prototype-named option values out of lean class output', () => {
+    const badge = recipe({
+      base: 'inline-flex',
+      variants: { color: { red: 'text-red' } },
+      defaultVariants: { color: 'red' },
+    });
+
+    expect(badge({ color: 'constructor' } as never)).toBe('inline-flex');
+  });
+
+  it('rejects undeclared prototype-named slotClassNames slots in strict mode', () => {
+    const tabs = defineConfig({ validate: 'always' }).recipe({
+      slots: { root: 'flex' },
+    });
+
+    expect(() =>
+      tabs({ slotClassNames: { constructor: 'p-1' } } as never)
+    ).toThrow(/slot "constructor" is not declared/);
+  });
+
+  it('rejects variant keys that shadow Object.prototype members in strict mode', () => {
+    expect(() =>
+      defineConfig({ validate: 'always' }).recipe({
+        base: 'inline-flex',
+        variants: { toString: { fancy: 'font-serif' } },
+      } as never)
+    ).toThrow(/shadows an Object.prototype member/);
+  });
+
+  it('does not resolve inherited props through propAliases', () => {
+    const input = recipe({
+      base: 'block',
+      variants: { size: { sm: 'text-sm' } },
+      defaultVariants: { size: 'sm' },
+    });
+
+    const { resolvedProps } = input.resolve({}, {
+      propAliases: { title: 'toString' },
+    } as never);
+
+    expect(hasOwnProperty(resolvedProps, 'title')).toBe(false);
+  });
+
+  it('allows prototype-named alias targets in strict mode without spurious overwrite errors', () => {
+    const input = defineConfig({ validate: 'always' }).recipe({
+      base: 'block',
+      variants: { size: { sm: 'text-sm' } },
+      defaultVariants: { size: 'sm' },
+    });
+
+    const { resolvedProps } = input.resolve(
+      { foo: 1 } as never,
+      {
+        propAliases: { constructor: 'foo' },
+      } as never
+    );
+
+    expect(hasOwnProperty(resolvedProps as object, 'constructor')).toBe(true);
+    expect((resolvedProps as Record<string, unknown>).constructor).toBe(1);
+  });
+
+  it('does not let own __proto__ input keys swap the resolvedProps prototype', () => {
+    const input = recipe({
+      base: 'block',
+      variants: { size: { sm: 'text-sm' } },
+      defaultVariants: { size: 'sm' },
+    });
+    const source = JSON.parse(
+      '{"id":"a","__proto__":{"polluted":1}}'
+    ) as Record<string, unknown>;
+
+    const { resolvedProps } = input.resolve(source as never);
+
+    expect(Object.getPrototypeOf(resolvedProps)).toBe(Object.prototype);
+    expect((resolvedProps as Record<string, unknown>).polluted).toBeUndefined();
+    expect(hasOwnProperty(resolvedProps, '__proto__')).toBe(false);
+    expect((resolvedProps as Record<string, unknown>).id).toBe('a');
+  });
+
+  it('never applies prop alias targets named __proto__', () => {
+    const aliases = JSON.parse('{"__proto__":"payload"}') as Record<
+      string,
+      string
+    >;
+    const lean = recipe({
+      base: 'block',
+      variants: { size: { sm: 'text-sm' } },
+      defaultVariants: { size: 'sm' },
+    });
+
+    const { resolvedProps } = lean.resolve(
+      { payload: { polluted: 9 } } as never,
+      {
+        propAliases: aliases,
+      } as never
+    );
+
+    expect(Object.getPrototypeOf(resolvedProps)).toBe(Object.prototype);
+    expect((resolvedProps as Record<string, unknown>).polluted).toBeUndefined();
+    expect(hasOwnProperty(resolvedProps, 'payload')).toBe(true);
+
+    const strict = defineConfig({ validate: 'always' }).recipe({
+      base: 'block',
+      variants: { size: { sm: 'text-sm' } },
+      defaultVariants: { size: 'sm' },
+    });
+
+    expect(() => strict.resolve({}, { propAliases: aliases } as never)).toThrow(
+      /prop alias target "__proto__"/
+    );
+  });
+});
+
+describe('compound variant semantics', () => {
+  it('drops compounds containing undeclared keys in lean mode', () => {
+    const button = recipe({
+      base: 'btn',
+      variants: { color: { red: 'c-red', blue: 'c-blue' } },
+      defaultVariants: { color: 'red' },
+      compoundVariants: [{ colr: 'red', className: 'ring' } as never],
+    });
+
+    expect(button()).toBe('btn c-red');
+    expect(button({ color: 'blue' })).toBe('btn c-blue');
+  });
+
+  it('throws for undeclared compound keys in strict mode regardless of value', () => {
+    const strictRecipe = defineConfig({ validate: 'always' }).recipe;
+    const build = (compound: unknown) => () =>
+      strictRecipe({
+        base: 'btn',
+        variants: { color: { red: 'c-red' } },
+        defaultVariants: { color: 'red' },
+        compoundVariants: [compound as never],
+      });
+
+    expect(build({ colr: 'red', className: 'ring' })).toThrow(
+      /compoundVariants key "colr" is not declared/
+    );
+    expect(build({ colr: undefined, className: 'ring' })).toThrow(
+      /compoundVariants key "colr" is not declared/
+    );
+  });
+
+  it('treats explicit undefined compound values as absent in both runtimes', () => {
+    const config = {
+      base: 'btn',
+      variants: { size: { sm: 's', lg: 'l' } },
+      defaultVariants: { size: 'sm' },
+      compoundVariants: [{ size: undefined, className: 'x' } as never],
+    };
+    const lean = defineConfig({ validate: 'never' }).recipe(config as never);
+    const strict = defineConfig({ validate: 'always' }).recipe(config as never);
+
+    // A compound whose selector keys are all absent applies to every selection.
+    expect(lean()).toBe('btn s x');
+    expect(lean({ size: 'lg' } as never)).toBe('btn l x');
+    expect(strict()).toBe(lean());
+    expect(strict({ size: 'lg' } as never)).toBe(lean({ size: 'lg' } as never));
+  });
+
+  it('filters undefined from compound value arrays in both runtimes', () => {
+    for (const validate of ['always', 'never'] as const) {
+      const button = defineConfig({ validate }).recipe({
+        base: 'btn',
+        variants: { tone: { info: 't-info', danger: 't-danger' } },
+        defaultVariants: { tone: 'info' },
+        compoundVariants: [
+          { tone: [undefined, 'info'], className: 'ring' } as never,
+          { tone: [undefined], className: 'never-applies' } as never,
+        ],
+      });
+
+      expect(button()).toBe('btn t-info ring');
+      expect(button({ tone: 'danger' })).toBe('btn t-danger');
+    }
+  });
+
+  it('applies the same compound semantics to slotted recipes', () => {
+    const tabs = recipe({
+      slots: { root: 'flex', icon: 'size-4' },
+      variants: {
+        tone: { red: { root: 't-red' }, blue: { root: 't-blue' } },
+      },
+      defaultVariants: { tone: 'red' },
+      compoundVariants: [
+        { tone: 'red', typo: 'x', className: { root: 'ring' } } as never,
+        { tone: undefined, className: { icon: 'shadow' } } as never,
+      ],
+    });
+
+    const slots = tabs();
+    expect(slots.root()).toBe('flex t-red');
+    expect(slots.icon()).toBe('size-4 shadow');
+  });
+});
+
+describe('non-recipe inputs', () => {
+  it('throws a descriptive error when variant helpers receive a non-recipe function', () => {
+    expect(() => variantNames((() => 'x') as never)).toThrow(
+      /variantNames\(\)/
+    );
+    expect(() => variantOptions((() => 'x') as never, 'tone' as never)).toThrow(
+      /variantOptions\(\)/
+    );
   });
 });

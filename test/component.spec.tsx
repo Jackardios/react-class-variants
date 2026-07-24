@@ -4,6 +4,7 @@ import {
   forwardRef,
   useEffect,
   type ComponentPropsWithoutRef,
+  type RefCallback,
 } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import {
@@ -822,5 +823,126 @@ describe('styled()', () => {
 
     view.unmount();
     expect(unmounts).toBe(1);
+  });
+
+  it('throws a descriptive error when styled() receives a non-recipe function', () => {
+    expect(() => styled('div', (() => 'x') as never)).toThrow(/styled\(\)/);
+    expect(() => styled('div', null as never)).toThrow(/styled\(\)/);
+    expect(() => styled('div', undefined as never)).toThrow(/styled\(\)/);
+  });
+
+  it('keeps merged render-prop refs identity-stable across re-renders', () => {
+    const linkRecipe = recipe({
+      base: 'inline-flex',
+      variants: {
+        tone: {
+          primary: 'text-blue-600',
+          secondary: 'text-slate-900',
+        },
+      },
+    });
+    const LinkButton = styled('button', linkRecipe, { withRender: true });
+    const innerRef = vi.fn<RefCallback<HTMLAnchorElement>>();
+    const outerRef = vi.fn<RefCallback<HTMLButtonElement>>();
+
+    const view = render(
+      <LinkButton
+        ref={outerRef}
+        tone="primary"
+        render={<a ref={innerRef} href="/docs" />}
+      >
+        Docs
+      </LinkButton>
+    );
+
+    expect(innerRef).toHaveBeenCalledTimes(1);
+    expect(outerRef).toHaveBeenCalledTimes(1);
+
+    view.rerender(
+      <LinkButton
+        ref={outerRef}
+        tone="secondary"
+        render={<a ref={innerRef} href="/docs" />}
+      >
+        Docs
+      </LinkButton>
+    );
+
+    expect(innerRef).toHaveBeenCalledTimes(1);
+    expect(innerRef).not.toHaveBeenCalledWith(null);
+    expect(outerRef).toHaveBeenCalledTimes(1);
+    expect(outerRef).not.toHaveBeenCalledWith(null);
+  });
+
+  it('keeps host.render override refs identity-stable across re-renders', () => {
+    const badgeRecipe = recipe({
+      base: 'inline-flex',
+      variants: {
+        tone: {
+          info: 'bg-sky-100',
+          warn: 'bg-amber-100',
+        },
+      },
+    });
+    const localRef = vi.fn<RefCallback<HTMLSpanElement>>();
+
+    function BadgeView({
+      host,
+    }: RootStyledViewProps<'span', typeof badgeRecipe, false>) {
+      return host.render({ ref: localRef, children: host.children } as never);
+    }
+
+    const Badge = styled('span', badgeRecipe, { view: BadgeView });
+    const outerRef = vi.fn<RefCallback<HTMLSpanElement>>();
+
+    const view = render(
+      <Badge ref={outerRef} tone="info">
+        Info
+      </Badge>
+    );
+    view.rerender(
+      <Badge ref={outerRef} tone="warn">
+        Info
+      </Badge>
+    );
+
+    expect(localRef).toHaveBeenCalledTimes(1);
+    expect(localRef).not.toHaveBeenCalledWith(null);
+    expect(outerRef).toHaveBeenCalledTimes(1);
+    expect(outerRef).not.toHaveBeenCalledWith(null);
+  });
+
+  it('runs React 19 ref cleanups for merged refs on unmount', () => {
+    const linkRecipe = recipe({
+      base: 'inline-flex',
+      variants: {
+        tone: {
+          primary: 'text-blue-600',
+        },
+      },
+    });
+    const LinkButton = styled('button', linkRecipe, { withRender: true });
+    const cleanup = vi.fn();
+    const attach = vi.fn(() => cleanup);
+    const outerRef = createRef<HTMLAnchorElement>();
+
+    const view = render(
+      <LinkButton
+        ref={outerRef as never}
+        tone="primary"
+        render={<a ref={attach} href="/docs" />}
+      >
+        Docs
+      </LinkButton>
+    );
+
+    expect(attach).toHaveBeenCalledTimes(1);
+    expect(outerRef.current).toBe(screen.getByRole('link', { name: 'Docs' }));
+
+    view.unmount();
+
+    expect(cleanup).toHaveBeenCalledTimes(1);
+    expect(attach).toHaveBeenCalledTimes(1);
+    expect(outerRef.current).toBeNull();
   });
 });

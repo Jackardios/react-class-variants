@@ -119,10 +119,39 @@ export type RuntimeSystemOptions = Omit<SystemOptions, 'validate'> & {
   validate: boolean;
 };
 
-const emptyVariantOptions: Record<string, never> = {};
+// Null-prototype so lean-mode lookups with prototype-named input values
+// ("constructor", "toString", ...) resolve to undefined instead of inherited
+// Object.prototype members, without a per-lookup hasOwnProperty guard.
+export function createNullProtoRecord<TValue>(): Record<string, TValue> {
+  return { __proto__: null } as unknown as Record<string, TValue>;
+}
+
+const emptyVariantOptions: Record<string, never> = Object.freeze(
+  createNullProtoRecord<never>()
+);
 
 const DEFAULT_RESULT_CACHE_MAX_SIZE = 500;
-const RESULT_CACHE_KEY_SEPARATOR = '\x00';
+// Cache-key tokens are self-delimiting: undefined/true/false encode as one
+// control character, strings free of the control characters `\x00`-`\x04` as
+// `<value>\x00` (the hot path — one short scan, one concat), and everything
+// else (strings containing those characters, coerced non-string garbage) as
+// `\x04<length>:<value>`, which is length-delimited so its payload may contain
+// anything. Decoding is deterministic at every token boundary and the token
+// count per recipe is fixed (variantTable.length), so the raw className tail
+// needs no terminator — keys collide only for identical inputs. Injectivity
+// relies on that fixed count.
+const CACHE_KEY_SEPARATOR = '\x00';
+const CACHE_TOKEN_UNDEFINED = '\x01';
+const CACHE_TOKEN_TRUE = '\x02';
+const CACHE_TOKEN_FALSE = '\x03';
+const CACHE_TOKEN_ESCAPED = '\x04';
+
+function hasCacheUnsafeChar(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    if (value.charCodeAt(index) <= 4) return true;
+  }
+  return false;
+}
 
 // The cache is sound only when the resolved className is a pure function of its
 // inputs and `merge` is pure. We therefore enable it only in lean mode (strict
@@ -141,20 +170,38 @@ export function resolveResultCacheMaxSize(
   return Number.isFinite(maxSize) && maxSize >= 1 ? Math.floor(maxSize) : 0;
 }
 
-function selectionToken(value: CompiledSelectionValue): string {
-  if (value === undefined) return '';
-  if (value === true) return 'true';
-  if (value === false) return 'false';
-  return value;
-}
-
 function appendSelectionKey(
   prefix: string,
   selection: readonly CompiledSelectionValue[]
 ): string {
   let key = prefix;
   for (let index = 0; index < selection.length; index += 1) {
-    key += selectionToken(selection[index]) + RESULT_CACHE_KEY_SEPARATOR;
+    const value = selection[index];
+    if (value === undefined) {
+      key += CACHE_TOKEN_UNDEFINED;
+    } else if (value === true) {
+      key += CACHE_TOKEN_TRUE;
+    } else if (value === false) {
+      key += CACHE_TOKEN_FALSE;
+    } else if (typeof value === 'string' && !hasCacheUnsafeChar(value)) {
+      key += value + CACHE_KEY_SEPARATOR;
+    } else if (typeof value === 'string') {
+      key += `${CACHE_TOKEN_ESCAPED}${value.length}:${value}`;
+    } else {
+      // Lean variants pass malformed non-string inputs through the selection;
+      // tag and coerce them so cache-enabled recipes neither crash nor collide
+      // with genuine string tokens. Collisions between distinct garbage values
+      // are harmless: property lookups coerce identically (named variants) or
+      // every non-`true` value resolves to falseClass (boolean variants), so
+      // colliding keys always map to identical output.
+      let coerced: string;
+      try {
+        coerced = String(value);
+      } catch {
+        coerced = 'unstringable';
+      }
+      key += `${CACHE_TOKEN_ESCAPED}${coerced.length}:${coerced}`;
+    }
   }
   return key;
 }
@@ -237,7 +284,7 @@ export function normalizeSelectionValue(
 export function createVariantIndex(
   variantTable: readonly { key: string }[]
 ): VariantIndex {
-  const variantIndex: VariantIndex = {};
+  const variantIndex = createNullProtoRecord<number>();
 
   for (let index = 0; index < variantTable.length; index += 1) {
     variantIndex[variantTable[index].key] = index;
@@ -250,9 +297,9 @@ export function getVariantIndex(
   variantIndex: Readonly<VariantIndex> | undefined,
   key: string
 ): number | undefined {
-  return variantIndex && hasOwnKey(variantIndex, key)
-    ? variantIndex[key]
-    : undefined;
+  // variantIndex is a null-prototype object, so a plain read cannot pick up
+  // inherited Object.prototype members.
+  return variantIndex ? variantIndex[key] : undefined;
 }
 
 function findVariantIndexByKey(
@@ -373,6 +420,12 @@ export function compileVariants<TClassName>(params: {
       );
     }
 
+    if (validate && variantKey in Object.prototype) {
+      throw new Error(
+        `react-class-variants: variant key "${variantKey}" shadows an Object.prototype member.`
+      );
+    }
+
     const optionMap = variants[variantKey] ?? {};
     let falseClass: TClassName | undefined;
     let hasNamedOption = false;
@@ -401,7 +454,7 @@ export function compileVariants<TClassName>(params: {
       }
 
       hasNamedOption = true;
-      options ??= {};
+      options ??= createNullProtoRecord<TClassName>();
       options[optionKey] = className;
     }
 
@@ -473,6 +526,7 @@ export function compileCompounds<TClassName>(params: {
 
   for (const compound of compounds) {
     const selectors: Array<readonly [number, CompiledExpected]> = [];
+    let dropped = false;
 
     for (const key in compound) {
       if (!hasOwnKey(compound, key) || key === 'className') continue;
@@ -484,15 +538,22 @@ export function compileCompounds<TClassName>(params: {
             `react-class-variants: compoundVariants key "${key}" is not declared in variants.`
           );
         }
-        continue;
+        // An undeclared selector key can never match, so the whole compound
+        // must never apply (matches cva/tailwind-variants semantics).
+        dropped = true;
+        break;
       }
 
-      const variant = variantTable[index];
       const value = (compound as Record<string, unknown>)[key];
+      if (value === undefined) continue;
+
+      const variant = variantTable[index];
 
       if (Array.isArray(value)) {
+        const candidates = value.filter(candidate => candidate !== undefined);
+
         if (validate) {
-          for (const candidate of value) {
+          for (const candidate of candidates) {
             if (!isAllowedVariantValue(variant, candidate)) {
               throw new Error(
                 `react-class-variants: invalid compoundVariants value "${String(
@@ -503,7 +564,7 @@ export function compileCompounds<TClassName>(params: {
           }
         }
 
-        selectors.push([index, compileCompoundSelection(variant, value)]);
+        selectors.push([index, compileCompoundSelection(variant, candidates)]);
         continue;
       }
 
@@ -520,6 +581,8 @@ export function compileCompounds<TClassName>(params: {
         normalizeSelectionValue(variant.isBoolean, value),
       ]);
     }
+
+    if (dropped) continue;
 
     compiledCompounds.push({
       className: compileClassName(
@@ -553,6 +616,9 @@ export function compileLeanCompounds<TClassName>(params: {
   const selectorPairs: Array<number | CompiledExpected> = [];
 
   for (const compound of compounds) {
+    const pairsStart = selectorPairs.length;
+    let dropped = false;
+
     for (const key in compound) {
       if (!hasOwnKey(compound, key) || key === 'className') continue;
 
@@ -563,15 +629,22 @@ export function compileLeanCompounds<TClassName>(params: {
             `react-class-variants: compoundVariants key "${key}" is not declared in variants.`
           );
         }
-        continue;
+        // An undeclared selector key can never match, so the whole compound
+        // must never apply (matches cva/tailwind-variants semantics).
+        dropped = true;
+        break;
       }
 
-      const variant = variantTable[index];
       const value = (compound as Record<string, unknown>)[key];
+      if (value === undefined) continue;
+
+      const variant = variantTable[index];
 
       if (Array.isArray(value)) {
+        const candidates = value.filter(candidate => candidate !== undefined);
+
         if (validate) {
-          for (const candidate of value) {
+          for (const candidate of candidates) {
             if (!isAllowedVariantValue(variant, candidate)) {
               throw new Error(
                 `react-class-variants: invalid compoundVariants value "${String(
@@ -582,7 +655,10 @@ export function compileLeanCompounds<TClassName>(params: {
           }
         }
 
-        selectorPairs.push(index, compileCompoundSelection(variant, value));
+        selectorPairs.push(
+          index,
+          compileCompoundSelection(variant, candidates)
+        );
         continue;
       }
 
@@ -598,6 +674,11 @@ export function compileLeanCompounds<TClassName>(params: {
         index,
         normalizeSelectionValue(variant.isBoolean, value)
       );
+    }
+
+    if (dropped) {
+      selectorPairs.length = pairsStart;
+      continue;
     }
 
     classNames.push(
@@ -796,15 +877,18 @@ export function createResolvedProps(
 
   for (const key in source) {
     if (!hasOwnKey(source, key)) continue;
+    // Assigning an own '__proto__' input key (e.g. from JSON.parse) would swap
+    // the prototype of resolvedProps instead of copying data; drop it.
+    if (key === '__proto__') continue;
     if (compiled.mode === 'slot' && key === 'slotClassNames') continue;
     if (getVariantIndex(variantIndex, key) !== undefined) continue;
     resolvedProps[key] = source[key];
   }
 
   for (const [nativeKey, aliasKey] of options?.propAliasEntries ?? []) {
-    if (!(aliasKey in resolvedProps)) continue;
+    if (!hasOwnKey(resolvedProps, aliasKey)) continue;
 
-    if (compiled.validate && nativeKey in resolvedProps) {
+    if (compiled.validate && hasOwnKey(resolvedProps, nativeKey)) {
       throw new Error(
         `react-class-variants: propAliases target "${nativeKey}" would overwrite an existing resolved prop.`
       );
@@ -815,7 +899,7 @@ export function createResolvedProps(
   }
 
   for (const [key, index] of options?.forwardPropEntries ?? []) {
-    if (compiled.validate && key in resolvedProps) {
+    if (compiled.validate && hasOwnKey(resolvedProps, key)) {
       throw new Error(
         `react-class-variants: forwardProps key "${key}" would overwrite an existing resolved prop.`
       );
@@ -857,6 +941,17 @@ export function normalizeResolveOptions(
 
       const aliasKey = rawPropAliases[nativeKey];
       if (!aliasKey) continue;
+
+      // Writing resolvedProps['__proto__'] would swap its prototype instead of
+      // copying data (see createResolvedProps), so this target is never legal.
+      if (nativeKey === '__proto__') {
+        if (compiled.validate) {
+          throw new Error(
+            'react-class-variants: prop alias target "__proto__" is not allowed.'
+          );
+        }
+        continue;
+      }
 
       if (compiled.validate) {
         if (isReservedPublicProp(compiled.mode, nativeKey)) {
@@ -939,4 +1034,21 @@ export function attachCompiled<TRecipe extends AnyRecipe>(
 
 export function getCompiledRecipe(recipe: AnyRecipe): CompiledRecipe {
   return (recipe as RecipeWithCompiled)[compiledRecipeSymbol];
+}
+
+export function getCompiledRecipeOrThrow(
+  recipe: AnyRecipe,
+  api: string
+): CompiledRecipe {
+  const compiled = recipe ? getCompiledRecipe(recipe) : undefined;
+
+  if (!compiled) {
+    throw new Error(
+      `react-class-variants: ${api} received a value without compiled recipe metadata. ` +
+        'Pass a recipe created by recipe() or defineConfig().recipe(). ' +
+        'If it is a recipe, duplicate copies of react-class-variants may be installed.'
+    );
+  }
+
+  return compiled;
 }

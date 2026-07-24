@@ -1,5 +1,5 @@
 import { type CSSProperties, useMemo, type Ref, type RefCallback } from 'react';
-import { setRef } from './internal/react-utils';
+import { setRef, type RefCleanup } from './internal/react-utils';
 import { hasOwnProperty } from './internal/core-utils';
 export { hasOwnProperty } from './internal/core-utils';
 
@@ -112,10 +112,34 @@ function mergeRefsImpl<T>(
   if (validRefCount === 1) return singleRef;
 
   return (value: T | null) => {
-    for (const ref of refs) {
+    let cleanups: Array<RefCleanup | undefined> | undefined;
+
+    for (let index = 0; index < refs.length; index += 1) {
+      const ref = refs[index];
       if (!ref) continue;
-      setRef(ref, value);
+
+      const cleanup = setRef(ref, value);
+      if (cleanup) {
+        cleanups ??= [];
+        cleanups[index] = cleanup;
+      }
     }
+
+    if (!cleanups) return;
+
+    // React 19 cleanup: run inner cleanups where provided and fall back to the
+    // legacy null call for refs that returned none.
+    const collected = cleanups;
+    return () => {
+      for (let index = 0; index < refs.length; index += 1) {
+        const ref = refs[index];
+        if (!ref) continue;
+
+        const cleanup = collected[index];
+        if (cleanup) cleanup();
+        else setRef(ref, null);
+      }
+    };
   };
 }
 

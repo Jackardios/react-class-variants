@@ -71,6 +71,12 @@ const badgeRecipe = recipe({
 });
 ```
 
+Compound selector semantics:
+
+- an explicitly `undefined` selector value is treated as if the key were absent, in both runtimes (cva instead matches such a selector only while the variant resolves to `undefined` — never, once a default exists)
+- `undefined` entries inside array selectors are filtered out; an array that ends up empty never matches
+- a selector key that is not a declared variant throws at recipe creation with `validate: 'always'`; the lean runtime drops that whole compound so it never applies (matching cva/tailwind-variants semantics)
+
 Use `slots` for slotted recipes:
 
 ```ts
@@ -782,13 +788,14 @@ semantics as the render path.
 - exported from the package root
 - merges multiple refs into one callback ref
 - avoids wrapping when there is only one non-null ref
+- propagates React 19 callback-ref cleanups: when an inner ref returns a cleanup, the merged ref returns a combined cleanup that runs it and null-resets the refs that returned none
 
 Use this in non-hook code such as `cloneElement()` or conditional branches.
 
 ### `useMergeRefs(...refs)`
 
 - exported from the package root
-- memoized hook form of `mergeRefs(...)`
+- memoized hook form of `mergeRefs(...)`, including cleanup propagation
 
 Use this inside React components when you need one ref prop to update multiple
 refs.
@@ -811,17 +818,20 @@ refs.
 
 ## Common Errors
 
-| Error                                                                    | Cause                                                         | Fix                                           |
-| ------------------------------------------------------------------------ | ------------------------------------------------------------- | --------------------------------------------- |
-| `unknown recipe prop "type"`                                             | direct recipe calls are variant-only APIs                     | use `resolve()` when you need arbitrary props |
-| `className cannot be passed directly to a slotted recipe call`           | slot recipes route class overrides at the slot-function level | use a slot renderer or `resolve()`            |
-| `slotted recipes require a view component`                               | slot recipes no longer accept the default direct host path    | pass `view` to `styled()`                     |
-| `slotted recipes without a "root" slot require hostSlot`                 | the recipe has no default host slot                           | provide `hostSlot` with a declared slot name  |
-| `hostSlot "x" is not declared in recipe.slots`                           | `hostSlot` references an unknown slot                         | use one of the declared slot names            |
-| `invalid input.slotClassNames; slot "x" is not declared in recipe.slots` | `slotClassNames` targets an unknown slot                      | only override declared slots                  |
-| `variant key "slotClassNames" is reserved`                               | `slotClassNames` cannot also be a variant name                | rename the variant key                        |
-| `prop alias target "className" conflicts with a reserved public prop`    | aliasing would shadow a reserved React prop                   | choose a different alias                      |
-| `forwardProps key "x" is not declared in variants`                       | `forwardProps` references a non-existent variant              | only forward declared variant keys            |
+| Error                                                                    | Cause                                                                           | Fix                                               |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `unknown recipe prop "type"`                                             | direct recipe calls are variant-only APIs                                       | use `resolve()` when you need arbitrary props     |
+| `className cannot be passed directly to a slotted recipe call`           | slot recipes route class overrides at the slot-function level                   | use a slot renderer or `resolve()`                |
+| `slotted recipes require a view component`                               | slot recipes no longer accept the default direct host path                      | pass `view` to `styled()`                         |
+| `slotted recipes without a "root" slot require hostSlot`                 | the recipe has no default host slot                                             | provide `hostSlot` with a declared slot name      |
+| `hostSlot "x" is not declared in recipe.slots`                           | `hostSlot` references an unknown slot                                           | use one of the declared slot names                |
+| `invalid input.slotClassNames; slot "x" is not declared in recipe.slots` | `slotClassNames` targets an unknown slot                                        | only override declared slots                      |
+| `variant key "slotClassNames" is reserved`                               | `slotClassNames` cannot also be a variant name                                  | rename the variant key                            |
+| `prop alias target "className" conflicts with a reserved public prop`    | aliasing would shadow a reserved React prop                                     | choose a different alias                          |
+| `forwardProps key "x" is not declared in variants`                       | `forwardProps` references a non-existent variant                                | only forward declared variant keys                |
+| `compoundVariants key "x" is not declared in variants`                   | a compound selector references an unknown variant (`validate: 'always'`)        | fix the selector key                              |
+| `variant key "x" shadows an Object.prototype member`                     | variant names like `toString` break plain-object lookups (`validate: 'always'`) | rename the variant key                            |
+| `styled() received a value without compiled recipe metadata`             | the second argument is not a recipe, or duplicate package copies are installed  | pass a `recipe()` result; deduplicate the package |
 
 ## Related Docs
 

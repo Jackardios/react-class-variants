@@ -1,6 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- public styled implementation intentionally erases recipe generics behind a typed export surface. */
 import { createRootStyled, createSlotStyled } from './internal/builders';
-import { createRecipeFactory, getCompiledRecipe } from './internal/recipe';
+import {
+  createRecipeFactory,
+  getCompiledRecipeOrThrow,
+} from './internal/recipe';
 import type {
   AnyRootRecipe,
   AnySlotRecipe,
@@ -90,7 +93,10 @@ function styledImpl(
     | RootStyledOptions<any, any, any, any, any, any>
     | SlotStyledOptions<any, any, any, any, any, any>
 ) {
-  const compiled = getCompiledRecipe(inputRecipe as AnyRootRecipe);
+  const compiled = getCompiledRecipeOrThrow(
+    inputRecipe as AnyRootRecipe,
+    'styled()'
+  );
   const isSlotRecipe = compiled.mode === 'slot';
 
   if (typeof base !== 'string' && options?.withRender) {

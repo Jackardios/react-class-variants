@@ -19,6 +19,7 @@ import {
   compileCompounds,
   compileLeanCompounds,
   compileVariants,
+  createNullProtoRecord,
   createResolvedProps,
   ensureVariantIndex,
   forEachMatchingCompound,
@@ -148,7 +149,9 @@ function compileSlotBase(config: AnySlotRecipeConfig, validate: boolean) {
   }
 
   const slotNames: string[] = [];
-  const slotIndex: Record<string, number> = {};
+  // Null-prototype so prototype-named slot keys cannot resolve to inherited
+  // Object.prototype members (see createNullProtoRecord in engine/shared.ts).
+  const slotIndex = createNullProtoRecord<number>();
   const base = [] as Array<string | undefined>;
   const rawSlots = config.slots as Record<string, unknown>;
 
@@ -531,10 +534,8 @@ function createStrictSlotRenderers(
   selection: readonly CompiledSelectionValue[],
   slotClassNames: SlotClassTable
 ) {
-  const slots = Object.create(null) as Record<
-    string,
-    (input?: Record<string, unknown>) => string
-  >;
+  const slots =
+    createNullProtoRecord<(input?: Record<string, unknown>) => string>();
   ensureVariantIndex(compiled);
 
   for (
@@ -567,10 +568,8 @@ function createLeanSlotRenderers(
   selection: readonly CompiledSelectionValue[],
   slotClassNames: SlotClassTable
 ) {
-  const slots = Object.create(null) as Record<
-    string,
-    (input?: Record<string, unknown>) => string
-  >;
+  const slots =
+    createNullProtoRecord<(input?: Record<string, unknown>) => string>();
   ensureVariantIndex(compiled);
 
   for (

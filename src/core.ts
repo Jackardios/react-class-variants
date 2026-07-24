@@ -1,4 +1,7 @@
-import { createRecipeFactory, getCompiledRecipe } from './internal/recipe';
+import {
+  createRecipeFactory,
+  getCompiledRecipeOrThrow,
+} from './internal/recipe';
 import { defaultRecipeFactory } from './internal/recipe-default';
 import type {
   AnyRecipe,
@@ -87,7 +90,7 @@ export function variantNames<const TSource extends VariantSource>(
   source: TSource
 ): VariantName<TSource>[] {
   if (isRecipe(source)) {
-    return getCompiledRecipe(source).variantTable.map(
+    return getCompiledRecipeOrThrow(source, 'variantNames()').variantTable.map(
       variant => variant.key
     ) as VariantName<TSource>[];
   }
@@ -100,9 +103,10 @@ export function variantOptions<
   const Name extends VariantName<TSource>
 >(source: TSource, variantName: Name): VariantOption<TSource, Name>[] {
   if (isRecipe(source)) {
-    const variant = getCompiledRecipe(source).variantTable.find(
-      entry => entry.key === variantName
-    );
+    const variant = getCompiledRecipeOrThrow(
+      source,
+      'variantOptions()'
+    ).variantTable.find(entry => entry.key === variantName);
 
     if (!variant) {
       return [];
