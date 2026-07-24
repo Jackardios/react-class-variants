@@ -1,5 +1,18 @@
 # react-class-variants
 
+## 2.0.0-alpha.12
+
+### Patch Changes
+
+- 7a96ac4: Treat explicitly `undefined` compound selector values as absent keys in both runtimes, consistent with `defaultVariants` and input props. Strict mode no longer throws at recipe creation for them, and the lean runtime no longer compiles them into matches-only-when-unset selectors. `undefined` entries inside selector arrays are filtered out; an array that ends up empty never matches.
+- 7a96ac4: Drop compound variants that reference undeclared variant keys in the lean runtime. Previously the unknown key was skipped but the compound's `className` still compiled, so the compound applied on every render; it now never applies, matching cva/tailwind-variants semantics. Strict mode (`validate: 'always'`) keeps throwing at recipe creation.
+- 7a96ac4: Memoize merged refs in the `styled()` render paths per ref pair. The render-prop and `host.render()` paths previously created a new callback ref every render, so React detached (`null`) and re-attached both underlying refs on every re-render; stable ref pairs now keep one identity across renders.
+- 7a96ac4: Throw a descriptive error when `styled()`, `variantNames()`, or `variantOptions()` receives a function without compiled recipe metadata, and when `styled()` receives `null` or `undefined`, instead of an opaque `TypeError`. The message also hints at duplicated copies of the package, the other way a real recipe can lose its per-module brand.
+- 7a96ac4: Create engine lookup tables (variant indexes, slot indexes, variant option maps) with null prototypes. Prototype-named keys and values such as `constructor` or `toString` no longer crash slot overrides, silently bypass strict slot validation, or leak `Object.prototype` members into class strings. Strict mode (`validate: 'always'`) now rejects variant keys that shadow an `Object.prototype` member at recipe creation.
+- 7a96ac4: Use own-property checks for `propAliases` and `forwardProps` in `resolve()`. Inherited `Object.prototype` members (e.g. an alias public key named `toString`) no longer count as present props or leak functions into resolved props, and strict mode no longer throws spurious "would overwrite an existing resolved prop" errors for prototype-named targets. Own `__proto__` input keys (e.g. from `JSON.parse`) and `propAliases` targets named `__proto__` are dropped (rejected in strict mode) instead of swapping the prototype of the resolved props object.
+- 7a96ac4: Encode result-cache keys with self-delimiting tokens. Boolean `true` versus the string `'true'`, option keys containing the old `\x00` separator, and empty-string versus unset selections no longer collide, so cached output can no longer depend on call history. Malformed non-string selection values (e.g. `null` or a number passed to a boolean variant) are type-tagged and coerced, so cache-enabled recipes neither crash nor serve poisoned entries for garbage input.
+- 7a96ac4: Propagate React 19 callback-ref cleanups through `mergeRefs`, `useMergeRefs`, and the merged refs inside `styled()`. When an inner ref returns a cleanup, the merged ref now returns a combined cleanup that runs it and null-resets refs that returned none; previously cleanups were discarded and never ran. Refs without cleanups keep the legacy null-call behavior unchanged.
+
 ## 2.0.0-alpha.11
 
 ### Patch Changes
