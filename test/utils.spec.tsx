@@ -112,4 +112,52 @@ describe('React utilities', () => {
     rerender(<Probe />);
     expect(outerRef.current).toBe(target);
   });
+
+  it('propagates React 19 cleanups through mergeRefs', () => {
+    const cleanup = vi.fn();
+    const attach = vi.fn(() => cleanup);
+    const objectRef = createRef<HTMLDivElement>();
+    const merged = mergeRefs<HTMLDivElement>(attach, objectRef);
+    const node = document.createElement('div');
+
+    const detach = merged?.(node);
+    expect(objectRef.current).toBe(node);
+    expect(typeof detach).toBe('function');
+
+    (detach as () => void)();
+    expect(cleanup).toHaveBeenCalledTimes(1);
+    expect(attach).toHaveBeenCalledTimes(1);
+    expect(attach).not.toHaveBeenCalledWith(null);
+    expect(objectRef.current).toBeNull();
+  });
+
+  it('returns no cleanup when no inner ref provides one', () => {
+    const firstRef = createRef<HTMLDivElement>();
+    const callbackRef = vi.fn<RefCallback<HTMLDivElement>>();
+    const merged = mergeRefs(firstRef, callbackRef);
+    const node = document.createElement('div');
+
+    expect(merged?.(node)).toBeUndefined();
+  });
+
+  it('runs cleanups through useMergeRefs on unmount', () => {
+    const cleanup = vi.fn();
+    const attach = vi.fn(() => cleanup);
+    const objectRef = createRef<HTMLDivElement>();
+
+    function Probe() {
+      return (
+        <div data-testid="probe-target" ref={useMergeRefs(attach, objectRef)} />
+      );
+    }
+
+    const view = render(<Probe />);
+    expect(objectRef.current).toBe(screen.getByTestId('probe-target'));
+
+    view.unmount();
+    expect(cleanup).toHaveBeenCalledTimes(1);
+    expect(attach).toHaveBeenCalledTimes(1);
+    expect(attach).not.toHaveBeenCalledWith(null);
+    expect(objectRef.current).toBeNull();
+  });
 });

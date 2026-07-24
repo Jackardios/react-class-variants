@@ -399,7 +399,7 @@ import {
 
 - `hasOwnProperty(object, key)` is a typed own-property guard and is also available from `react-class-variants/core`
 - `mergeProps(base, overrides)` concatenates `className`, shallow-merges `style`, composes React event handlers with override-first ordering, and replaces other props with the override value
-- `mergeRefs(...refs)` creates a merged ref callback for non-hook contexts such as `cloneElement()` or conditional branches
+- `mergeRefs(...refs)` creates a merged ref callback for non-hook contexts such as `cloneElement()` or conditional branches; React 19 callback-ref cleanups are propagated through the merged ref
 - `useMergeRefs(...refs)` is the memoized hook form for React components
 
 ## Primary APIs

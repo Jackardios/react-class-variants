@@ -162,7 +162,7 @@ Does not export React runtime helpers such as `styled()`, `mergeProps()`, or ref
 
 ### Runtime and engine layers
 
-- `src/internal/recipe-default.ts`: default environment-sensitive `recipe()` factory
+- `src/internal/recipe-default.ts`: unconditionally lean default `recipe()` factory (no validation, no environment branch)
 - `src/internal/recipe.ts`: configurable recipe factory and shared resolution helpers
 - `src/internal/engine/root.ts`: root recipe compilation and root `resolve()`
 - `src/internal/engine/slot.ts`: slotted recipe compilation and slot `resolve()`

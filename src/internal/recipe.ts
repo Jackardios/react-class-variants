@@ -23,6 +23,7 @@ import {
 } from './engine/slot';
 import {
   getCompiledRecipe,
+  getCompiledRecipeOrThrow,
   normalizeResolveOptions,
   type CompiledRecipe,
   type NormalizedResolveOptions,
@@ -32,6 +33,7 @@ import {
 
 export {
   getCompiledRecipe,
+  getCompiledRecipeOrThrow,
   normalizeResolveOptions,
   type CompiledRecipe,
   type NormalizedResolveOptions,
@@ -87,25 +89,11 @@ function createStrictRecipeFactory(options: SystemOptions): RecipeFactory {
   }) as RecipeFactory;
 }
 
-function createDefaultRecipeFactory(
-  options: SystemOptions,
-  defaultMode: RuntimeSystemOptions['mode']
-): RecipeFactory {
-  if (options.validate === 'never') {
-    return createLeanRecipeFactory(options);
-  }
-
-  if (options.validate === 'always') {
-    return createStrictRecipeFactory(options);
-  }
-
-  return defaultMode === 'strict'
-    ? createStrictRecipeFactory(options)
-    : createLeanRecipeFactory(options);
-}
-
 export function createRecipeFactory(
   options: SystemOptions = {}
 ): RecipeFactory {
-  return createDefaultRecipeFactory(options, 'lean');
+  // 'never' and the default both resolve to the lean runtime.
+  return options.validate === 'always'
+    ? createStrictRecipeFactory(options)
+    : createLeanRecipeFactory(options);
 }

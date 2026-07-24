@@ -100,6 +100,14 @@ badgeRecipe({ tone: 'danger', size: 'sm' });
 
 Arrays in compound selectors mean “match any of these values”.
 
+Explicitly `undefined` selector values are treated as absent keys — consistent
+with `defaultVariants` and input props. cva instead matches such a selector
+only while the variant resolves to `undefined` (never, once a default exists).
+`undefined` entries in selector arrays are filtered out (an array that ends up
+empty never matches). A selector key that is not a declared variant throws with
+`validate: 'always'` and makes the whole compound inert in the lean runtime —
+it never applies.
+
 ## 2. Turn It into a Component
 
 ```tsx
