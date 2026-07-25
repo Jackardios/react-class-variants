@@ -21,6 +21,7 @@ import {
   compileLeanCompounds,
   compileVariants,
   createResolvedProps,
+  ensureVariantIndex,
   forEachMatchingCompound,
   forEachMatchingLeanCompound,
   freezeConfig,
@@ -158,6 +159,7 @@ function resolveStrictRootClassName(
   input: Record<string, unknown> | undefined,
   allowUnknownProps: boolean
 ) {
+  ensureVariantIndex(compiled);
   const selection = buildSelection(
     compiled,
     input,
@@ -197,6 +199,7 @@ function resolveLeanRootClassName(
   compiled: LeanRootCompiledRecipe,
   input: Record<string, unknown> | undefined
 ) {
+  ensureVariantIndex(compiled);
   const selection = buildRootSelectionLean(compiled, input);
   const userClassName = flattenUserClassName(
     'input.className',

@@ -503,6 +503,53 @@ describe('styled()', () => {
     expect(screen.getByTestId('icon').className).toBe('size-4 text-blue-100');
   });
 
+  it('renders slotted views safely while Object.prototype is polluted', () => {
+    // A polluted string would leak into class output if the compiled lookup
+    // tables were left with Object.prototype reachable. The first render below
+    // is also the recipe's first resolution, so it exercises the lazy seal.
+    // Non-enumerable so React's own for..in prop walks stay quiet; direct
+    // reads through an unsealed table would still see it.
+    Object.defineProperty(Object.prototype, '__rcvPolluted', {
+      configurable: true,
+      value: 'evil',
+    });
+    try {
+      const tabsRecipe = recipe({
+        slots: {
+          root: 'flex',
+          icon: 'size-4',
+        },
+        variants: {
+          tone: {
+            red: {
+              root: 'text-red',
+              icon: 'fill-red',
+            },
+          },
+        },
+        defaultVariants: {
+          tone: 'red',
+        },
+      });
+      const Tabs = styled('div', tabsRecipe, {
+        view({ host, classes }) {
+          return host.render({
+            children: (
+              <span data-testid="tabs-icon" className={classes.icon()} />
+            ),
+          });
+        },
+      });
+
+      render(<Tabs data-testid="tabs" tone={'__rcvPolluted' as never} />);
+
+      expect(screen.getByTestId('tabs').className).toBe('flex');
+      expect(screen.getByTestId('tabs-icon').className).toBe('size-4');
+    } finally {
+      delete (Object.prototype as Record<string, unknown>).__rcvPolluted;
+    }
+  });
+
   it('rejects reserved prop alias targets on the React surface', () => {
     const strict = defineConfig({ validate: 'always' });
     const inputRecipe = strict.recipe({

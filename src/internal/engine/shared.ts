@@ -119,15 +119,38 @@ export type RuntimeSystemOptions = Omit<SystemOptions, 'validate'> & {
   validate: boolean;
 };
 
-// Null-prototype so lean-mode lookups with prototype-named input values
-// ("constructor", "toString", ...) resolve to undefined instead of inherited
-// Object.prototype members, without a per-lookup hasOwnProperty guard.
-export function createNullProtoRecord<TValue>(): Record<string, TValue> {
-  return { __proto__: null } as unknown as Record<string, TValue>;
+// Compiled lookup tables are built as ordinary fast-mode objects and sealed
+// with a null prototype once fully populated. Object.setPrototypeOf(obj, null)
+// keeps V8's fast properties (unlike `{ __proto__: null }` literals or
+// Object.create(null), which end up in dictionary mode), so lookups and
+// per-recipe memory match plain objects while inherited Object.prototype
+// members stay unreachable — prototype-named input values ("constructor",
+// "toString", ...) and polluted Object.prototype entries resolve to undefined
+// without a per-lookup hasOwnProperty guard. Invariant: sealed tables are
+// write-once — never add keys after the seal.
+export function sealNullPrototype<T extends object>(record: T): T {
+  return Object.setPrototypeOf(record, null) as T;
 }
 
+// Population writes go through this helper: before the seal the table still
+// inherits Object.prototype, so a plain assignment of a "__proto__" config key
+// (slot name, option key, lean variant key — e.g. from JSON.parse) would hit
+// the inherited accessor and silently vanish (or transiently swap the
+// prototype for object values) instead of creating an own property. Sealing
+// early detaches the accessor, so the assignment creates an own key; only
+// tables that actually contain a "__proto__" key take the dictionary-mode hit.
+export function setOwnKey<TValue>(
+  record: Record<string, TValue>,
+  key: string,
+  value: TValue
+): void {
+  if (key === '__proto__') Object.setPrototypeOf(record, null);
+  record[key] = value;
+}
+
+// Seal before freeze: Object.setPrototypeOf throws on a frozen object.
 const emptyVariantOptions: Record<string, never> = Object.freeze(
-  createNullProtoRecord<never>()
+  sealNullPrototype<Record<string, never>>({})
 );
 
 const DEFAULT_RESULT_CACHE_MAX_SIZE = 500;
@@ -282,15 +305,22 @@ export function normalizeSelectionValue(
 }
 
 export function createVariantIndex(
-  variantTable: readonly { key: string }[]
+  variantTable: readonly { key: string; options: object }[]
 ): VariantIndex {
-  const variantIndex = createNullProtoRecord<number>();
+  const variantIndex: VariantIndex = {};
 
   for (let index = 0; index < variantTable.length; index += 1) {
-    variantIndex[variantTable[index].key] = index;
+    setOwnKey(variantIndex, variantTable[index].key, index);
+    // Lazy options seal: recipe creation skips the per-table setPrototypeOf
+    // cost (creation is the library's weakest competitive axis) and every
+    // resolution path calls ensureVariantIndex before its first raw
+    // `variant.options[value]` read. Re-sealing emptyVariantOptions (or a
+    // table sealed early by setOwnKey) is a same-value prototype set, which
+    // is allowed even on frozen objects.
+    Object.setPrototypeOf(variantTable[index].options, null);
   }
 
-  return variantIndex;
+  return sealNullPrototype(variantIndex);
 }
 
 export function getVariantIndex(
@@ -454,8 +484,8 @@ export function compileVariants<TClassName>(params: {
       }
 
       hasNamedOption = true;
-      options ??= createNullProtoRecord<TClassName>();
-      options[optionKey] = className;
+      options ??= {};
+      setOwnKey(options, optionKey, className);
     }
 
     if (isBoolean && hasNamedOption) {
@@ -469,6 +499,9 @@ export function compileVariants<TClassName>(params: {
       falseClass,
       isBoolean,
       key: variantKey,
+      // Sealed lazily inside createVariantIndex on the first recipe call.
+      // Until then every read is prototype-safe: hasOwnKey during
+      // compile-time validation and Object.keys() in variantOptions().
       options: options ?? (emptyVariantOptions as Record<string, TClassName>),
       trueClass,
     };
