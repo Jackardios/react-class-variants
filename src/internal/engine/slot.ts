@@ -19,7 +19,6 @@ import {
   compileCompounds,
   compileLeanCompounds,
   compileVariants,
-  createNullProtoRecord,
   createResolvedProps,
   ensureVariantIndex,
   forEachMatchingCompound,
@@ -31,6 +30,8 @@ import {
   materializeSelection,
   normalizeResolveOptions,
   normalizeSelectionValue,
+  sealNullPrototype,
+  setOwnKey,
   readVariantClassName,
   type CompiledSelectionValue,
   type LeanSlotClassTable,
@@ -149,15 +150,13 @@ function compileSlotBase(config: AnySlotRecipeConfig, validate: boolean) {
   }
 
   const slotNames: string[] = [];
-  // Null-prototype so prototype-named slot keys cannot resolve to inherited
-  // Object.prototype members (see createNullProtoRecord in engine/shared.ts).
-  const slotIndex = createNullProtoRecord<number>();
+  const slotIndex: Record<string, number> = {};
   const base = [] as Array<string | undefined>;
   const rawSlots = config.slots as Record<string, unknown>;
 
   for (const slot in rawSlots) {
     if (!hasOwnKey(rawSlots, slot)) continue;
-    slotIndex[slot] = slotNames.length;
+    setOwnKey(slotIndex, slot, slotNames.length);
     slotNames.push(slot);
   }
 
@@ -172,7 +171,11 @@ function compileSlotBase(config: AnySlotRecipeConfig, validate: boolean) {
 
   return {
     base: base.some(Boolean) ? base : emptySlotClassTable,
-    slotIndex,
+    // Seal here, before compileSlotClassTable ever reads slotIndex: its raw
+    // `slotIndex[slot]` lookups rely on `undefined` to detect undeclared
+    // slots, which an unsealed (Object.prototype-chained) table would break
+    // for prototype-named slot keys.
+    slotIndex: sealNullPrototype(slotIndex),
     slotNames,
   };
 }
@@ -516,6 +519,11 @@ export function resolveSlotViewState(
   input: Record<string, unknown> | undefined,
   options: NormalizedResolveOptions | undefined
 ) {
+  // Styled slot-view path: slot renderers built from this state read
+  // variant.options raw. The lazy seal is guaranteed before any renderer runs
+  // — createResolvedProps below calls ensureVariantIndex eagerly, and the
+  // renderer factories seal again at creation. Keep one of those anchors if
+  // this function is restructured.
   const selection =
     compiled.runtime === 'lean'
       ? buildSlotSelectionLean(compiled, input)
@@ -534,8 +542,10 @@ function createStrictSlotRenderers(
   selection: readonly CompiledSelectionValue[],
   slotClassNames: SlotClassTable
 ) {
-  const slots =
-    createNullProtoRecord<(input?: Record<string, unknown>) => string>();
+  const slots = Object.create(null) as Record<
+    string,
+    (input?: Record<string, unknown>) => string
+  >;
   ensureVariantIndex(compiled);
 
   for (
@@ -568,8 +578,10 @@ function createLeanSlotRenderers(
   selection: readonly CompiledSelectionValue[],
   slotClassNames: SlotClassTable
 ) {
-  const slots =
-    createNullProtoRecord<(input?: Record<string, unknown>) => string>();
+  const slots = Object.create(null) as Record<
+    string,
+    (input?: Record<string, unknown>) => string
+  >;
   ensureVariantIndex(compiled);
 
   for (
