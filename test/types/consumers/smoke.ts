@@ -91,6 +91,9 @@ import type {
   VariantSource as CoreVariantSource,
 } from 'react-class-variants/core';
 
+// A styled component is a React 19 function component.
+type StyledRender = ReactNode | Promise<ReactNode>;
+
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
   ? 1
   : 2
@@ -172,12 +175,12 @@ const Tabs = styled('div', tabs, {
     host.render({ children: [host.props.label, classes.tab()] }),
 });
 type _ButtonRef = Expect<Equal<ComponentRef<typeof Button>, HTMLButtonElement>>;
-const buttonElement: ReactNode = Button({
+const buttonElement: StyledRender = Button({
   tone: 'primary',
   ref: createRef<HTMLButtonElement>(),
   render: props => props.children,
 });
-const tabsElement: ReactNode = Tabs({ size: 'lg', label: 'Tab' });
+const tabsElement: StyledRender = Tabs({ size: 'lg', label: 'Tab' });
 const merged = root.mergeProps({ className: 'a' }, { className: 'b' });
 
 // Recipes built from the core entry work with root-entry helpers and styled().
@@ -190,7 +193,7 @@ type _CrossEntryTone = Expect<
 >;
 const crossEntryInput: RecipeInput<typeof coreBadge> = { tone: 'info' };
 const CoreBadge = styled('span', coreBadge);
-const coreBadgeElement: ReactNode = CoreBadge({ tone: 'danger' });
+const coreBadgeElement: StyledRender = CoreBadge({ tone: 'danger' });
 const coreConfigured: string = core
   .defineConfig({ merge: className => className })
   .recipe({ base: 'flex' })();

@@ -182,10 +182,10 @@ export function mergeRefs<T = unknown>(
  * an element. This is a hook version that memoizes the merged ref.
  *
  * @example
- * const Component = forwardRef((props, ref) => {
- *   const internalRef = useRef();
+ * function Component({ ref, ...props }: ComponentProps<'div'>) {
+ *   const internalRef = useRef<HTMLDivElement>(null);
  *   return <div {...props} ref={useMergeRefs(internalRef, ref)} />;
- * });
+ * }
  */
 export function useMergeRefs(): undefined;
 export function useMergeRefs<T>(

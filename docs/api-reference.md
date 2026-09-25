@@ -316,6 +316,18 @@ Rules:
 - root recipes may omit `view`
 - custom bases should accept and forward `className`, `children`, and `ref` when those behaviors matter
 
+### Return value and refs
+
+`styled()` returns a plain React 19 function component (`FunctionComponent`),
+not a `forwardRef` object. `ref` is a regular prop:
+
+- it reaches the rendered host element, or the base component as its `ref` prop
+- in a `view`, it stays out of `host.props` and is attached by `host.render()`,
+  merged with any `ref` passed to `host.render()`
+- `ComponentRef<typeof Component>` resolves to the base element or component instance
+
+Component bases may take `ref` as a regular prop or still use `forwardRef`.
+
 ### Root recipe, simple path
 
 ```tsx

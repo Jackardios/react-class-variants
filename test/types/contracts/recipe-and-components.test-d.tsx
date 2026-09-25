@@ -24,6 +24,9 @@ import {
   type VariantProps,
 } from '../../../dist';
 
+// A styled component is a React 19 function component.
+type StyledRender = ReactNode | Promise<ReactNode>;
+
 const { styled } = defineConfig();
 
 const badge = recipe({
@@ -238,9 +241,9 @@ const CoreBadgeViewButton = styled('button', coreBadge, {
   },
 });
 
-expectType<ReactNode>(CoreBadgeViewButton({ tone: 'danger' }));
+expectType<StyledRender>(CoreBadgeViewButton({ tone: 'danger' }));
 
-expectType<ReactNode>(
+expectType<StyledRender>(
   CoreBadgeButton({
     tone: 'info',
     render: props => {
@@ -291,7 +294,7 @@ const CoreField = styled('label', coreField, {
   },
 });
 
-expectType<ReactNode>(CoreField({ invalid: true, children: 'Email' }));
+expectType<StyledRender>(CoreField({ invalid: true, children: 'Email' }));
 
 const buttonRecipe = recipe({
   slots: {
@@ -509,7 +512,7 @@ const Badge = styled('button', badge, {
   },
 });
 
-expectType<ReactNode>(
+expectType<StyledRender>(
   Badge({ tone: 'info', type: 'button', children: 'Press' })
 );
 expectError(Badge({ children: 'Missing tone' }));
@@ -522,7 +525,7 @@ const LinkBadge = styled('button', badge, {
       children: host.children,
     }),
 });
-expectType<ReactNode>(
+expectType<StyledRender>(
   LinkBadge({
     tone: 'danger',
     render: props => {
@@ -533,7 +536,7 @@ expectType<ReactNode>(
     children: 'Link',
   })
 );
-expectType<ReactNode>(
+expectType<StyledRender>(
   LinkBadge({
     tone: 'danger',
     render: <a href="/" />,
@@ -546,7 +549,7 @@ const RouterLink = (props: { to: string } & ComponentPropsWithoutRef<'a'>) =>
 
 const RoutedBadge = styled(RouterLink, badge);
 
-expectType<ReactNode>(
+expectType<StyledRender>(
   RoutedBadge({
     tone: 'info',
     to: '/docs',
@@ -648,7 +651,7 @@ const ViewPropButton = styled('button', badge, {
   },
 });
 
-expectType<ReactNode>(
+expectType<StyledRender>(
   ViewPropButton({
     tone: 'info',
     icon: IconGlyph,
@@ -677,7 +680,7 @@ const ComposedViewPropInput = styled('input', viewedInputRecipe, {
   },
 });
 
-expectType<ReactNode>(
+expectType<StyledRender>(
   ComposedViewPropInput({
     tone: 'info',
     size: 'sm',
@@ -817,7 +820,7 @@ expectError(
   )
 );
 
-expectType<ReactNode>(
+expectType<StyledRender>(
   Input({
     size: 'sm',
     htmlSize: 12,
@@ -826,7 +829,7 @@ expectType<ReactNode>(
     readOnly: true,
   })
 );
-expectType<ReactNode>(
+expectType<StyledRender>(
   ViewedInput({
     tone: 'info',
     size: 'sm',
@@ -882,7 +885,7 @@ const SlottedButton = styled('button', buttonRecipe, {
   },
 });
 
-expectType<ReactNode>(
+expectType<StyledRender>(
   SlottedButton({
     tone: 'primary',
     className: 'px-4',

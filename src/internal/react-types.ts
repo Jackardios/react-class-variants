@@ -4,7 +4,7 @@ import type {
   ComponentRef,
   ComponentType,
   ElementType,
-  ForwardRefExoticComponent,
+  FunctionComponent,
   HTMLAttributes,
   JSX,
   PropsWithoutRef,
@@ -272,7 +272,7 @@ type StyledComponent<
   Aliases extends PropAliases<Base> = {},
   Forwarded extends string = never,
   ViewProps extends ViewPropsShape = {}
-> = ForwardRefExoticComponent<
+> = FunctionComponent<
   PropsWithoutRef<
     StyledComponentProps<
       Base,

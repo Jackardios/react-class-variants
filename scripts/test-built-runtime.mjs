@@ -20,7 +20,6 @@ const corePath = resolve(repoRoot, 'dist/core.js');
 
 const reactShimSource = `export const cloneElement = () => null;
 export const createElement = () => null;
-export const forwardRef = render => render;
 export const isValidElement = () => false;
 export const useMemo = factory => factory();`;
 
@@ -182,5 +181,10 @@ assert.equal(
   markup,
   '<button type="button" class="inline-flex items-center bg-blue text-white"><span class="truncate">Press</span></button>'
 );
+
+// styled() builds plain React 19 function components, named after the base.
+assert.equal(typeof Button, 'function');
+assert.equal(Button.$$typeof, undefined);
+assert.equal(Button.displayName, 'Styled(button)');
 
 console.log('Built runtime smoke checks passed.');
