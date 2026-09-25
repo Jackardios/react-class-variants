@@ -229,6 +229,29 @@ Document a no-release repo maintenance change.
     });
   });
 
+  it('accepts empty changesets written by `changeset add --empty`', () => {
+    // Raw @changesets/write output for `--empty` (before prettier) and the
+    // prettier-formatted variant that lands on disk.
+    for (const contents of ['---\n\n---\n\n\n  ', '---\n---\n']) {
+      expect(parseChangesetFile('.changeset/empty.md', contents)).toEqual({
+        body: '',
+        releases: [],
+      });
+    }
+  });
+
+  it('still requires a summary for changesets that release packages', () => {
+    expect(() =>
+      parseChangesetFile(
+        '.changeset/example.md',
+        `---
+'react-class-variants': patch
+---
+`
+      )
+    ).toThrow(/must include a non-empty summary body/);
+  });
+
   it('rejects malformed frontmatter before release time', () => {
     expect(() =>
       parseChangesetFile(

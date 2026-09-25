@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  buildGitHubActionsIdTokenUrl,
   getReleaseAuthStrategy,
+  resolveReleaseAuth,
   sanitizeNpmCliEnv,
 } from '../scripts/npm-release-auth.mjs';
 
@@ -45,13 +45,34 @@ describe('npm release auth helpers', () => {
     expect(env.npm_config_verify_deps_before_run).toBeUndefined();
   });
 
-  it('appends the npm audience to the GitHub OIDC request URL', () => {
-    expect(
-      buildGitHubActionsIdTokenUrl(
-        'https://token.actions.githubusercontent.com/?existing=value'
-      )
-    ).toBe(
-      'https://token.actions.githubusercontent.com/?existing=value&audience=npm%3Aregistry.npmjs.org'
+  it('falls back to none without OIDC or a token', () => {
+    expect(getReleaseAuthStrategy({})).toBe('none');
+    expect(getReleaseAuthStrategy({ RELEASE_NPM_AUTH_MODE: 'oidc' })).toBe(
+      'none'
     );
+  });
+
+  it('resolves token auth in precedence order', () => {
+    expect(
+      resolveReleaseAuth({
+        NODE_AUTH_TOKEN: 'node-token',
+        NPM_TOKEN: 'npm-token',
+        RELEASE_NPM_AUTH_TOKEN: 'release-token',
+      })
+    ).toEqual({ source: 'token', token: 'release-token' });
+    expect(resolveReleaseAuth({ NPM_TOKEN: 'npm-token' })).toEqual({
+      source: 'token',
+      token: 'npm-token',
+    });
+  });
+
+  it('requires a token because OIDC only authenticates npm publish', () => {
+    expect(() =>
+      resolveReleaseAuth({
+        ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'request-token',
+        ACTIONS_ID_TOKEN_REQUEST_URL:
+          'https://token.actions.githubusercontent.com',
+      })
+    ).toThrow(/No npm token is available/);
   });
 });

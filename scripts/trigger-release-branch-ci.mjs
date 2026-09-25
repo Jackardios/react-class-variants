@@ -1,17 +1,7 @@
-import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { githubApi, getGitHubRepository } from './github-api.mjs';
+import { delay, isMainModule } from './release-shared.mjs';
 
 const defaultWorkflow = 'main.yml';
-const isMain =
-  process.argv[1] &&
-  fileURLToPath(import.meta.url) === resolve(process.argv[1]);
-
-function delay(ms) {
-  return new Promise(resolve => {
-    setTimeout(resolve, ms);
-  });
-}
 
 async function waitForReleaseBranch(repository, branch) {
   for (let attempt = 1; attempt <= 10; attempt += 1) {
@@ -83,6 +73,6 @@ export async function triggerReleaseBranchCi() {
   }
 }
 
-if (isMain) {
+if (isMainModule(import.meta.url)) {
   await triggerReleaseBranchCi();
 }

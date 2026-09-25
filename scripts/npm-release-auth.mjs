@@ -6,7 +6,6 @@ import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
 const defaultNpmRegistryUrl = 'https://registry.npmjs.org';
-const defaultOidcAudience = 'npm:registry.npmjs.org';
 const noisyNpmConfigEnvKeys = [
   'npm_config__jsr_registry',
   'npm_config_auto_install_peers',
@@ -26,110 +25,6 @@ function registryAuthLine(registryUrl) {
   const url = new URL(registryUrl);
   const path = url.pathname.endsWith('/') ? url.pathname : `${url.pathname}/`;
   return `//${url.host}${path}:_authToken=\${NODE_AUTH_TOKEN}`;
-}
-
-async function fetchJson(url, init, context) {
-  const response = await fetch(url, init);
-  const text = await response.text();
-  let payload = null;
-
-  if (text) {
-    try {
-      payload = JSON.parse(text);
-    } catch {
-      payload = text;
-    }
-  }
-
-  if (!response.ok) {
-    const message =
-      typeof payload === 'object' && payload && 'message' in payload
-        ? String(payload.message)
-        : typeof payload === 'string' && payload
-        ? payload
-        : `${response.status} ${response.statusText}`;
-
-    throw new Error(`${context} failed: ${message}`);
-  }
-
-  return payload;
-}
-
-export function buildGitHubActionsIdTokenUrl(
-  requestUrl,
-  audience = defaultOidcAudience
-) {
-  const url = new URL(requestUrl);
-  url.searchParams.set('audience', audience);
-  return url.toString();
-}
-
-async function requestGitHubOidcIdToken(env) {
-  const requestUrl = env.ACTIONS_ID_TOKEN_REQUEST_URL;
-  const requestToken = env.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
-
-  if (!requestUrl || !requestToken) {
-    throw new Error(
-      'GitHub Actions OIDC environment is unavailable. Ensure the workflow grants id-token: write.'
-    );
-  }
-
-  const payload = await fetchJson(
-    buildGitHubActionsIdTokenUrl(requestUrl),
-    {
-      headers: {
-        Accept: 'application/json',
-        Authorization: `Bearer ${requestToken}`,
-      },
-    },
-    'GitHub Actions OIDC token request'
-  );
-
-  if (
-    !payload ||
-    typeof payload !== 'object' ||
-    typeof payload.value !== 'string' ||
-    payload.value.length === 0
-  ) {
-    throw new Error(
-      'GitHub Actions OIDC token request returned an unexpected payload.'
-    );
-  }
-
-  return payload.value;
-}
-
-async function exchangeOidcTokenForNpmToken(packageName, registryUrl, env) {
-  const oidcIdToken = await requestGitHubOidcIdToken(env);
-  const exchangeUrl = `${normalizeRegistryUrl(
-    registryUrl
-  )}/-/npm/v1/oidc/token/exchange/package/${encodeURIComponent(packageName)}`;
-  const payload = await fetchJson(
-    exchangeUrl,
-    {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        Authorization: `Bearer ${oidcIdToken}`,
-      },
-    },
-    'npm OIDC exchange'
-  );
-
-  if (
-    !payload ||
-    typeof payload !== 'object' ||
-    typeof payload.token !== 'string' ||
-    payload.token.length === 0
-  ) {
-    throw new Error('npm OIDC exchange returned an unexpected payload.');
-  }
-
-  return {
-    expiresAt: typeof payload.expires === 'string' ? payload.expires : null,
-    source: 'oidc',
-    token: payload.token,
-  };
 }
 
 export function getReleaseRegistryUrl(env = process.env) {
@@ -179,45 +74,19 @@ export function sanitizeNpmCliEnv(env = process.env) {
   return nextEnv;
 }
 
-export async function resolveReleaseAuth({
-  env = process.env,
-  logger = console,
-  packageName,
-  registryUrl = getReleaseRegistryUrl(env),
-} = {}) {
-  if (!packageName) {
-    throw new Error('resolveReleaseAuth requires a packageName.');
-  }
-
-  const explicitToken =
+// npm trusted publishing (OIDC) only authenticates `npm publish`, so every
+// other registry mutation, such as dist-tag repair, needs an explicit token.
+export function resolveReleaseAuth(env = process.env) {
+  const token =
     env.RELEASE_NPM_AUTH_TOKEN || env.NODE_AUTH_TOKEN || env.NPM_TOKEN || '';
-  const strategy = getReleaseAuthStrategy(env);
 
-  if (strategy === 'oidc') {
-    try {
-      return await exchangeOidcTokenForNpmToken(packageName, registryUrl, env);
-    } catch (error) {
-      if (!explicitToken) {
-        throw error;
-      }
-
-      logger.warn(
-        `npm OIDC exchange failed, falling back to token auth: ${error.message}`
-      );
-    }
+  if (!token) {
+    throw new Error(
+      'No npm token is available for dist-tag updates. Provide RELEASE_NPM_AUTH_TOKEN, NODE_AUTH_TOKEN, or NPM_TOKEN.'
+    );
   }
 
-  if (explicitToken) {
-    return {
-      expiresAt: null,
-      source: 'token',
-      token: explicitToken,
-    };
-  }
-
-  throw new Error(
-    'No npm dist-tag credentials are available. Provide GitHub Actions OIDC (id-token: write) or a valid NODE_AUTH_TOKEN/NPM_TOKEN.'
-  );
+  return { source: 'token', token };
 }
 
 export async function withNpmAuthEnv(auth, callback, env = process.env) {

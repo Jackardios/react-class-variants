@@ -1,16 +1,11 @@
-import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { githubApi, getGitHubRepository } from './github-api.mjs';
 import {
   buildReleaseTag,
   extractReleaseNotes,
+  isMainModule,
   readChangelog,
   readPackageJson,
 } from './release-shared.mjs';
-
-const isMain =
-  process.argv[1] &&
-  fileURLToPath(import.meta.url) === resolve(process.argv[1]);
 
 export async function verifyGitHubReleasePreflight() {
   const packageJson = await readPackageJson(import.meta.url);
@@ -40,6 +35,6 @@ export async function verifyGitHubReleasePreflight() {
   );
 }
 
-if (isMain) {
+if (isMainModule(import.meta.url)) {
   await verifyGitHubReleasePreflight();
 }

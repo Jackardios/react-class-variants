@@ -1,31 +1,19 @@
-import { execFile } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { promisify } from 'node:util';
 import {
   execAuthenticatedNpm,
   getReleaseAuthStrategy,
-  getReleaseRegistryUrl,
   resolveReleaseAuth,
-  sanitizeNpmCliEnv,
 } from './npm-release-auth.mjs';
+import {
+  isMainModule,
+  isPrereleaseVersion,
+  npmView,
+  pollUntil,
+  readPackageJson,
+  warnAnnotation,
+} from './release-shared.mjs';
 
-const execFileAsync = promisify(execFile);
 const args = process.argv.slice(2).filter(arg => arg !== '--');
-const isMain =
-  process.argv[1] &&
-  fileURLToPath(import.meta.url) === resolve(process.argv[1]);
-
-function delay(ms) {
-  return new Promise(resolvePromise => {
-    setTimeout(resolvePromise, ms);
-  });
-}
-
-function isPrerelease(version) {
-  return version.includes('-');
-}
 
 function parseStableVersion(version) {
   const match = /^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)$/.exec(version);
@@ -76,12 +64,14 @@ export function computeDesiredDistTags({
   publishedVersions,
 }) {
   const stableVersions = normalizeArray(publishedVersions)
-    .filter(version => !isPrerelease(version) && parseStableVersion(version))
+    .filter(
+      version => !isPrereleaseVersion(version) && parseStableVersion(version)
+    )
     .sort(compareStableVersions);
   const latestStableVersion = stableVersions.at(-1);
   const desiredDistTags = new Map();
 
-  if (isPrerelease(publishedVersion)) {
+  if (isPrereleaseVersion(publishedVersion)) {
     desiredDistTags.set(prereleaseTag, publishedVersion);
     desiredDistTags.set('latest', latestStableVersion ?? publishedVersion);
   } else {
@@ -89,33 +79,6 @@ export function computeDesiredDistTags({
   }
 
   return desiredDistTags;
-}
-
-async function npmJson(...args) {
-  const { stdout } = await execFileAsync('npm', args, {
-    env: sanitizeNpmCliEnv(process.env),
-    maxBuffer: 1024 * 1024 * 10,
-  });
-
-  return stdout.trim() ? JSON.parse(stdout) : null;
-}
-
-async function waitForJson({ commandArgs, predicate }) {
-  let lastValue = null;
-
-  for (let attempt = 1; attempt <= 8; attempt += 1) {
-    lastValue = await npmJson(...commandArgs);
-
-    if (predicate(lastValue)) {
-      return lastValue;
-    }
-
-    if (attempt < 8) {
-      await delay(attempt * 1500);
-    }
-  }
-
-  return lastValue;
 }
 
 async function addDistTag(packageName, tag, version, auth) {
@@ -127,12 +90,7 @@ async function addDistTag(packageName, tag, version, auth) {
       }
     );
   } catch (error) {
-    if (auth.source === 'token') {
-      error.message = `${error.message}\n\nThe configured npm token could not update dist-tags. Refresh NODE_AUTH_TOKEN/NPM_TOKEN or switch this workflow to npm OIDC exchange.`;
-    } else {
-      error.message = `${error.message}\n\nnpm publish can use trusted publishing automatically, but dist-tag repair requires exchanging the GitHub Actions OIDC token for a short-lived npm registry token. Confirm this package still has a trusted publisher configured for this workflow.`;
-    }
-
+    error.message = `${error.message}\n\nThe configured npm token could not update dist-tags. Refresh RELEASE_NPM_AUTH_TOKEN/NODE_AUTH_TOKEN/NPM_TOKEN.`;
     throw error;
   }
 }
@@ -146,9 +104,7 @@ function formatDistTagCommands(packageName, updates) {
 }
 
 async function readReleaseConfig() {
-  const packageJson = JSON.parse(
-    await readFile(new URL('../package.json', import.meta.url), 'utf8')
-  );
+  const packageJson = await readPackageJson(import.meta.url);
   let prereleaseTag = 'alpha';
 
   try {
@@ -166,18 +122,17 @@ async function readReleaseConfig() {
     prereleaseTag,
     publishedVersion:
       args[0] ?? process.env.RELEASE_VERSION ?? packageJson.version,
-    registryUrl: getReleaseRegistryUrl(process.env),
   };
 }
 
 export async function syncDistTags() {
-  const { packageName, prereleaseTag, publishedVersion, registryUrl } =
+  const { packageName, prereleaseTag, publishedVersion } =
     await readReleaseConfig();
   const publishedVersions = normalizeArray(
-    await waitForJson({
-      commandArgs: ['view', packageName, 'versions', '--json'],
-      predicate: value => normalizeArray(value).includes(publishedVersion),
-    })
+    await pollUntil(
+      () => npmView(packageName, 'versions'),
+      value => normalizeArray(value).includes(publishedVersion)
+    )
   );
 
   if (!publishedVersions.includes(publishedVersion)) {
@@ -187,10 +142,10 @@ export async function syncDistTags() {
   }
 
   const currentDistTags =
-    (await waitForJson({
-      commandArgs: ['view', packageName, 'dist-tags', '--json'],
-      predicate: value => value !== null,
-    })) ?? {};
+    (await pollUntil(
+      () => npmView(packageName, 'dist-tags'),
+      value => value !== null
+    )) ?? {};
   const desiredDistTags = computeDesiredDistTags({
     prereleaseTag,
     publishedVersion,
@@ -211,22 +166,19 @@ export async function syncDistTags() {
   const authStrategy = getReleaseAuthStrategy(process.env);
 
   if (authStrategy === 'oidc') {
-    console.warn(
-      `Skipping automated npm dist-tag repair for ${packageName}@${publishedVersion} because npm trusted publishing OIDC currently authenticates publish, but not dist-tag mutations.`
+    // npm trusted publishing authenticates `npm publish` only. Surface the
+    // drift as an annotation so it is visible in the run summary.
+    warnAnnotation(
+      [
+        `npm dist-tags for ${packageName}@${publishedVersion} need a manual repair: trusted publishing (OIDC) cannot update dist-tags.`,
+        'Run:',
+        formatDistTagCommands(packageName, pendingUpdates),
+      ].join('\n')
     );
-    console.warn('Pending dist-tag updates:');
-    for (const [tag, version] of pendingUpdates) {
-      console.warn(`- ${tag} -> ${version}`);
-    }
-    console.warn('Repair manually with:');
-    console.warn(formatDistTagCommands(packageName, pendingUpdates));
     return;
   }
 
-  const auth = await resolveReleaseAuth({
-    packageName,
-    registryUrl,
-  });
+  const auth = resolveReleaseAuth(process.env);
 
   console.log(`Using token auth for dist-tag updates.`);
 
@@ -236,14 +188,14 @@ export async function syncDistTags() {
   }
 
   const finalDistTags =
-    (await waitForJson({
-      commandArgs: ['view', packageName, 'dist-tags', '--json'],
-      predicate: value =>
+    (await pollUntil(
+      () => npmView(packageName, 'dist-tags'),
+      value =>
         [...desiredDistTags].every(
           ([tag, version]) =>
             value && typeof value === 'object' && value[tag] === version
-        ),
-    })) ?? {};
+        )
+    )) ?? {};
 
   for (const [tag, version] of desiredDistTags) {
     if (finalDistTags[tag] !== version) {
@@ -260,6 +212,6 @@ export async function syncDistTags() {
   );
 }
 
-if (isMain) {
+if (isMainModule(import.meta.url)) {
   await syncDistTags();
 }

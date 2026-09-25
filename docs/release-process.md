@@ -18,10 +18,12 @@ The published v2 package surface is ESM-only.
 
 Defined in `.github/workflows/main.yml`.
 
-- runs on every push and pull request
+- runs on every pull request and on pushes to `main` and `v1-maintenance`; pushes to `next` are verified by the `Release` workflow
 - can be dispatched manually for an existing branch
-- runs `pnpm run verify`
-- tests on Node `20.x`, `22.x`, and `24.x`
+- cancels an in-progress run when the same PR or branch is updated
+- runs `pnpm run verify` on Node `20.x`, `22.x`, and `24.x` through the reusable `.github/workflows/verify.yml`
+- runs `pnpm run check:overhead` once, against the committed `bench/overhead/baseline.json`
+- reports the combined result as a single `build` check, which branch protection requires
 
 ### `Changeset Check` workflow
 
@@ -37,7 +39,7 @@ Defined in `.github/workflows/changeset-check.yml`.
 Defined in `.github/workflows/release.yml`.
 
 - runs on pushes to `next`
-- runs the same `pnpm run verify` matrix as CI on Node `20.x`, `22.x`, and `24.x`
+- runs the same reusable `pnpm run verify` matrix as CI on Node `20.x`, `22.x`, and `24.x`
 - uses `changesets/action`
 - uses npm trusted publishing via GitHub Actions OIDC
 - validates GitHub release/changelog readiness with `scripts/verify-github-release.mjs`
@@ -80,6 +82,7 @@ In practice, this means the version-package PR is the staging step and the publi
 - prerelease mode stays active under the `alpha` tag until the stable `2.0.0` transition
 - publishing happens from GitHub Actions through npm trusted publishing
 - the release workflow validates GitHub release/changelog readiness before publish and checks whether automated npm dist-tag repair is available in the current environment
+- the publish wrapper checks the registry once before publishing (`changeset publish` itself also skips versions already on npm) and streams `changeset publish` output live
 - the publish wrapper is safe to rerun after a partial success: it skips duplicate publishes, treats an already-tagged earlier release commit as a no-op on newer commits, and only recreates a missing local tag when it has provenance for the current `HEAD`
 - post-publish npm lookups retry through short registry propagation delays before deciding that a version or dist-tag update is missing
 - the same release path works for the stable `2.0.0` publish from `next`; if you later move day-to-day releases from `next` to `main`, update workflow branch filters in the same change
@@ -155,6 +158,7 @@ These settings live outside the repository and should be reviewed periodically.
 - keep `next` as the default branch during the alpha period
 - protect `next` as the active release branch for v2
 - restrict direct day-to-day development on `main`
+- require the `build` status check on `next` and `main`; it is the aggregate job in `.github/workflows/main.yml`, so matrix and job renames do not need protection updates
 - keep the release workflow allowed to write Actions, contents, pull requests, and OIDC tokens
 
 ### npm

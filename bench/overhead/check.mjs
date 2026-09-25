@@ -1,5 +1,11 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,18 +13,50 @@ import { fileURLToPath } from 'node:url';
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDir, '../..');
 const measureScript = join(scriptDir, 'measure.mjs');
+// Bundle profiles gated against a baseline, with their default thresholds.
+const gatedBundles = [
+  { key: 'recipeOnly', label: 'Recipe-only', option: 'recipeMaxRegression' },
+  {
+    key: 'slottedRecipe',
+    label: 'Slotted recipe',
+    option: 'slottedRecipeMaxRegression',
+  },
+  {
+    key: 'component',
+    label: 'Component',
+    option: 'componentMaxRegression',
+  },
+];
 
 function parseArgs(argv) {
   const options = {
+    baselineFile: null,
     baselineRef: null,
     componentMaxGzipBytes: null,
+    componentMaxRegression: 0.1,
     recipeMaxRegression: 0.15,
     report: null,
     slottedRecipeMaxRegression: 0.15,
+    writeBaseline: null,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
+    if (token === '--baseline-file') {
+      options.baselineFile = resolve(argv[index + 1]);
+      index += 1;
+      continue;
+    }
+    if (token === '--write-baseline') {
+      options.writeBaseline = resolve(argv[index + 1]);
+      index += 1;
+      continue;
+    }
+    if (token === '--component-max-regression') {
+      options.componentMaxRegression = Number(argv[index + 1]);
+      index += 1;
+      continue;
+    }
     if (token === '--baseline-ref') {
       options.baselineRef = argv[index + 1];
       index += 1;
@@ -47,6 +85,10 @@ function parseArgs(argv) {
     throw new Error(`Unknown argument: ${token}`);
   }
 
+  if (options.baselineFile && options.baselineRef) {
+    throw new Error('Pass either --baseline-file or --baseline-ref, not both.');
+  }
+
   return options;
 }
 
@@ -59,6 +101,20 @@ function runMeasure(args) {
 
 function readReport(reportPath) {
   return JSON.parse(readFileSync(reportPath, 'utf8')).report;
+}
+
+// The committed baseline keeps only the gated gzip sizes, so it changes only
+// when a PR intentionally moves the bundle budget.
+function writeBaselineFile(baselinePath, report) {
+  const bundles = Object.fromEntries(
+    gatedBundles.map(({ key }) => [
+      key,
+      { gzipBytes: report.bundles[key].gzipBytes },
+    ])
+  );
+
+  writeFileSync(baselinePath, `${JSON.stringify({ bundles }, null, 2)}\n`);
+  console.log(`Wrote overhead baseline to ${baselinePath}.`);
 }
 
 function assertCondition(condition, message) {
@@ -105,7 +161,16 @@ function main() {
 
     const current = readReport(currentReportPath);
 
-    if (options.baselineRef) {
+    if (options.writeBaseline) {
+      writeBaselineFile(options.writeBaseline, current);
+      return;
+    }
+
+    let baseline = null;
+
+    if (options.baselineFile) {
+      baseline = JSON.parse(readFileSync(options.baselineFile, 'utf8'));
+    } else if (options.baselineRef) {
       runMeasure([
         '--ref',
         options.baselineRef,
@@ -113,19 +178,18 @@ function main() {
         baselineReportPath,
         '--size-only',
       ]);
-      const baseline = readReport(baselineReportPath);
-      assertBundleRegressionWithinThreshold({
-        baselineMetric: baseline.bundles.recipeOnly,
-        currentMetric: current.bundles.recipeOnly,
-        label: 'Recipe-only',
-        regressionThreshold: options.recipeMaxRegression,
-      });
-      assertBundleRegressionWithinThreshold({
-        baselineMetric: baseline.bundles.slottedRecipe,
-        currentMetric: current.bundles.slottedRecipe,
-        label: 'Slotted recipe',
-        regressionThreshold: options.slottedRecipeMaxRegression,
-      });
+      baseline = readReport(baselineReportPath);
+    }
+
+    if (baseline) {
+      for (const { key, label, option } of gatedBundles) {
+        assertBundleRegressionWithinThreshold({
+          baselineMetric: baseline.bundles[key],
+          currentMetric: current.bundles[key],
+          label,
+          regressionThreshold: options[option],
+        });
+      }
     }
 
     if (options.componentMaxGzipBytes != null) {

@@ -1,20 +1,29 @@
 name: CI
 on:
-  push:
-    branches:
-      - '**'
   pull_request:
+  push:
+    # `next` is verified by the Release workflow; feature branches by their PRs.
     branches:
-      - '**'
+      - 'main'
+      - 'v1-maintenance'
+  # Used by scripts/trigger-release-branch-ci.mjs for changeset-release/* branches.
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
-  build:
+  verify:
+    name: Verify
+    uses: ./.github/workflows/verify.yml
+
+  overhead:
+    name: Overhead
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: [20.x, 22.x, 24.x]
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -25,9 +34,28 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 24.x
           cache: 'pnpm'
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Verify
-        run: pnpm run verify
+      - name: Check bundle overhead
+        run: pnpm run check:overhead
+
+  # Branch protection requires a single `build` check; this job reports the
+  # combined result of the matrix and the overhead gate under that name.
+  build:
+    name: build
+    if: always()
+    needs: [verify, overhead]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all CI jobs to pass
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: $RESULTS"
+          for result in $RESULTS; do
+            if [ "$result" != "success" ]; then
+              exit 1
+            fi
+          done

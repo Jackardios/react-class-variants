@@ -22,7 +22,7 @@ Install dependencies:
 pnpm install
 ```
 
-CI and the release gate both run `pnpm run verify` on Node `20.x`, `22.x`, and `24.x`. Local development only needs to satisfy the package minimum in `package.json`, but it is useful to keep the full support matrix in mind when touching runtime or packaging behavior.
+CI and the release gate both run `pnpm run verify` on Node `20.x`, `22.x`, and `24.x`; CI also runs `pnpm run check:overhead` once. Local development only needs to satisfy the package minimum in `package.json`, but it is useful to keep the full support matrix in mind when touching runtime or packaging behavior.
 
 ## Typical Contributor Flow
 
@@ -96,7 +96,10 @@ pnpm bench:diagnostics:competitors
 pnpm bench:competitors
 pnpm bench:overhead
 pnpm check:overhead
+pnpm check:overhead:update
 ```
+
+`pnpm check:overhead` runs in CI against the committed `bench/overhead/baseline.json`. When a change intentionally moves the bundle budget, run `pnpm check:overhead:update` and commit the new baseline in the same PR.
 
 Use these when:
 
@@ -135,7 +138,7 @@ Add a changeset for any:
 Notes:
 
 - documentation-only changes usually do not need a changeset
-- if a PR intentionally touches release-affecting files but should not ship a version, use an empty changeset
+- if a PR intentionally touches release-affecting files but should not ship a version, add an empty changeset with `pnpm changeset add --empty`
 - if a prerelease redesign replaces an unreleased API, rewrite or delete stale pending `.changeset/*.md` files before the next alpha so `changeset pre exit` does not carry obsolete notes into the stable release plan
 
 Use:
