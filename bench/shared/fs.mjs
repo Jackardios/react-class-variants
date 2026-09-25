@@ -30,7 +30,9 @@ export function removeTempDir(directoryPath) {
       }
 
       if (
-        !['EBUSY', 'ENOTEMPTY', 'EPERM'].includes(error?.code) ||
+        !['EBUSY', 'ENOTEMPTY', 'EPERM'].includes(
+          /** @type {NodeJS.ErrnoException} */ (error)?.code ?? ''
+        ) ||
         attempt === 7
       ) {
         throw error;

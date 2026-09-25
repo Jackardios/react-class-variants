@@ -1,16 +1,16 @@
-export const simpleComponentProps = {
+export const simpleComponentProps = /** @type {const} */ ({
   children: 'Click',
   size: 'lg',
   tone: 'secondary',
-};
+});
 
-export const complexComponentProps = {
+export const complexComponentProps = /** @type {const} */ ({
   children: 'Click',
   disabled: true,
   size: 'lg',
   tone: 'danger',
   variant: 'outline',
-};
+});
 
 export function createRenderFixtures(createElement, href = '/docs') {
   return {
@@ -20,25 +20,25 @@ export function createRenderFixtures(createElement, href = '/docs') {
 }
 
 export function createSimpleRerenderProps(toggle) {
-  return {
+  return /** @type {const} */ ({
     children: 'Click',
     size: 'lg',
     tone: toggle ? 'secondary' : 'primary',
-  };
+  });
 }
 
 export function createComplexRerenderProps(toggle) {
-  return {
+  return /** @type {const} */ ({
     ...complexComponentProps,
     tone: toggle ? 'danger' : 'primary',
-  };
+  });
 }
 
 export function createRenderRerenderProps(toggle, render) {
-  return {
+  return /** @type {const} */ ({
     children: 'Link',
     render,
     size: 'lg',
     tone: toggle ? 'secondary' : 'primary',
-  };
+  });
 }

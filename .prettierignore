@@ -4,3 +4,4 @@ dist/
 coverage/
 bench/overhead/reports/
 .pack-check-*/
+pnpm-lock.yaml

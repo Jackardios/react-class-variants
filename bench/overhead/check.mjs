@@ -29,6 +29,18 @@ const gatedBundles = [
 ];
 
 function parseArgs(argv) {
+  /**
+   * @type {{
+   *   baselineFile: string | null;
+   *   baselineRef: string | null;
+   *   componentMaxGzipBytes: number | null;
+   *   componentMaxRegression: number;
+   *   recipeMaxRegression: number;
+   *   report: string | null;
+   *   slottedRecipeMaxRegression: number;
+   *   writeBaseline: string | null;
+   * }}
+   */
   const options = {
     baselineFile: null,
     baselineRef: null,

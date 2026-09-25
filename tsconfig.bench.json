@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noImplicitAny": false,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["src", "bench/**/*.ts", "bench/**/*.tsx", "bench/**/*.mjs"],
+  "exclude": ["node_modules", "dist", "bench/**/reports/**"]
+}

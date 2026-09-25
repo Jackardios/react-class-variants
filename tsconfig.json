@@ -2,17 +2,16 @@
   "compilerOptions": {
     "outDir": "dist",
     "module": "ESNext",
-    "target": "ES2016",
+    "target": "ES2020",
     "lib": ["ESNext", "dom"],
     "jsx": "react-jsx",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "skipLibCheck": true,
     "esModuleInterop": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
-    "noEmit": true,
-    "types": ["@testing-library/jest-dom"]
+    "noEmit": true
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]

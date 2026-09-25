@@ -6,20 +6,27 @@ import {
 } from './stats.mjs';
 
 export function assertGcAvailable(scriptLabel = 'benchmark') {
-  if (typeof global.gc !== 'function') {
+  const { gc } = globalThis;
+  if (typeof gc !== 'function') {
     throw new Error(
       `${scriptLabel} requires --expose-gc so retained-memory measurements are meaningful.`
     );
   }
+  return gc;
 }
 
 export function heapUsed(scriptLabel = 'benchmark') {
-  assertGcAvailable(scriptLabel);
-  global.gc();
-  global.gc();
+  const gc = assertGcAvailable(scriptLabel);
+  gc();
+  gc();
   return process.memoryUsage().heapUsed;
 }
 
+/**
+ * @param {() => unknown} createValue
+ * @param {number} count
+ * @param {{ label?: string; samples?: number; scriptLabel?: string }} [options]
+ */
 export function measureRetainedBytes(
   createValue,
   count,

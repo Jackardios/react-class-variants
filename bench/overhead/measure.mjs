@@ -20,6 +20,17 @@ const repoRoot = resolve(scriptDir, '../..');
 const defaultOutPath = join(scriptDir, 'reports', 'current.json');
 
 function parseArgs(argv) {
+  /**
+   * @type {{
+   *   keepTemp: boolean;
+   *   nodeEnv: string | null;
+   *   out: string;
+   *   ref: string | null;
+   *   runtimeWorker: boolean;
+   *   sizeOnly: boolean;
+   *   targetDir: string | null;
+   * }}
+   */
   const options = {
     keepTemp: false,
     nodeEnv: null,
@@ -118,7 +129,6 @@ export async function measureTarget(target, options) {
     typescript: options.sizeOnly
       ? null
       : measureTypeScriptProfiles({
-          repoRoot,
           surface,
           targetDir: target.dir,
         }),

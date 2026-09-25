@@ -1,5 +1,15 @@
 import { build } from 'esbuild';
 
+/**
+ * @param {{
+ *   absWorkingDir: string;
+ *   define?: Record<string, string>;
+ *   entryFile: string;
+ *   external?: string[];
+ *   outFile: string;
+ *   platform?: import('esbuild').Platform;
+ * }} options
+ */
 export async function bundleWithEsbuild({
   absWorkingDir,
   define,
@@ -29,7 +39,9 @@ export async function bundleWithEsbuild({
       write: true,
     });
   } catch (error) {
-    const details = error.errors
+    const details = /** @type {{ errors?: { text: string }[] }} */ (
+      error
+    ).errors
       ?.map(entry => entry.text)
       .filter(Boolean)
       .join('\n');
