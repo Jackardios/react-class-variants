@@ -58,8 +58,8 @@ export async function githubApi(
       typeof body === 'object' && body && 'message' in body
         ? String(body.message)
         : typeof body === 'string' && body
-        ? body
-        : `${response.status} ${response.statusText}`;
+          ? body
+          : `${response.status} ${response.statusText}`;
 
     throw new Error(`GitHub API ${method} ${path} failed: ${message}`);
   }

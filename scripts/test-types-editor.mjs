@@ -402,8 +402,8 @@ function definitionSpans(
     text: (definition.fileName === exactProbeFile
       ? exactProbeSource
       : definition.fileName === completionProbeFile
-      ? completionProbeSource
-      : ts.sys.readFile(definition.fileName) ?? ''
+        ? completionProbeSource
+        : (ts.sys.readFile(definition.fileName) ?? '')
     ).slice(
       definition.textSpan.start,
       definition.textSpan.start + definition.textSpan.length

@@ -176,7 +176,7 @@ export function createRootRecipe(compiled: RootCompiledRecipe): AnyRecipe {
 
   rootRecipe.resolve = <
     TInput extends Record<string, unknown> | undefined = undefined,
-    const TOptions extends ResolveOptions | undefined = undefined
+    const TOptions extends ResolveOptions | undefined = undefined,
   >(
     input?: TInput,
     options?: TOptions

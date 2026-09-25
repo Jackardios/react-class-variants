@@ -8,8 +8,7 @@ import {
 } from './shared';
 
 type CompiledExpected =
-  | CompiledSelectionValue
-  | readonly CompiledSelectionValue[];
+  CompiledSelectionValue | readonly CompiledSelectionValue[];
 
 // Flat layout: compound `i` owns the selector pairs
 // `selectorPairs[offsets[i] * 2 .. offsets[i + 1] * 2)`, stored as
