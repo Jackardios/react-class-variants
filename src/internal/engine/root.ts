@@ -23,6 +23,7 @@ import {
   createResolvedProps,
   normalizeResolveOptions,
   type NormalizedResolveOptions,
+  type SkipKeys,
 } from './props';
 import {
   attachCompiled,
@@ -126,44 +127,43 @@ function resolveRootClassName(
   };
 }
 
+// `styled()` direct path: one owned props object, className included.
 export function resolveRootComponentProps(
   compiled: RootCompiledRecipe,
-  input: Record<string, unknown> | undefined,
-  options: NormalizedResolveOptions | undefined
+  input: Record<string, unknown>,
+  options: NormalizedResolveOptions | undefined,
+  skip: SkipKeys
 ) {
   const resolved = resolveRootClassName(compiled, input, true);
-  const resolvedProps = createResolvedProps(
+  const props = createResolvedProps(
     compiled,
     input,
     options,
-    resolved.selection
+    resolved.selection,
+    skip
   );
-  resolvedProps.className = resolved.className;
-
-  return resolvedProps as Record<string, unknown> & {
-    className: string;
-  };
+  props.className = resolved.className;
+  return props;
 }
 
+// `styled()` view path: the host className stays out of the host props.
 export function resolveRootViewState(
   compiled: RootCompiledRecipe,
-  input: Record<string, unknown> | undefined,
-  options: NormalizedResolveOptions | undefined
+  input: Record<string, unknown>,
+  options: NormalizedResolveOptions | undefined,
+  skip: SkipKeys
 ) {
   const resolved = resolveRootClassName(compiled, input, true);
-  const resolvedProps = createResolvedProps(
-    compiled,
-    input,
-    options,
-    resolved.selection
-  );
-  resolvedProps.className = resolved.className;
 
   return {
-    resolvedProps: resolvedProps as Record<string, unknown> & {
-      className: string;
-    },
-    selection: resolved.selection,
+    className: resolved.className,
+    props: createResolvedProps(
+      compiled,
+      input,
+      options,
+      resolved.selection,
+      skip
+    ),
     variants: materializeSelection(compiled, resolved.selection),
   };
 }

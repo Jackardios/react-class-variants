@@ -18,6 +18,7 @@ import {
   createResolvedProps,
   normalizeResolveOptions,
   type NormalizedResolveOptions,
+  type SkipKeys,
 } from './props';
 import {
   attachCompiled,
@@ -278,7 +279,7 @@ export function validateSlotOverride(
   }
 }
 
-function resolveSlotClassName(
+export function resolveSlotClassName(
   compiled: SlotCompiledRecipe,
   slotIndex: number,
   selection: readonly CompiledSelectionValue[],
@@ -316,40 +317,18 @@ function resolveSlotClassName(
   return compiled.merge ? compiled.merge(output) : output;
 }
 
-export function resolveSlotClassNameForRender(
-  compiled: SlotCompiledRecipe,
-  slotIndex: number,
-  parentSelection: readonly CompiledSelectionValue[],
-  slotClassNames: SlotClassTable,
-  input?: Record<string, unknown>
-) {
-  if (!input) {
-    return resolveSlotClassName(
-      compiled,
-      slotIndex,
-      parentSelection,
-      slotClassNames
-    );
-  }
-
-  return resolveSlotClassName(
-    compiled,
-    slotIndex,
-    overrideSelection(compiled, parentSelection, input),
-    slotClassNames,
-    input.className as ClassNameValue | undefined
-  );
-}
-
+// `styled()` view path: className and slotClassNames stay out of the host
+// props (the skip record and the slot copy rule drop them).
 export function resolveSlotViewState(
   compiled: SlotCompiledRecipe,
-  input: Record<string, unknown> | undefined,
-  options: NormalizedResolveOptions | undefined
+  input: Record<string, unknown>,
+  options: NormalizedResolveOptions | undefined,
+  skip: SkipKeys
 ) {
   const selection = compiled.runtime.select(compiled, input, true);
 
   return {
-    resolvedProps: createResolvedProps(compiled, input, options, selection),
+    props: createResolvedProps(compiled, input, options, selection, skip),
     selection,
     slotClassNames: resolveTopLevelSlotClassNames(compiled, input),
     variants: materializeSelection(compiled, selection),
@@ -370,13 +349,15 @@ export function createSlotRenderers(
     slotIndex += 1
   ) {
     slots[compiled.slotNames[slotIndex]] = input =>
-      resolveSlotClassNameForRender(
-        compiled,
-        slotIndex,
-        selection,
-        slotClassNames,
-        input
-      );
+      input
+        ? resolveSlotClassName(
+            compiled,
+            slotIndex,
+            overrideSelection(compiled, selection, input),
+            slotClassNames,
+            input.className as ClassNameValue | undefined
+          )
+        : resolveSlotClassName(compiled, slotIndex, selection, slotClassNames);
   }
 
   return slots;

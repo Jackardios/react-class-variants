@@ -32,34 +32,44 @@ export function mergeProps<TBase extends object, TOverrides extends object>(
   base: TBase & MergeableProps,
   overrides: TOverrides & MergeableProps
 ): MergedProps<TBase, TOverrides> {
-  const props = { ...base } as Record<string, unknown> & MergeableProps;
-  const baseProps = base as Record<string, unknown> & MergeableProps;
-  const overrideProps = overrides as Record<string, unknown> & MergeableProps;
+  const props = { ...base } as Record<string, unknown>;
+  assignMergedProps(props, overrides as Record<string, unknown>);
+  return props as MergedProps<TBase, TOverrides>;
+}
 
-  for (const key in overrideProps) {
-    if (!hasOwnProperty(overrideProps, key)) continue;
+// mergeProps() in place: merges `overrides` into `target`, whose current
+// values act as the base. Keys listed in `skip` are left to the caller.
+export function assignMergedProps(
+  target: Record<string, unknown>,
+  overrides: Record<string, unknown>,
+  skip?: Readonly<Record<string, true>>
+): void {
+  for (const key in overrides) {
+    if (!hasOwnProperty(overrides, key)) continue;
+    if (skip !== undefined && skip[key] === true) continue;
 
     if (key === 'className') {
-      const baseClass = baseProps.className;
-      const overrideClass = overrideProps.className;
+      const baseClass = target.className;
+      const overrideClass = overrides.className;
 
       if (baseClass && overrideClass) {
-        props.className = `${baseClass} ${overrideClass}`;
+        target.className = `${baseClass} ${overrideClass}`;
       } else if (overrideClass) {
-        props.className = overrideClass;
+        target.className = overrideClass;
       }
 
       continue;
     }
 
     if (key === 'style') {
-      props.style = baseProps.style
-        ? { ...baseProps.style, ...overrideProps.style }
-        : overrideProps.style;
+      const baseStyle = target.style as CSSProperties | undefined;
+      target.style = baseStyle
+        ? { ...baseStyle, ...(overrides.style as CSSProperties | undefined) }
+        : overrides.style;
       continue;
     }
 
-    const overrideValue = overrideProps[key];
+    const overrideValue = overrides[key];
 
     const isEventHandlerKey =
       key.length > 2 &&
@@ -73,12 +83,12 @@ export function mergeProps<TBase extends object, TOverrides extends object>(
         continue;
       }
 
-      const baseValue = baseProps[key];
+      const baseValue = target[key];
       if (
         typeof overrideValue === 'function' &&
         typeof baseValue === 'function'
       ) {
-        props[key] = (...args: unknown[]) => {
+        target[key] = (...args: unknown[]) => {
           const result = overrideValue(...args);
           baseValue(...args);
           return result;
@@ -87,10 +97,8 @@ export function mergeProps<TBase extends object, TOverrides extends object>(
       }
     }
 
-    props[key] = overrideValue;
+    target[key] = overrideValue;
   }
-
-  return props as MergedProps<TBase, TOverrides>;
 }
 
 function mergeRefsImpl<T>(

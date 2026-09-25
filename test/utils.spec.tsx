@@ -64,6 +64,21 @@ describe('React utilities', () => {
     expect(props.onClick).toBe(baseClick);
   });
 
+  it('takes override className and style when the base has none', () => {
+    const base = { id: 'base' };
+    const props = mergeProps(base, {
+      className: 'override',
+      style: { color: 'red' },
+    });
+
+    expect(props).toEqual({
+      className: 'override',
+      id: 'base',
+      style: { color: 'red' },
+    });
+    expect(base).toEqual({ id: 'base' });
+  });
+
   it('fans out merged refs without wrapping a single ref unnecessarily', () => {
     const firstRef = createRef<HTMLDivElement>();
     const secondRef = createRef<HTMLDivElement>();

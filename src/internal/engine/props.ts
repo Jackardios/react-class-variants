@@ -1,7 +1,7 @@
 import type { ResolveOptions } from '../core-types';
 import {
+  createNullProtoRecord,
   ensureVariantIndex,
-  getVariantIndex,
   hasOwnKey,
   isReservedPublicProp,
   type CompiledRecipe,
@@ -17,51 +17,77 @@ type ForwardPropEntry = readonly [key: string, index: number];
 
 export type NormalizedResolveOptions = {
   readonly [normalizedResolveOptionsSymbol]: true;
+  // Public alias keys: read by their alias entry, never copied verbatim.
+  readonly aliasKeys?: SkipKeys;
   readonly forwardPropEntries?: readonly ForwardPropEntry[];
   readonly propAliasEntries?: readonly (readonly [string, string])[];
 };
+
+// Input keys the copy loop leaves out of resolvedProps: the public alias keys
+// (see NormalizedResolveOptions.aliasKeys) plus, for `styled()`, the keys it
+// reads from the raw props itself. A null-prototype record built once per
+// recipe options or styled() call, so the loop pays one property read per key.
+export type SkipKeys = Readonly<Record<string, true>>;
+
+export function createSkipKeys(
+  keys: readonly string[],
+  extra?: SkipKeys
+): SkipKeys {
+  const skip = createNullProtoRecord<true>();
+  for (const key of keys) skip[key] = true;
+  for (const key in extra) skip[key] = true;
+  return skip;
+}
 
 export function createResolvedProps(
   compiled: CompiledRecipe,
   input: Record<string, unknown> | undefined,
   options: NormalizedResolveOptions | undefined,
-  selection: readonly CompiledSelectionValue[]
+  selection: readonly CompiledSelectionValue[],
+  skip: SkipKeys | undefined = options?.aliasKeys
 ) {
   const resolvedProps: Record<string, unknown> = {};
-  const source = input ?? {};
-  const variantIndex = ensureVariantIndex(compiled);
 
-  for (const key in source) {
-    if (!hasOwnKey(source, key)) continue;
-    // Assigning an own '__proto__' input key (e.g. from JSON.parse) would swap
-    // the prototype of resolvedProps instead of copying data; drop it.
-    if (key === '__proto__') continue;
-    if (compiled.mode === 'slot' && key === 'slotClassNames') continue;
-    if (getVariantIndex(variantIndex, key) !== undefined) continue;
-    resolvedProps[key] = source[key];
-  }
+  if (input) {
+    const variantIndex = ensureVariantIndex(compiled);
 
-  for (const [nativeKey, aliasKey] of options?.propAliasEntries ?? []) {
-    if (!hasOwnKey(resolvedProps, aliasKey)) continue;
-
-    if (compiled.validate && hasOwnKey(resolvedProps, nativeKey)) {
-      throw new Error(
-        `react-class-variants: propAliases target "${nativeKey}" would overwrite an existing resolved prop.`
-      );
+    for (const key in input) {
+      if (!hasOwnKey(input, key)) continue;
+      // Assigning an own '__proto__' input key (e.g. from JSON.parse) would
+      // swap the prototype of resolvedProps instead of copying data; drop it.
+      if (key === '__proto__') continue;
+      if (compiled.mode === 'slot' && key === 'slotClassNames') continue;
+      if (variantIndex[key] !== undefined) continue;
+      if (skip !== undefined && skip[key] === true) continue;
+      resolvedProps[key] = input[key];
     }
 
-    resolvedProps[nativeKey] = resolvedProps[aliasKey];
-    delete resolvedProps[aliasKey];
+    // Aliases read the raw input, so every alias applies independently of the
+    // others (a chain such as `{ b: 'c', a: 'b' }` maps c→b and b→a).
+    const propAliasEntries = options?.propAliasEntries;
+    if (propAliasEntries !== undefined) {
+      for (const [nativeKey, aliasKey] of propAliasEntries) {
+        if (!hasOwnKey(input, aliasKey)) continue;
+
+        if (compiled.validate && hasOwnKey(resolvedProps, nativeKey)) {
+          throw new Error(
+            `react-class-variants: propAliases target "${nativeKey}" would overwrite an existing resolved prop.`
+          );
+        }
+
+        resolvedProps[nativeKey] = input[aliasKey];
+      }
+    }
   }
 
-  for (const [key, index] of options?.forwardPropEntries ?? []) {
-    if (compiled.validate && hasOwnKey(resolvedProps, key)) {
-      throw new Error(
-        `react-class-variants: forwardProps key "${key}" would overwrite an existing resolved prop.`
-      );
+  // forwardProps keys are declared variants, which the copy loop never
+  // copies, and they cannot double as alias targets (see
+  // normalizeResolveOptions), so nothing can be overwritten here.
+  const forwardPropEntries = options?.forwardPropEntries;
+  if (forwardPropEntries !== undefined) {
+    for (const [key, index] of forwardPropEntries) {
+      resolvedProps[key] = selection[index];
     }
-
-    resolvedProps[key] = selection[index];
   }
 
   return resolvedProps;
@@ -71,6 +97,33 @@ function isNormalizedResolveOptions(
   options: ResolveOptions | NormalizedResolveOptions | undefined
 ): options is NormalizedResolveOptions {
   return Boolean(options && normalizedResolveOptionsSymbol in options);
+}
+
+function getPropAliasProblem(
+  mode: CompiledRecipe['mode'],
+  variantIndex: Readonly<VariantIndex>,
+  aliasKeys: Readonly<Record<string, true>> | undefined,
+  nativeKey: string,
+  aliasKey: string
+) {
+  // Writing resolvedProps['__proto__'] would swap its prototype instead of
+  // copying data (see createResolvedProps).
+  if (nativeKey === '__proto__') {
+    return 'prop alias target "__proto__" is not allowed.';
+  }
+  if (isReservedPublicProp(mode, nativeKey)) {
+    return `prop alias target "${nativeKey}" conflicts with a reserved public prop.`;
+  }
+  if (isReservedPublicProp(mode, aliasKey)) {
+    return `prop alias "${aliasKey}" conflicts with a reserved public prop.`;
+  }
+  if (variantIndex[aliasKey] !== undefined) {
+    return `prop alias "${aliasKey}" conflicts with a declared variant key.`;
+  }
+  if (aliasKeys !== undefined && aliasKeys[aliasKey] === true) {
+    return `prop alias "${aliasKey}" cannot be reused.`;
+  }
+  return undefined;
 }
 
 export function normalizeResolveOptions(
@@ -88,8 +141,8 @@ export function normalizeResolveOptions(
 
   let forwardPropEntries: ForwardPropEntry[] | undefined;
   let propAliasEntries: Array<readonly [string, string]> | undefined;
+  let aliasKeys: Record<string, true> | undefined;
   let variantIndex: Readonly<VariantIndex> | undefined;
-  const seenAliases: Record<string, true> = {};
 
   if (rawPropAliases) {
     for (const nativeKey in rawPropAliases) {
@@ -98,45 +151,25 @@ export function normalizeResolveOptions(
       const aliasKey = rawPropAliases[nativeKey];
       if (!aliasKey) continue;
 
-      // Writing resolvedProps['__proto__'] would swap its prototype instead of
-      // copying data (see createResolvedProps), so this target is never legal.
-      if (nativeKey === '__proto__') {
+      variantIndex ??= ensureVariantIndex(compiled);
+      const problem = getPropAliasProblem(
+        compiled.mode,
+        variantIndex,
+        aliasKeys,
+        nativeKey,
+        aliasKey
+      );
+      if (problem) {
+        // Strict mode rejects the alias; lean mode drops it, since it could
+        // never apply cleanly.
         if (compiled.validate) {
-          throw new Error(
-            'react-class-variants: prop alias target "__proto__" is not allowed.'
-          );
+          throw new Error(`react-class-variants: ${problem}`);
         }
         continue;
       }
 
-      if (compiled.validate) {
-        if (isReservedPublicProp(compiled.mode, nativeKey)) {
-          throw new Error(
-            `react-class-variants: prop alias target "${nativeKey}" conflicts with a reserved public prop.`
-          );
-        }
-
-        if (isReservedPublicProp(compiled.mode, aliasKey)) {
-          throw new Error(
-            `react-class-variants: prop alias "${aliasKey}" conflicts with a reserved public prop.`
-          );
-        }
-
-        variantIndex ??= ensureVariantIndex(compiled);
-        if (getVariantIndex(variantIndex, aliasKey) !== undefined) {
-          throw new Error(
-            `react-class-variants: prop alias "${aliasKey}" conflicts with a declared variant key.`
-          );
-        }
-
-        if (hasOwnKey(seenAliases, aliasKey)) {
-          throw new Error(
-            `react-class-variants: prop alias "${aliasKey}" cannot be reused.`
-          );
-        }
-      }
-
-      seenAliases[aliasKey] = true;
+      aliasKeys ??= createNullProtoRecord<true>();
+      aliasKeys[aliasKey] = true;
       propAliasEntries ??= [];
       propAliasEntries.push([nativeKey, aliasKey]);
     }
@@ -146,7 +179,7 @@ export function normalizeResolveOptions(
     variantIndex ??= ensureVariantIndex(compiled);
 
     for (const key of forwardProps) {
-      const index = getVariantIndex(variantIndex, key);
+      const index = variantIndex[key];
 
       if (compiled.validate && index === undefined) {
         throw new Error(
@@ -175,6 +208,7 @@ export function normalizeResolveOptions(
 
   return {
     [normalizedResolveOptionsSymbol]: true,
+    aliasKeys,
     forwardPropEntries,
     propAliasEntries,
   };

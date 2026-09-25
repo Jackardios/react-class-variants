@@ -213,7 +213,7 @@ describe('recipe().resolve()', () => {
     expect(resolvedProps.ref).toBe(ref);
   });
 
-  it('applies chained propAliases in declaration order', () => {
+  it('applies chained propAliases independently from the raw input', () => {
     // Chains are unreachable through the public types (an alias key cannot be
     // a base prop key), so this pins the runtime behavior for casted input.
     const badge = recipe({
@@ -222,13 +222,61 @@ describe('recipe().resolve()', () => {
     });
 
     const { resolvedProps } = badge.resolve(
-      { tone: 'info', c: 'from-c' } as never,
+      { tone: 'info', b: 'from-b', c: 'from-c' } as never,
       { propAliases: { b: 'c', a: 'b' } } as never
     );
 
     expect(resolvedProps).toEqual({
-      a: 'from-c',
+      a: 'from-b',
+      b: 'from-c',
       className: 'inline-flex text-sky-700',
     });
+  });
+
+  it('forwards resolved defaults when resolve() gets no input', () => {
+    const badge = recipe({
+      base: 'inline-flex',
+      variants: { tone: { info: 'text-sky-700', warn: 'text-amber-700' } },
+      defaultVariants: { tone: 'warn' },
+    });
+
+    expect(badge.resolve(undefined, { forwardProps: ['tone'] })).toEqual({
+      resolvedProps: { className: 'inline-flex text-amber-700', tone: 'warn' },
+      variants: { tone: 'warn' },
+    });
+  });
+
+  it('drops the propAliases that strict mode rejects in lean mode', () => {
+    const config = {
+      base: 'inline-flex',
+      variants: { tone: { info: 'text-sky-700' } },
+    };
+    const input = {
+      tone: 'info',
+      className: 'mt-2',
+      label: 'x',
+      shared: 'y',
+    } as never;
+    // Reserved alias, variant alias, reserved target, reused alias.
+    const propAliases = {
+      title: 'className',
+      role: 'tone',
+      children: 'label',
+      id: 'shared',
+      name: 'shared',
+    } as never;
+
+    expect(
+      recipe(config).resolve(input, { propAliases }).resolvedProps
+    ).toEqual({
+      className: 'inline-flex text-sky-700 mt-2',
+      id: 'y',
+      label: 'x',
+    });
+    expect(() =>
+      defineConfig({ validate: 'always' })
+        .recipe(config)
+        .resolve(input, { propAliases })
+    ).toThrow(/conflicts with a reserved public prop/);
   });
 });

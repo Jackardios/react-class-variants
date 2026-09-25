@@ -146,7 +146,9 @@ describe('styled() view components', () => {
         return host.render({
           'data-shortcut': host.props.shortcut,
           'aria-busy': variants.loading || undefined,
-        });
+          // viewProps keys stay unrendered even when passed as overrides.
+          shortcut: 'override',
+        } as never);
       },
     });
 

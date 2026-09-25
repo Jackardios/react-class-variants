@@ -25,6 +25,7 @@ export type AnyElementType = ElementType;
 export type AnyIntrinsicElement = keyof JSX.IntrinsicElements;
 declare const viewPropsShapeSymbol: unique symbol;
 
+// Mirrors the runtime set in engine/shared.ts (isReservedPublicProp).
 type ReservedReactPublicProps = 'children' | 'className' | 'ref' | 'render';
 type BaseProps<Base extends AnyElementType> = ComponentPropsWithRef<Base>;
 type ViewPropsShape = Record<string, unknown>;
