@@ -54,7 +54,7 @@ What they do:
 
 - `pnpm dev`: Vitest in watch mode
 - `pnpm test`: runtime tests once
-- `pnpm test:coverage`: runtime tests with coverage
+- `pnpm test:coverage`: runtime tests with enforced coverage thresholds (`vite.config.ts`); part of `pnpm run verify`
 - `pnpm lint`: TypeScript publish-surface check for `src/`
 - `pnpm lint:all`: TypeScript check for `src/` plus runtime test files
 - `pnpm lint:eslint`: ESLint for `src/`, `test/`, and `scripts/`
@@ -68,6 +68,7 @@ pnpm test:built
 pnpm test:types
 pnpm test:types:contracts
 pnpm test:types:editor
+pnpm test:types:packed
 pnpm test:types:exports
 pnpm test:types:consumers
 pnpm lint:pkg
@@ -75,12 +76,13 @@ pnpm lint:pkg
 
 What they do:
 
-- `pnpm test:built`: built runtime smoke test
-- `pnpm test:types`: full type gate: build + built runtime + contracts + editor + exports + consumers
+- `pnpm test:built`: the runtime specs run against `dist/` (`vitest.built.config.ts` fails if any `src/` module loads), plus process-less import and SSR smoke checks
+- `pnpm test:types`: full type gate: build + built runtime + contracts + editor + packed
 - `pnpm test:types:contracts`: `tsd` contract tests against the built package
 - `pnpm test:types:editor`: editor/types tooling validation
-- `pnpm test:types:exports`: standalone packed export validation, including clean-checkout prepack coverage
-- `pnpm test:types:consumers`: packaged Bundler and NodeNext ESM consumer fixtures
+- `pnpm test:types:packed`: packs once from a clean-checkout state (`dist/` hidden, so `prepack` builds), then runs both checks below on that tarball
+- `pnpm test:types:exports`: `attw` export validation of the clean-checkout tarball only
+- `pnpm test:types:consumers`: Bundler and NodeNext consumer fixtures, both compiling `test/types/consumers/smoke.ts` with `skipLibCheck: false`
 - `pnpm lint:pkg`: `publint` package-surface validation
 
 When to use them:
@@ -123,8 +125,10 @@ pnpm run ci
 
 Useful Vitest shortcuts:
 
-- run one file: `pnpm vitest run test/recipe.spec.ts`
+- run one file: `pnpm vitest run test/recipe-root.spec.ts`
 - run by test name: `pnpm vitest run -t "compound variants"`
+
+Specs run in `jsdom` by default. Specs that do not render React start with `// @vitest-environment node`, which keeps the suite fast; add it to new non-DOM spec files.
 
 ## Changesets and Release Intent
 

@@ -40,7 +40,7 @@ Use the smallest relevant gate while iterating.
 ```bash
 pnpm dev           # Vitest watch mode
 pnpm test          # runtime tests once
-pnpm test:coverage # runtime tests with coverage
+pnpm test:coverage # runtime tests with coverage thresholds (part of verify)
 pnpm lint          # TypeScript publish-surface check for src/
 pnpm lint:all      # TypeScript check for src/ plus runtime test files
 pnpm lint:eslint   # ESLint for src/, test/, and scripts/
@@ -51,26 +51,27 @@ pnpm build         # tsup build -> dist/ (ESM + d.ts)
 ### Public-surface and packaging gates
 
 ```bash
-pnpm test:built            # built runtime smoke test
-pnpm test:types            # build + built runtime + contracts + editor + exports + consumers
+pnpm test:built            # runtime specs against dist/ + process-less import and SSR smoke checks
+pnpm test:types            # build + built runtime + contracts + editor + packed
 pnpm test:types:contracts  # tsd contract tests
 pnpm test:types:editor     # editor/types tooling validation
-pnpm test:types:exports    # standalone packed export validation, including clean-checkout prepack coverage
-pnpm test:types:consumers  # Bundler and NodeNext ESM consumer fixtures
+pnpm test:types:packed     # one clean-checkout pack, then exports + consumers on that tarball
+pnpm test:types:exports    # attw export validation of the clean-checkout tarball only
+pnpm test:types:consumers  # Bundler and NodeNext consumer smoke fixtures only
 pnpm lint:pkg              # publint package-surface check
 ```
 
 ### Full gates
 
 ```bash
-pnpm run verify          # lint + lint:all + lint:eslint + lint:format + test + test:types + lint:pkg
+pnpm run verify          # lint + lint:all + lint:eslint + lint:format + test:coverage + test:types + lint:pkg
 pnpm run check:changeset # release-affecting branch/worktree changes must include a changeset
 pnpm run ci              # check:changeset + verify
 ```
 
 Useful Vitest shortcuts:
 
-- one file: `pnpm vitest run test/recipe.spec.ts`
+- one file: `pnpm vitest run test/recipe-root.spec.ts`
 - by test name: `pnpm vitest run -t "compound variants"`
 
 ### Benchmarks and overhead
@@ -191,7 +192,7 @@ Touch as needed:
 - `src/internal/engine/root.ts`
 - `src/internal/engine/slot.ts`
 - `src/internal/engine/shared.ts`
-- `test/recipe.spec.ts`
+- `test/recipe-*.spec.ts`, `test/compounds.spec.ts`, `test/prototype-keys.spec.ts`, `test/result-cache.spec.ts`
 
 ### If you change `styled()` behavior
 
@@ -199,7 +200,7 @@ Touch as needed:
 
 - `src/internal/builders.tsx`
 - `src/react.ts`
-- `test/component.spec.tsx`
+- `test/styled-*.spec.tsx`
 
 ### If you change React helpers
 
@@ -218,18 +219,17 @@ Touch as needed:
 - `src/react.ts`
 - `test/public-api.spec.ts`
 - `test/types/contracts/*.test-d.tsx`
-- `test/types/consumers/fixtures/*`
+- `test/types/consumers/smoke.ts` (shared by the Bundler and NodeNext fixtures)
 - `scripts/test-built-runtime.mjs`
 - `scripts/test-types-editor.mjs`
-- `scripts/test-types-exports.mjs`
-- `scripts/test-types-consumers.mjs`
+- `scripts/test-types-packed.mjs`
 - affected docs and examples
 
 For changes that touch recipe resolution, class merging, `styled()` behavior, prop routing, overloads, exports, or package metadata:
 
 - update the relevant runtime tests in `test/`
 - update type contract tests in `test/types/contracts/`
-- update consumer fixtures in `test/types/consumers/` when package surface or exports change
+- update the consumer smoke test in `test/types/consumers/smoke.ts` when package surface or exports change
 - update docs and examples that describe the affected public behavior
 - keep the package-root and core-subpath surfaces aligned across code, tests, fixtures, and docs
 - keep `README.md` aligned with the primary user-facing API summary

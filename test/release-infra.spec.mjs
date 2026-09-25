@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { createRequire } from 'node:module';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {

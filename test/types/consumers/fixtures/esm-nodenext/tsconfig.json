@@ -7,7 +7,7 @@
     "moduleResolution": "NodeNext",
     "lib": ["ESNext", "DOM"],
     "jsx": "react-jsx",
-    "skipLibCheck": true,
+    "skipLibCheck": false,
     "esModuleInterop": true
   },
   "include": ["src"]

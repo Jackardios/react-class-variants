@@ -7,7 +7,7 @@
     "moduleResolution": "Bundler",
     "lib": ["ESNext", "DOM"],
     "jsx": "react-jsx",
-    "skipLibCheck": true
+    "skipLibCheck": false
   },
   "include": ["src"]
 }
