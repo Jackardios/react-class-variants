@@ -1,91 +1,33 @@
-import type {
-  AnyRootRecipeConfig,
-  AnySlotRecipeConfig,
-  RecipeConfig,
-  RecipeFactory,
-  SystemOptions,
-} from './core-types';
+import type { RecipeConfig, RecipeFactory, SystemOptions } from './core-types';
 import {
-  compileLeanRootRecipe,
-  compileStrictRootRecipe,
-  createLeanRootRecipe,
-  createStrictRootRecipe,
-  resolveRootComponentProps,
-  resolveRootViewState,
-} from './engine/root';
-import {
-  compileLeanSlotRecipe,
-  compileStrictSlotRecipe,
-  createLeanSlotRecipe,
-  createStrictSlotRecipe,
-  resolveSlotClassNameForRender,
-  resolveSlotViewState,
-} from './engine/slot';
-import {
-  getCompiledRecipe,
-  getCompiledRecipeOrThrow,
-  normalizeResolveOptions,
-  type CompiledRecipe,
-  type NormalizedResolveOptions,
-  type RootCompiledRecipe,
-  type RuntimeSystemOptions,
+  buildValidatedSelection,
+  deepFreeze,
+  type RecipeRuntime,
 } from './engine/shared';
+import { validateSlotOverride } from './engine/slot';
+import {
+  createLeanRecipeFactory,
+  createRecipeFactoryWith,
+} from './recipe-default';
 
-export {
-  getCompiledRecipe,
-  getCompiledRecipeOrThrow,
-  normalizeResolveOptions,
-  type CompiledRecipe,
-  type NormalizedResolveOptions,
-  type RootCompiledRecipe,
+const validatingRuntime: RecipeRuntime = {
+  select: buildValidatedSelection,
+  validateOverride: validateSlotOverride,
 };
-export { resolveRootComponentProps };
-export {
-  resolveRootViewState,
-  resolveSlotClassNameForRender,
-  resolveSlotViewState,
-};
-
-function createLeanRecipeFactory(options: SystemOptions): RecipeFactory {
-  const runtimeOptions: RuntimeSystemOptions = {
-    cache: options.cache,
-    freeze: 'none',
-    merge: options.merge,
-    mode: 'lean',
-    validate: false,
-  };
-
-  return ((config: RecipeConfig) => {
-    if ('slots' in config) {
-      return createLeanSlotRecipe(
-        compileLeanSlotRecipe(config as AnySlotRecipeConfig, runtimeOptions)
-      );
-    }
-
-    return createLeanRootRecipe(
-      compileLeanRootRecipe(config as AnyRootRecipeConfig, runtimeOptions)
-    );
-  }) as RecipeFactory;
-}
 
 function createStrictRecipeFactory(options: SystemOptions): RecipeFactory {
-  const runtimeOptions: RuntimeSystemOptions = {
-    freeze: options.validate === 'always' ? 'deep' : 'shallow',
+  const factory = createRecipeFactoryWith({
     merge: options.merge,
-    mode: 'strict',
+    runtime: validatingRuntime,
     validate: true,
-  };
+  });
 
+  // Validated configs are frozen after compilation so later mutations fail
+  // loudly instead of silently diverging from the compiled recipe.
   return ((config: RecipeConfig) => {
-    if ('slots' in config) {
-      return createStrictSlotRecipe(
-        compileStrictSlotRecipe(config as AnySlotRecipeConfig, runtimeOptions)
-      );
-    }
-
-    return createStrictRootRecipe(
-      compileStrictRootRecipe(config as AnyRootRecipeConfig, runtimeOptions)
-    );
+    const recipe = factory(config as never);
+    deepFreeze(config);
+    return recipe;
   }) as RecipeFactory;
 }
 

@@ -14,10 +14,10 @@ export default defineConfig({
       // Enforced by `pnpm test:coverage` (part of `pnpm run verify`). Raise
       // these when coverage improves; never lower them to land a change.
       thresholds: {
-        statements: 97,
-        branches: 91,
+        statements: 98,
+        branches: 93,
         functions: 100,
-        lines: 97,
+        lines: 98,
       },
     },
     benchmark: {

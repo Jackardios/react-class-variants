@@ -1,9 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- public styled implementation intentionally erases recipe generics behind a typed export surface. */
 import { createRootStyled, createSlotStyled } from './internal/builders';
-import {
-  createRecipeFactory,
-  getCompiledRecipeOrThrow,
-} from './internal/recipe';
+import { getCompiledRecipeOrThrow } from './internal/engine/shared';
+import { createRecipeFactory } from './internal/recipe';
 import type {
   AnyRootRecipe,
   AnySlotRecipe,

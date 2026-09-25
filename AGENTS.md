@@ -164,11 +164,16 @@ Does not export React runtime helpers such as `styled()`, `mergeProps()`, or ref
 
 ### Runtime and engine layers
 
-- `src/internal/recipe-default.ts`: unconditionally lean default `recipe()` factory (no validation, no environment branch)
-- `src/internal/recipe.ts`: configurable recipe factory and shared resolution helpers
-- `src/internal/engine/root.ts`: root recipe compilation and root `resolve()`
-- `src/internal/engine/slot.ts`: slotted recipe compilation and slot `resolve()`
-- `src/internal/engine/shared.ts`: compiled metadata, normalization, aliases, forwarding, and validation
+- `src/internal/recipe-default.ts`: lean runtime and the default `recipe()` factory; never imports the validating runtime
+- `src/internal/recipe.ts`: `createRecipeFactory()` and the validating runtime used by `defineConfig({ validate: 'always' })`
+- `src/internal/engine/root.ts`: root recipe compilation, class resolution, and root `resolve()`
+- `src/internal/engine/slot.ts`: slotted recipe compilation, slot renderers, and slot `resolve()`
+- `src/internal/engine/shared.ts`: compiled recipe types, the `RecipeRuntime` strategy, variant compilation, and selection builders
+- `src/internal/engine/compounds.ts`: flat compound-variant compilation and matching
+- `src/internal/engine/props.ts`: `resolve()` option normalization, prop aliases, and forwarded props
+- `src/internal/engine/cache.ts`: lean root result cache and its key encoding
+
+Lean and validating recipes share one engine. Validation-only work sits behind `compiled.validate` (compile time) or the `RecipeRuntime` object that the factory picks (per call), so a bundle that only uses the default `recipe()` never contains the validating runtime. `scripts/test-built-runtime.mjs` asserts this.
 
 ### React adapter and utilities
 
@@ -192,6 +197,9 @@ Touch as needed:
 - `src/internal/engine/root.ts`
 - `src/internal/engine/slot.ts`
 - `src/internal/engine/shared.ts`
+- `src/internal/engine/compounds.ts`
+- `src/internal/engine/props.ts`
+- `src/internal/engine/cache.ts`
 - `test/recipe-*.spec.ts`, `test/compounds.spec.ts`, `test/prototype-keys.spec.ts`, `test/result-cache.spec.ts`
 
 ### If you change `styled()` behavior

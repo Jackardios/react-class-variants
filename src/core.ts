@@ -1,7 +1,4 @@
-import {
-  createRecipeFactory,
-  getCompiledRecipeOrThrow,
-} from './internal/recipe';
+import { createRecipeFactory } from './internal/recipe';
 import { defaultRecipeFactory } from './internal/recipe-default';
 import type {
   AnyRecipe,
@@ -19,7 +16,7 @@ import type {
   VariantSelectionValues,
   VariantSource,
 } from './internal/core-types';
-import { hasOwnKey } from './internal/engine/shared';
+import { getCompiledRecipeOrThrow, hasOwnKey } from './internal/engine/shared';
 
 export type {
   AnyRecipe,

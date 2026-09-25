@@ -1,14 +1,7 @@
-import type {
-  AnyRecipe,
-  RecipeConfig,
-  ResolveOptions,
-  SystemOptions,
-} from '../core-types';
+import type { AnyRecipe, RecipeConfig, SystemOptions } from '../core-types';
+import type { CompiledCompounds } from './compounds';
 
 export const compiledRecipeSymbol = Symbol('react-class-variants.compiled');
-const normalizedResolveOptionsSymbol = Symbol(
-  'react-class-variants.normalized-resolve-options'
-);
 
 const sharedReservedPublicProps = new Set([
   'children',
@@ -22,15 +15,9 @@ type RecipeWithCompiled = AnyRecipe & {
   [compiledRecipeSymbol]: CompiledRecipe;
 };
 
-export type RuntimeMode = 'lean' | 'strict';
 export type CompiledSelectionValue = string | boolean | undefined;
-export type CompiledExpected =
-  | CompiledSelectionValue
-  | readonly CompiledSelectionValue[];
 export type VariantIndex = Record<string, number>;
-export type ForwardPropEntry = readonly [key: string, index: number];
 export type SlotClassTable = readonly (string | undefined)[];
-export type LeanSlotClassTable = SlotClassTable;
 
 export type CompiledVariant<TClassName> = {
   key: string;
@@ -41,81 +28,52 @@ export type CompiledVariant<TClassName> = {
   falseClass?: TClassName;
 };
 
-export type CompiledCompound<TClassName> = {
-  className: TClassName;
-  selectors: readonly (readonly [index: number, expected: CompiledExpected])[];
+// Per-call selection logic, picked by the recipe factory: the lean runtime
+// (recipe-default.ts) or the validating one (recipe.ts). Keeping the validating
+// implementations behind this object lets bundles that only use the default
+// recipe() drop them entirely.
+export type RecipeRuntime = {
+  // Builds the recipe-level variant selection.
+  select(
+    compiled: CompiledRecipe,
+    input: Record<string, unknown> | undefined,
+    allowUnknownProps: boolean
+  ): CompiledSelectionValue[];
+  // Checks per-slot override props before they are applied; only the
+  // validating runtime defines it.
+  validateOverride?(
+    compiled: SlotCompiledRecipe,
+    input: Record<string, unknown>
+  ): void;
 };
 
-export type LeanCompiledCompounds<TClassName> = {
-  classNames: readonly TClassName[];
-  offsets: readonly number[];
-  selectorPairs: readonly (number | CompiledExpected)[];
-};
-
-type SharedCompiledRecipe = {
+type CompiledRecipeBase<TClassName> = {
+  compounds: CompiledCompounds<TClassName>;
   merge?: (className: string) => string;
-  resultCache?: Map<string, string>;
-  resultCacheMaxSize?: number;
-  runtime: RuntimeMode;
+  runtime: RecipeRuntime;
   validate: boolean;
   variantIndex?: VariantIndex;
+  variantTable: readonly CompiledVariant<TClassName>[];
 };
 
-export type StrictRootCompiledRecipe = SharedCompiledRecipe & {
+export type RootCompiledRecipe = CompiledRecipeBase<string> & {
   base: string;
-  compounds: readonly CompiledCompound<string>[];
   mode: 'root';
-  runtime: 'strict';
-  variantTable: readonly CompiledVariant<string>[];
+  resultCache?: Map<string, string>;
+  resultCacheMaxSize: number;
 };
 
-export type LeanRootCompiledRecipe = SharedCompiledRecipe & {
-  base: string;
-  compounds: LeanCompiledCompounds<string>;
-  mode: 'root';
-  runtime: 'lean';
-  variantTable: readonly CompiledVariant<string>[];
-};
-
-export type RootCompiledRecipe =
-  | LeanRootCompiledRecipe
-  | StrictRootCompiledRecipe;
-
-export type StrictSlotCompiledRecipe = SharedCompiledRecipe & {
+export type SlotCompiledRecipe = CompiledRecipeBase<SlotClassTable> & {
   base: SlotClassTable;
-  compounds: readonly CompiledCompound<SlotClassTable>[];
   mode: 'slot';
-  runtime: 'strict';
   slotIndex: Readonly<Record<string, number>>;
   slotNames: readonly string[];
-  variantTable: readonly CompiledVariant<SlotClassTable>[];
 };
-
-export type LeanSlotCompiledRecipe = SharedCompiledRecipe & {
-  base: LeanSlotClassTable;
-  compounds: LeanCompiledCompounds<LeanSlotClassTable>;
-  mode: 'slot';
-  runtime: 'lean';
-  slotIndex: Readonly<Record<string, number>>;
-  slotNames: readonly string[];
-  variantTable: readonly CompiledVariant<LeanSlotClassTable>[];
-};
-
-export type SlotCompiledRecipe =
-  | LeanSlotCompiledRecipe
-  | StrictSlotCompiledRecipe;
 
 export type CompiledRecipe = RootCompiledRecipe | SlotCompiledRecipe;
 
-export type NormalizedResolveOptions = {
-  readonly [normalizedResolveOptionsSymbol]: true;
-  readonly forwardPropEntries?: readonly ForwardPropEntry[];
-  readonly propAliasEntries?: readonly (readonly [string, string])[];
-};
-
 export type RuntimeSystemOptions = Omit<SystemOptions, 'validate'> & {
-  freeze: 'deep' | 'none' | 'shallow';
-  mode: RuntimeMode;
+  runtime: RecipeRuntime;
   validate: boolean;
 };
 
@@ -130,106 +88,6 @@ const emptyVariantOptions: Record<string, never> = Object.freeze(
   createNullProtoRecord<never>()
 );
 
-const DEFAULT_RESULT_CACHE_MAX_SIZE = 500;
-// Cache-key tokens are self-delimiting: undefined/true/false encode as one
-// control character, strings free of the control characters `\x00`-`\x04` as
-// `<value>\x00` (the hot path — one short scan, one concat), and everything
-// else (strings containing those characters, coerced non-string garbage) as
-// `\x04<length>:<value>`, which is length-delimited so its payload may contain
-// anything. Decoding is deterministic at every token boundary and the token
-// count per recipe is fixed (variantTable.length), so the raw className tail
-// needs no terminator — keys collide only for identical inputs. Injectivity
-// relies on that fixed count.
-const CACHE_KEY_SEPARATOR = '\x00';
-const CACHE_TOKEN_UNDEFINED = '\x01';
-const CACHE_TOKEN_TRUE = '\x02';
-const CACHE_TOKEN_FALSE = '\x03';
-const CACHE_TOKEN_ESCAPED = '\x04';
-
-function hasCacheUnsafeChar(value: string): boolean {
-  for (let index = 0; index < value.length; index += 1) {
-    if (value.charCodeAt(index) <= 4) return true;
-  }
-  return false;
-}
-
-// The cache is sound only when the resolved className is a pure function of its
-// inputs and `merge` is pure. We therefore enable it only in lean mode (strict
-// mode validates per call) and only when a `merge` is configured (without merge
-// the result cache costs more than the work it would skip).
-export function resolveResultCacheMaxSize(
-  merge: ((className: string) => string) | undefined,
-  cache: SystemOptions['cache']
-): number {
-  if (!merge || cache === false) return 0;
-  if (cache === undefined || cache === true) {
-    return DEFAULT_RESULT_CACHE_MAX_SIZE;
-  }
-  const { maxSize } = cache;
-  if (maxSize === undefined) return DEFAULT_RESULT_CACHE_MAX_SIZE;
-  return Number.isFinite(maxSize) && maxSize >= 1 ? Math.floor(maxSize) : 0;
-}
-
-function appendSelectionKey(
-  prefix: string,
-  selection: readonly CompiledSelectionValue[]
-): string {
-  let key = prefix;
-  for (let index = 0; index < selection.length; index += 1) {
-    const value = selection[index];
-    if (value === undefined) {
-      key += CACHE_TOKEN_UNDEFINED;
-    } else if (value === true) {
-      key += CACHE_TOKEN_TRUE;
-    } else if (value === false) {
-      key += CACHE_TOKEN_FALSE;
-    } else if (typeof value === 'string' && !hasCacheUnsafeChar(value)) {
-      key += value + CACHE_KEY_SEPARATOR;
-    } else if (typeof value === 'string') {
-      key += `${CACHE_TOKEN_ESCAPED}${value.length}:${value}`;
-    } else {
-      // Lean variants pass malformed non-string inputs through the selection;
-      // tag and coerce them so cache-enabled recipes neither crash nor collide
-      // with genuine string tokens. Collisions between distinct garbage values
-      // are harmless: property lookups coerce identically (named variants) or
-      // every non-`true` value resolves to falseClass (boolean variants), so
-      // colliding keys always map to identical output.
-      let coerced: string;
-      try {
-        coerced = String(value);
-      } catch {
-        coerced = 'unstringable';
-      }
-      key += `${CACHE_TOKEN_ESCAPED}${coerced.length}:${coerced}`;
-    }
-  }
-  return key;
-}
-
-export function buildRootResultCacheKey(
-  selection: readonly CompiledSelectionValue[],
-  className: string
-): string {
-  return appendSelectionKey('', selection) + className;
-}
-
-// FIFO eviction keeps the cache-hit path a pure Map.get (no per-hit reordering).
-export function storeResult(
-  compiled: CompiledRecipe,
-  key: string,
-  value: string
-): string {
-  let cache = compiled.resultCache;
-  if (!cache) {
-    cache = new Map();
-    compiled.resultCache = cache;
-  } else if (cache.size >= (compiled.resultCacheMaxSize as number)) {
-    cache.delete(cache.keys().next().value as string);
-  }
-  cache.set(key, value);
-  return value;
-}
-
 export function hasOwnKey(object: object, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(object, key);
 }
@@ -240,7 +98,7 @@ export function isPlainObject(
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
-function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
+export function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
   if (!value || typeof value !== 'object') return value;
   const object = value as object;
   if (Object.isFrozen(object) || seen.has(object)) return value;
@@ -251,20 +109,6 @@ function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
   }
 
   return Object.freeze(value);
-}
-
-export function freezeConfig(
-  config: RecipeConfig,
-  freeze: RuntimeSystemOptions['freeze']
-) {
-  if (freeze === 'deep') {
-    deepFreeze(config);
-    return;
-  }
-
-  if (freeze === 'shallow' && !Object.isFrozen(config)) {
-    Object.freeze(config);
-  }
 }
 
 function optionKeyForValue(value: unknown): string {
@@ -302,19 +146,6 @@ export function getVariantIndex(
   return variantIndex ? variantIndex[key] : undefined;
 }
 
-function findVariantIndexByKey(
-  variantTable: readonly { key: string }[],
-  key: string
-) {
-  for (let index = 0; index < variantTable.length; index += 1) {
-    if (variantTable[index].key === key) {
-      return index;
-    }
-  }
-
-  return undefined;
-}
-
 export function ensureVariantIndex(
   compiled: CompiledRecipe
 ): Readonly<VariantIndex> {
@@ -324,7 +155,10 @@ export function ensureVariantIndex(
   return compiled.variantIndex;
 }
 
-function isReservedPublicProp(mode: CompiledRecipe['mode'], key: string) {
+export function isReservedPublicProp(
+  mode: CompiledRecipe['mode'],
+  key: string
+) {
   return (
     sharedReservedPublicProps.has(key) ||
     (mode === 'slot' && slotReservedPublicProps.has(key))
@@ -356,35 +190,6 @@ export function readVariantClassName<TClassName>(
   }
 
   return variant.options[value as string];
-}
-
-function validateVariantValue(
-  variant: CompiledVariant<unknown>,
-  value: unknown,
-  context: string
-) {
-  if (value === undefined) return;
-
-  if (!isAllowedVariantValue(variant, value)) {
-    throw new Error(
-      `react-class-variants: invalid ${context} value "${String(
-        value
-      )}" for variant "${variant.key}".`
-    );
-  }
-}
-
-function compileCompoundSelection<TClassName>(
-  variant: CompiledVariant<TClassName>,
-  value: readonly unknown[]
-) {
-  const expected = new Array<CompiledSelectionValue>(value.length);
-
-  for (let index = 0; index < value.length; index += 1) {
-    expected[index] = normalizeSelectionValue(variant.isBoolean, value[index]);
-  }
-
-  return expected as readonly CompiledSelectionValue[];
 }
 
 export function compileVariants<TClassName>(params: {
@@ -511,235 +316,71 @@ export function compileVariants<TClassName>(params: {
   return compiledVariants;
 }
 
-export function compileCompounds<TClassName>(params: {
-  compileClassName: (context: string, value: unknown) => TClassName;
-  compounds: RecipeConfig['compoundVariants'];
-  validate: boolean;
-  variantTable: readonly CompiledVariant<TClassName>[];
-}): readonly CompiledCompound<TClassName>[] {
-  const { compileClassName, compounds, validate, variantTable } = params;
-  if (!compounds || compounds.length === 0) {
-    return [];
-  }
+export function buildSelectionLean(
+  compiled: CompiledRecipe,
+  input: Record<string, unknown> | undefined
+): CompiledSelectionValue[] {
+  const selection = new Array<CompiledSelectionValue>(
+    compiled.variantTable.length
+  );
+  const source = input ?? {};
 
-  const compiledCompounds: Array<CompiledCompound<TClassName>> = [];
+  for (let index = 0; index < compiled.variantTable.length; index += 1) {
+    const variant = compiled.variantTable[index];
+    let value = source[variant.key];
 
-  for (const compound of compounds) {
-    const selectors: Array<readonly [number, CompiledExpected]> = [];
-    let dropped = false;
-
-    for (const key in compound) {
-      if (!hasOwnKey(compound, key) || key === 'className') continue;
-
-      const index = findVariantIndexByKey(variantTable, key);
-      if (index === undefined) {
-        if (validate) {
-          throw new Error(
-            `react-class-variants: compoundVariants key "${key}" is not declared in variants.`
-          );
-        }
-        // An undeclared selector key can never match, so the whole compound
-        // must never apply (matches cva/tailwind-variants semantics).
-        dropped = true;
-        break;
-      }
-
-      const value = (compound as Record<string, unknown>)[key];
-      if (value === undefined) continue;
-
-      const variant = variantTable[index];
-
-      if (Array.isArray(value)) {
-        const candidates = value.filter(candidate => candidate !== undefined);
-
-        if (validate) {
-          for (const candidate of candidates) {
-            if (!isAllowedVariantValue(variant, candidate)) {
-              throw new Error(
-                `react-class-variants: invalid compoundVariants value "${String(
-                  candidate
-                )}" for variant "${key}".`
-              );
-            }
-          }
-        }
-
-        selectors.push([index, compileCompoundSelection(variant, candidates)]);
-        continue;
-      }
-
-      if (validate && !isAllowedVariantValue(variant, value)) {
-        throw new Error(
-          `react-class-variants: invalid compoundVariants value "${String(
-            value
-          )}" for variant "${key}".`
-        );
-      }
-
-      selectors.push([
-        index,
-        normalizeSelectionValue(variant.isBoolean, value),
-      ]);
+    if (value === undefined) {
+      value = variant.defaultValue;
     }
 
-    if (dropped) continue;
-
-    compiledCompounds.push({
-      className: compileClassName(
-        'compoundVariants.className',
-        (compound as { className?: unknown }).className
-      ),
-      selectors,
-    });
-  }
-
-  return compiledCompounds;
-}
-
-export function compileLeanCompounds<TClassName>(params: {
-  compileClassName: (context: string, value: unknown) => TClassName;
-  compounds: RecipeConfig['compoundVariants'];
-  validate: boolean;
-  variantTable: readonly CompiledVariant<TClassName>[];
-}): LeanCompiledCompounds<TClassName> {
-  const { compileClassName, compounds, validate, variantTable } = params;
-  if (!compounds || compounds.length === 0) {
-    return {
-      classNames: [],
-      offsets: [0],
-      selectorPairs: [],
-    };
-  }
-
-  const classNames: TClassName[] = [];
-  const offsets = [0];
-  const selectorPairs: Array<number | CompiledExpected> = [];
-
-  for (const compound of compounds) {
-    const pairsStart = selectorPairs.length;
-    let dropped = false;
-
-    for (const key in compound) {
-      if (!hasOwnKey(compound, key) || key === 'className') continue;
-
-      const index = findVariantIndexByKey(variantTable, key);
-      if (index === undefined) {
-        if (validate) {
-          throw new Error(
-            `react-class-variants: compoundVariants key "${key}" is not declared in variants.`
-          );
-        }
-        // An undeclared selector key can never match, so the whole compound
-        // must never apply (matches cva/tailwind-variants semantics).
-        dropped = true;
-        break;
-      }
-
-      const value = (compound as Record<string, unknown>)[key];
-      if (value === undefined) continue;
-
-      const variant = variantTable[index];
-
-      if (Array.isArray(value)) {
-        const candidates = value.filter(candidate => candidate !== undefined);
-
-        if (validate) {
-          for (const candidate of candidates) {
-            if (!isAllowedVariantValue(variant, candidate)) {
-              throw new Error(
-                `react-class-variants: invalid compoundVariants value "${String(
-                  candidate
-                )}" for variant "${key}".`
-              );
-            }
-          }
-        }
-
-        selectorPairs.push(
-          index,
-          compileCompoundSelection(variant, candidates)
-        );
-        continue;
-      }
-
-      if (validate && !isAllowedVariantValue(variant, value)) {
-        throw new Error(
-          `react-class-variants: invalid compoundVariants value "${String(
-            value
-          )}" for variant "${key}".`
-        );
-      }
-
-      selectorPairs.push(
-        index,
-        normalizeSelectionValue(variant.isBoolean, value)
-      );
-    }
-
-    if (dropped) {
-      selectorPairs.length = pairsStart;
+    if (value === undefined) {
+      if (variant.isBoolean) selection[index] = false;
       continue;
     }
 
-    classNames.push(
-      compileClassName(
-        'compoundVariants.className',
-        (compound as { className?: unknown }).className
-      )
-    );
-    offsets.push(selectorPairs.length / 2);
+    selection[index] = normalizeSelectionValue(variant.isBoolean, value);
   }
 
-  return {
-    classNames,
-    offsets,
-    selectorPairs,
-  };
+  return selection;
 }
 
-function validateKnownRecipeProps(
-  compiled: CompiledRecipe,
-  source: Record<string, unknown>,
-  context: string,
-  allowUnknownProps: boolean,
-  allowedPublicProps: readonly string[] | undefined
-) {
-  if (!compiled.validate || allowUnknownProps) return;
-
-  const variantIndex = ensureVariantIndex(compiled);
-  for (const key in source) {
-    if (!hasOwnKey(source, key)) continue;
-    if (allowedPublicProps?.includes(key)) continue;
-    if (getVariantIndex(variantIndex, key) === undefined) {
-      throw new Error(
-        `react-class-variants: unknown ${context} prop "${key}". Use resolve() for arbitrary component props.`
-      );
-    }
-  }
-}
-
-export function buildSelection(
+// Direct calls reject props that are not variants (the root className and the
+// slotted slotClassNames excepted); component and resolve() callers pass
+// allowUnknownProps because their input is a full prop bag.
+export function buildValidatedSelection(
   compiled: CompiledRecipe,
   input: Record<string, unknown> | undefined,
-  context: string,
-  allowUnknownProps: boolean,
-  allowedPublicProps?: readonly string[]
-) {
+  allowUnknownProps: boolean
+): CompiledSelectionValue[] {
   const source = input ?? {};
+
+  if (!allowUnknownProps) {
+    if (compiled.mode === 'slot' && 'className' in source) {
+      throw new Error(
+        'react-class-variants: className cannot be passed directly to a slotted recipe call. Use slot functions instead.'
+      );
+    }
+
+    const variantIndex = ensureVariantIndex(compiled);
+    const publicProp =
+      compiled.mode === 'root' ? 'className' : 'slotClassNames';
+
+    for (const key in source) {
+      if (!hasOwnKey(source, key) || key === publicProp) continue;
+      if (getVariantIndex(variantIndex, key) === undefined) {
+        throw new Error(
+          `react-class-variants: unknown recipe prop "${key}". Use resolve() for arbitrary component props.`
+        );
+      }
+    }
+  }
+
   const selection = new Array<CompiledSelectionValue>(
     compiled.variantTable.length
   );
 
-  validateKnownRecipeProps(
-    compiled,
-    source,
-    context,
-    allowUnknownProps,
-    allowedPublicProps
-  );
-
   for (let index = 0; index < compiled.variantTable.length; index += 1) {
-    const variant = compiled.variantTable[index];
+    const variant: CompiledVariant<unknown> = compiled.variantTable[index];
     let value = source[variant.key];
 
     if (value === undefined) {
@@ -751,105 +392,23 @@ export function buildSelection(
     }
 
     if (value === undefined) {
-      if (compiled.validate) {
-        throw new Error(
-          `react-class-variants: missing required ${context} variant "${variant.key}".`
-        );
-      }
-      continue;
+      throw new Error(
+        `react-class-variants: missing required recipe variant "${variant.key}".`
+      );
     }
 
-    if (compiled.validate) {
-      validateVariantValue(variant, value, context);
+    if (!isAllowedVariantValue(variant, value)) {
+      throw new Error(
+        `react-class-variants: invalid recipe value "${String(
+          value
+        )}" for variant "${variant.key}".`
+      );
     }
 
     selection[index] = normalizeSelectionValue(variant.isBoolean, value);
   }
 
   return selection;
-}
-
-function matchesCompound(
-  selection: readonly CompiledSelectionValue[],
-  selectors: readonly (readonly [number, CompiledExpected])[]
-) {
-  for (const [index, expected] of selectors) {
-    const actual = selection[index];
-
-    if (Array.isArray(expected)) {
-      let matched = false;
-      for (const candidate of expected) {
-        if (candidate === actual) {
-          matched = true;
-          break;
-        }
-      }
-      if (!matched) return false;
-      continue;
-    }
-
-    if (expected !== actual) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-function matchesLeanCompoundRange(
-  selection: readonly CompiledSelectionValue[],
-  compounds: LeanCompiledCompounds<unknown>,
-  compoundIndex: number
-) {
-  const start = compounds.offsets[compoundIndex] * 2;
-  const end = compounds.offsets[compoundIndex + 1] * 2;
-
-  for (let index = start; index < end; index += 2) {
-    const actual = selection[compounds.selectorPairs[index] as number];
-    const expected = compounds.selectorPairs[index + 1] as CompiledExpected;
-
-    if (Array.isArray(expected)) {
-      let matched = false;
-      for (const candidate of expected) {
-        if (candidate === actual) {
-          matched = true;
-          break;
-        }
-      }
-      if (!matched) return false;
-      continue;
-    }
-
-    if (expected !== actual) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-export function forEachMatchingCompound<TClassName>(
-  compounds: readonly CompiledCompound<TClassName>[],
-  selection: readonly CompiledSelectionValue[],
-  callback: (className: TClassName) => void
-) {
-  for (const compound of compounds) {
-    if (matchesCompound(selection, compound.selectors)) {
-      callback(compound.className);
-    }
-  }
-}
-
-export function forEachMatchingLeanCompound<TClassName>(
-  compounds: LeanCompiledCompounds<TClassName>,
-  selection: readonly CompiledSelectionValue[],
-  callback: (className: TClassName) => void
-) {
-  for (let index = 0; index < compounds.classNames.length; index += 1) {
-    if (matchesLeanCompoundRange(selection, compounds, index)) {
-      callback(compounds.classNames[index]);
-    }
-  }
 }
 
 export function materializeSelection(
@@ -863,165 +422,6 @@ export function materializeSelection(
   }
 
   return variants;
-}
-
-export function createResolvedProps(
-  compiled: CompiledRecipe,
-  input: Record<string, unknown> | undefined,
-  options: NormalizedResolveOptions | undefined,
-  selection: readonly CompiledSelectionValue[]
-) {
-  const resolvedProps: Record<string, unknown> = {};
-  const source = input ?? {};
-  const variantIndex = ensureVariantIndex(compiled);
-
-  for (const key in source) {
-    if (!hasOwnKey(source, key)) continue;
-    // Assigning an own '__proto__' input key (e.g. from JSON.parse) would swap
-    // the prototype of resolvedProps instead of copying data; drop it.
-    if (key === '__proto__') continue;
-    if (compiled.mode === 'slot' && key === 'slotClassNames') continue;
-    if (getVariantIndex(variantIndex, key) !== undefined) continue;
-    resolvedProps[key] = source[key];
-  }
-
-  for (const [nativeKey, aliasKey] of options?.propAliasEntries ?? []) {
-    if (!hasOwnKey(resolvedProps, aliasKey)) continue;
-
-    if (compiled.validate && hasOwnKey(resolvedProps, nativeKey)) {
-      throw new Error(
-        `react-class-variants: propAliases target "${nativeKey}" would overwrite an existing resolved prop.`
-      );
-    }
-
-    resolvedProps[nativeKey] = resolvedProps[aliasKey];
-    delete resolvedProps[aliasKey];
-  }
-
-  for (const [key, index] of options?.forwardPropEntries ?? []) {
-    if (compiled.validate && hasOwnKey(resolvedProps, key)) {
-      throw new Error(
-        `react-class-variants: forwardProps key "${key}" would overwrite an existing resolved prop.`
-      );
-    }
-
-    resolvedProps[key] = selection[index];
-  }
-
-  return resolvedProps;
-}
-
-function isNormalizedResolveOptions(
-  options: ResolveOptions | NormalizedResolveOptions | undefined
-): options is NormalizedResolveOptions {
-  return Boolean(options && normalizedResolveOptionsSymbol in options);
-}
-
-export function normalizeResolveOptions(
-  compiled: CompiledRecipe,
-  options: ResolveOptions | undefined
-): NormalizedResolveOptions | undefined {
-  if (!options) return undefined;
-  if (isNormalizedResolveOptions(options)) return options;
-
-  const forwardProps =
-    options.forwardProps && options.forwardProps.length > 0
-      ? options.forwardProps
-      : undefined;
-  const rawPropAliases = options.propAliases;
-
-  let forwardPropEntries: ForwardPropEntry[] | undefined;
-  let propAliasEntries: Array<readonly [string, string]> | undefined;
-  let variantIndex: Readonly<VariantIndex> | undefined;
-  const seenAliases: Record<string, true> = {};
-
-  if (rawPropAliases) {
-    for (const nativeKey in rawPropAliases) {
-      if (!hasOwnKey(rawPropAliases, nativeKey)) continue;
-
-      const aliasKey = rawPropAliases[nativeKey];
-      if (!aliasKey) continue;
-
-      // Writing resolvedProps['__proto__'] would swap its prototype instead of
-      // copying data (see createResolvedProps), so this target is never legal.
-      if (nativeKey === '__proto__') {
-        if (compiled.validate) {
-          throw new Error(
-            'react-class-variants: prop alias target "__proto__" is not allowed.'
-          );
-        }
-        continue;
-      }
-
-      if (compiled.validate) {
-        if (isReservedPublicProp(compiled.mode, nativeKey)) {
-          throw new Error(
-            `react-class-variants: prop alias target "${nativeKey}" conflicts with a reserved public prop.`
-          );
-        }
-
-        if (isReservedPublicProp(compiled.mode, aliasKey)) {
-          throw new Error(
-            `react-class-variants: prop alias "${aliasKey}" conflicts with a reserved public prop.`
-          );
-        }
-
-        variantIndex ??= ensureVariantIndex(compiled);
-        if (getVariantIndex(variantIndex, aliasKey) !== undefined) {
-          throw new Error(
-            `react-class-variants: prop alias "${aliasKey}" conflicts with a declared variant key.`
-          );
-        }
-
-        if (hasOwnKey(seenAliases, aliasKey)) {
-          throw new Error(
-            `react-class-variants: prop alias "${aliasKey}" cannot be reused.`
-          );
-        }
-      }
-
-      seenAliases[aliasKey] = true;
-      propAliasEntries ??= [];
-      propAliasEntries.push([nativeKey, aliasKey]);
-    }
-  }
-
-  if (forwardProps) {
-    variantIndex ??= ensureVariantIndex(compiled);
-
-    for (const key of forwardProps) {
-      const index = getVariantIndex(variantIndex, key);
-
-      if (compiled.validate && index === undefined) {
-        throw new Error(
-          `react-class-variants: forwardProps key "${key}" is not declared in variants.`
-        );
-      }
-
-      if (
-        compiled.validate &&
-        propAliasEntries?.some(([nativeKey]) => nativeKey === key)
-      ) {
-        throw new Error(
-          `react-class-variants: forwardProps key "${key}" conflicts with propAliases target "${key}".`
-        );
-      }
-
-      if (index === undefined) continue;
-      forwardPropEntries ??= [];
-      forwardPropEntries.push([key, index]);
-    }
-  }
-
-  if (!forwardPropEntries && !propAliasEntries) {
-    return undefined;
-  }
-
-  return {
-    [normalizedResolveOptionsSymbol]: true,
-    forwardPropEntries,
-    propAliasEntries,
-  };
 }
 
 export function attachCompiled<TRecipe extends AnyRecipe>(

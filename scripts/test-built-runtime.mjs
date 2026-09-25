@@ -1,6 +1,6 @@
 // Checks of the built package that the Vitest suite cannot cover: importing
 // the entries in an environment without `process`, the React-free core entry,
-// and server rendering in plain Node. Behavioral coverage of dist/ comes from
+// tree-shaking of the validating runtime, and server rendering in plain Node. Behavioral coverage of dist/ comes from
 // `vitest run --config vitest.built.config.ts`.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -10,6 +10,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { build } from 'esbuild';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDir, '..');
@@ -93,6 +94,32 @@ module.defineConfig().recipe({ base: 'inline-flex' });`,
 
 assertImportsWithoutProcess(packageRootPath, true);
 assertImportsWithoutProcess(corePath, false);
+
+// A bundle that only uses the default lean recipe() must not include the
+// validating runtime (recipe.ts); defineConfig({ validate: 'always' }) must.
+async function bundleEntry(source) {
+  const result = await build({
+    absWorkingDir: repoRoot,
+    bundle: true,
+    format: 'esm',
+    logLevel: 'silent',
+    minify: true,
+    stdin: { contents: source, resolveDir: repoRoot },
+    treeShaking: true,
+    write: false,
+  });
+  return result.outputFiles[0].text;
+}
+
+const validatingMessage = 'missing required recipe variant';
+const leanBundle = await bundleEntry(
+  `import { recipe } from './dist/core.js';\nconsole.log(recipe({ base: 'x' })());`
+);
+const validatingBundle = await bundleEntry(
+  `import { defineConfig } from './dist/core.js';\nconsole.log(defineConfig({ validate: 'always' }).recipe({ base: 'x' })());`
+);
+assert.equal(leanBundle.includes(validatingMessage), false);
+assert.equal(validatingBundle.includes(validatingMessage), true);
 
 const packageRoot = await import(pathToFileURL(packageRootPath).href);
 const { recipe, styled } = packageRoot.defineConfig();

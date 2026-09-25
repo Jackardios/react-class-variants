@@ -3,25 +3,42 @@ import type {
   AnySlotRecipeConfig,
   RecipeConfig,
   RecipeFactory,
+  SystemOptions,
 } from './core-types';
-import { compileLeanRootRecipe, createLeanRootRecipe } from './engine/root';
-import { compileLeanSlotRecipe, createLeanSlotRecipe } from './engine/slot';
-import type { RuntimeSystemOptions } from './engine/shared';
+import { compileRootRecipe, createRootRecipe } from './engine/root';
+import {
+  buildSelectionLean,
+  type RecipeRuntime,
+  type RuntimeSystemOptions,
+} from './engine/shared';
+import { compileSlotRecipe, createSlotRecipe } from './engine/slot';
 
-const leanRuntimeOptions: RuntimeSystemOptions = {
-  freeze: 'none',
-  mode: 'lean',
-  validate: false,
+const leanRuntime: RecipeRuntime = {
+  select: buildSelectionLean,
 };
 
-export const defaultRecipeFactory = ((config: RecipeConfig) => {
-  if ('slots' in config) {
-    return createLeanSlotRecipe(
-      compileLeanSlotRecipe(config as AnySlotRecipeConfig, leanRuntimeOptions)
-    );
-  }
+export function createRecipeFactoryWith(
+  runtimeOptions: RuntimeSystemOptions
+): RecipeFactory {
+  return ((config: RecipeConfig) =>
+    'slots' in config
+      ? createSlotRecipe(
+          compileSlotRecipe(config as AnySlotRecipeConfig, runtimeOptions)
+        )
+      : createRootRecipe(
+          compileRootRecipe(config as AnyRootRecipeConfig, runtimeOptions)
+        )) as RecipeFactory;
+}
 
-  return createLeanRootRecipe(
-    compileLeanRootRecipe(config as AnyRootRecipeConfig, leanRuntimeOptions)
-  );
-}) as RecipeFactory;
+// Kept apart from recipe.ts so a bundle that only uses the default recipe()
+// never pulls in the validating runtime.
+export function createLeanRecipeFactory(options: SystemOptions): RecipeFactory {
+  return createRecipeFactoryWith({
+    cache: options.cache,
+    merge: options.merge,
+    runtime: leanRuntime,
+    validate: false,
+  });
+}
+
+export const defaultRecipeFactory = createLeanRecipeFactory({});

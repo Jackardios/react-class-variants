@@ -26,19 +26,18 @@ import type {
   StyledComponentProps,
   StyledComponentType,
 } from './react-types';
+import { normalizeResolveOptions } from './engine/props';
+import { resolveRootComponentProps, resolveRootViewState } from './engine/root';
 import {
   getCompiledRecipe,
-  normalizeResolveOptions,
-  resolveRootComponentProps,
-  resolveRootViewState,
+  type CompiledSelectionValue,
+  type RootCompiledRecipe,
+  type SlotCompiledRecipe,
+} from './engine/shared';
+import {
   resolveSlotClassNameForRender,
   resolveSlotViewState,
-  type RootCompiledRecipe,
-} from './recipe';
-import type {
-  CompiledSelectionValue,
-  SlotCompiledRecipe,
-} from './engine/shared';
+} from './engine/slot';
 import { flattenClassName } from './class-name';
 import {
   getComponentDisplayName,
