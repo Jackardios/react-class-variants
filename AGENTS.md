@@ -43,7 +43,8 @@ pnpm test          # runtime tests once
 pnpm test:coverage # runtime tests with coverage thresholds (part of verify)
 pnpm lint          # TypeScript publish-surface check for src/
 pnpm lint:all      # TypeScript check for src/ plus runtime test files
-pnpm lint:eslint   # ESLint for src/, test/, and scripts/
+pnpm lint:bench    # TypeScript check for bench/ (checkJs)
+pnpm lint:eslint   # ESLint for src/, test/, scripts/, and bench/
 pnpm lint:format   # Prettier check
 pnpm build         # tsup build -> dist/ (ESM + d.ts)
 ```
@@ -64,7 +65,7 @@ pnpm lint:pkg              # publint package-surface check
 ### Full gates
 
 ```bash
-pnpm run verify          # lint + lint:all + lint:eslint + lint:format + test:coverage + test:types + lint:pkg
+pnpm run verify          # lint + lint:all + lint:bench + lint:eslint + lint:format + test:coverage + test:types + lint:pkg
 pnpm run check:changeset # release-affecting branch/worktree changes must include a changeset
 pnpm run ci              # check:changeset + verify
 ```
