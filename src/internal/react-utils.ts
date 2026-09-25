@@ -76,3 +76,42 @@ export function mergeTwoRefs<T>(
 
   return merged as RefCallback<T>;
 }
+
+const MAX_DISPLAY_NAME_DEPTH = 5;
+
+// Mirrors how React DevTools names components: an explicit displayName wins,
+// then the function name; forwardRef and memo wrappers are unwrapped through
+// their `render` / `type` fields.
+export function getComponentDisplayName(base: unknown, depth = 0): string {
+  if (typeof base === 'string') return base;
+  if (depth > MAX_DISPLAY_NAME_DEPTH || !base) return 'Component';
+
+  if (typeof base === 'function' || typeof base === 'object') {
+    const component = base as {
+      displayName?: unknown;
+      name?: unknown;
+      render?: unknown;
+      type?: unknown;
+    };
+
+    if (typeof component.displayName === 'string' && component.displayName) {
+      return component.displayName;
+    }
+
+    if (typeof base === 'function') {
+      return typeof component.name === 'string' && component.name
+        ? component.name
+        : 'Component';
+    }
+
+    if (component.render) {
+      return getComponentDisplayName(component.render, depth + 1);
+    }
+
+    if (component.type) {
+      return getComponentDisplayName(component.type, depth + 1);
+    }
+  }
+
+  return 'Component';
+}

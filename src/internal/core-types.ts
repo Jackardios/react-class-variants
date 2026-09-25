@@ -393,8 +393,11 @@ export type RecipeTypeMetadata<
   config: Config;
 };
 
-declare const recipeTypeSymbol: unique symbol;
-
+// Type-only brand. The package root and `/core` ship self-contained declaration
+// files, so a `unique symbol` key would be a different symbol in each and
+// root-entry helpers (VariantProps, RecipeConfigOf, ...) would resolve to
+// `never` for recipes created through `/core`. A string key keeps both
+// declaration graphs structurally compatible. It never exists at runtime.
 type RecipeBrand<
   Mode extends 'root' | 'slot',
   Slots extends string,
@@ -402,13 +405,7 @@ type RecipeBrand<
   Defaults extends object,
   Config
 > = {
-  readonly [recipeTypeSymbol]?: RecipeTypeMetadata<
-    Mode,
-    Slots,
-    Variants,
-    Defaults,
-    Config
-  >;
+  readonly '~rcv'?: RecipeTypeMetadata<Mode, Slots, Variants, Defaults, Config>;
 };
 
 export type RootResolveResult<
@@ -478,12 +475,24 @@ export type SlotRecipe<
   >;
 };
 
+// The resolve results are deliberately loose: `RootResolveResult<any, ...>`
+// expands `variants` to a string index signature once TypeScript compares
+// two separately declared copies of these types (package root vs `/core`),
+// which rejects recipes with boolean variants. The brand's mode already
+// separates root recipes from slot recipes.
+type AnyResolveResult = {
+  readonly variants: Record<string, unknown>;
+  readonly resolvedProps: Record<string, unknown>;
+};
+
 export type AnyRootRecipe = RecipeBrand<'root', never, any, any, any> & {
-  readonly resolve: (...args: any[]) => RootResolveResult<any, any, any>;
+  readonly resolve: (...args: any[]) => AnyResolveResult;
 };
 
 export type AnySlotRecipe = RecipeBrand<'slot', any, any, any, any> & {
-  readonly resolve: (...args: any[]) => SlotResolveResult<any, any, any>;
+  readonly resolve: (...args: any[]) => AnyResolveResult & {
+    readonly slots: Record<string, (...args: any[]) => string>;
+  };
 };
 
 export type AnyRecipe = AnyRootRecipe | AnySlotRecipe;

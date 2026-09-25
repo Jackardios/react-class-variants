@@ -6,6 +6,7 @@ import {
   type RecipeConfigOf,
   type RecipeInput,
   type RootStyledViewProps,
+  type VariantProps,
   type SlotStyledViewProps,
 } from 'react-class-variants';
 import {
@@ -390,3 +391,14 @@ void badgeDanger;
 type _BadgeToneClass = Expect<
   Equal<NonNullable<BadgeConfig['variants']>['tone']['info'], 'bg-sky-500'>
 >;
+
+// Root-entry type helpers must understand recipes created through the core
+// subpath: the two entries ship separate declaration files.
+type CoreButtonVariants = VariantProps<typeof coreButtonRecipe>;
+type _CrossEntryTone = Expect<
+  Equal<NonNullable<CoreButtonVariants['tone']>, 'info' | 'danger'>
+>;
+const crossEntryInput: RecipeInput<typeof coreButtonRecipe> = {
+  tone: 'info',
+};
+void crossEntryInput;

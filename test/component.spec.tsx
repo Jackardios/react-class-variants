@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import {
   createRef,
   forwardRef,
+  memo,
   useEffect,
   type ComponentPropsWithoutRef,
   type RefCallback,
@@ -944,5 +945,50 @@ describe('styled()', () => {
     expect(cleanup).toHaveBeenCalledTimes(1);
     expect(attach).toHaveBeenCalledTimes(1);
     expect(outerRef.current).toBeNull();
+  });
+
+  it('derives displayName from the base component', () => {
+    const baseRecipe = recipe({ base: 'inline-flex' });
+    const tabsRecipe = recipe({ slots: { root: 'flex' } });
+
+    function RouterLink(props: ComponentPropsWithoutRef<'a'>) {
+      return <a {...props} />;
+    }
+    function Internal(props: ComponentPropsWithoutRef<'a'>) {
+      return <a {...props} />;
+    }
+    Internal.displayName = 'PublicLink';
+    const ForwardedLink = forwardRef<
+      HTMLAnchorElement,
+      ComponentPropsWithoutRef<'a'>
+    >(function LinkRender(props, ref) {
+      return <a ref={ref} {...props} />;
+    });
+    const MemoLink = memo(ForwardedLink);
+    const anonymous = [
+      (props: ComponentPropsWithoutRef<'a'>) => <a {...props} />,
+    ][0];
+
+    expect(styled('button', baseRecipe).displayName).toBe('Styled(button)');
+    expect(styled(RouterLink, baseRecipe).displayName).toBe(
+      'Styled(RouterLink)'
+    );
+    expect(styled(Internal, baseRecipe).displayName).toBe('Styled(PublicLink)');
+    expect(styled(ForwardedLink, baseRecipe).displayName).toBe(
+      'Styled(LinkRender)'
+    );
+    expect(styled(MemoLink, baseRecipe).displayName).toBe('Styled(LinkRender)');
+    expect(styled(anonymous, baseRecipe).displayName).toBe('Styled(Component)');
+    expect(styled(styled('button', baseRecipe), baseRecipe).displayName).toBe(
+      'Styled(Styled(button))'
+    );
+    expect(
+      styled('button', baseRecipe, { displayName: 'Button' }).displayName
+    ).toBe('Button');
+    expect(
+      styled(RouterLink, tabsRecipe, {
+        view: ({ host }) => host.render(),
+      }).displayName
+    ).toBe('Styled(RouterLink)');
   });
 });

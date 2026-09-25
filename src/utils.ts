@@ -3,18 +3,6 @@ import { setRef, type RefCleanup } from './internal/react-utils';
 import { hasOwnProperty } from './internal/core-utils';
 export { hasOwnProperty } from './internal/core-utils';
 
-/**
- * Merges two sets of props with special handling for className, style, and event handlers.
- *
- * - className: Concatenated with space separator
- * - style: Shallow merged (override wins for same property)
- * - event handlers (on*): Both handlers are called (override first, then base)
- * - other props: Override replaces base
- *
- * @param base - Base props object
- * @param overrides - Props to merge on top of base
- * @returns Merged props object
- */
 type MergeableProps = {
   className?: string | null | undefined;
   style?: CSSProperties | undefined;
@@ -28,6 +16,18 @@ type MergedProps<TBase extends object, TOverrides extends object> = Simplify<
   Omit<TBase, keyof TOverrides> & TOverrides
 >;
 
+/**
+ * Merges two sets of props with special handling for className, style, and event handlers.
+ *
+ * - className: Concatenated with space separator
+ * - style: Shallow merged (override wins for same property)
+ * - event handlers (on*): Both handlers are called (override first, then base)
+ * - other props: Override replaces base
+ *
+ * @param base - Base props object
+ * @param overrides - Props to merge on top of base
+ * @returns Merged props object
+ */
 export function mergeProps<TBase extends object, TOverrides extends object>(
   base: TBase & MergeableProps,
   overrides: TOverrides & MergeableProps

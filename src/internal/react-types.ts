@@ -31,39 +31,8 @@ type HasKeys<T> = [keyof T] extends [never] ? false : true;
 type HasForwardedKeys<Forwarded extends string> = [Forwarded] extends [never]
   ? false
   : true;
-type StructuralRecipeInput<TRecipe> = TRecipe extends (
-  input?: infer Input
-) => any
-  ? Exclude<Input, undefined>
-  : never;
-type StructuralRecipeVariantProps<TRecipe> =
-  StructuralRecipeInput<TRecipe> extends infer DefinedInput
-    ? TRecipe extends { resolve: (...args: any[]) => { slots: unknown } }
-      ? DefinedInput extends object
-        ? Omit<DefinedInput, 'slotClassNames'>
-        : DefinedInput
-      : DefinedInput extends { className?: ClassNameValue }
-      ? Omit<DefinedInput, 'className'>
-      : DefinedInput
-    : never;
-type StructuralResolvedRecipeVariantProps<TRecipe> = TRecipe extends {
-  resolve: (...args: any[]) => infer Result;
-}
-  ? Result extends { variants: infer Variants }
-    ? Variants
-    : never
-  : never;
-// The root entry and `/core` entry currently emit independent declaration
-// graphs, so React helpers need a structural fallback when brand-based core
-// helpers see a recipe from the sibling entrypoint.
-type RecipeVariantMap<TRecipe> = [VariantProps<TRecipe>] extends [never]
-  ? StructuralRecipeVariantProps<TRecipe>
-  : VariantProps<TRecipe>;
-type ResolvedRecipeVariantMap<TRecipe> = [
-  ResolvedVariantProps<TRecipe>
-] extends [never]
-  ? StructuralResolvedRecipeVariantProps<TRecipe>
-  : ResolvedVariantProps<TRecipe>;
+type RecipeVariantMap<TRecipe> = VariantProps<TRecipe>;
+type ResolvedRecipeVariantMap<TRecipe> = ResolvedVariantProps<TRecipe>;
 type StructuralSlotRenderMap<TRecipe> = TRecipe extends (
   input?: any
 ) => infer RenderMap
