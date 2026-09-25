@@ -24,8 +24,10 @@ For recipe-only modules, the primary `react-class-variants/core` APIs covered
 here are:
 
 - `recipe()`
-- `defineConfig()`
+- `defineConfig()` (returns `{ recipe }`)
 - `defineRecipeConfig()`
+- `variantNames()` and `variantOptions()`
+- `hasOwnProperty()`
 - core recipe types
 
 ## `recipe(config)`
@@ -703,8 +705,27 @@ type SystemOptions = {
 
 ### `validate`
 
+The option type is exported as `ValidateMode` (`'never' | 'always'`).
+
 - `'always'`: strict validation everywhere
 - `'never'`: lean runtime with no validation
+
+Both modes reject reserved variant keys and variants that mix boolean and named
+options. On top of that, strict mode:
+
+- rejects malformed configs when a recipe is created: undeclared compound or
+  default keys, invalid default values, variant keys that shadow
+  `Object.prototype` members, and invalid `className` values
+- checks every call: required variants, unknown option values, unknown props on
+  direct calls, and `propAliases` / `forwardProps` / `viewProps` conflicts
+- deep-freezes the config
+
+Lean mode skips these checks and drops input it cannot use.
+
+There is deliberately no environment-based mode such as "validate in
+development": the choice is made explicitly per factory, so the published code
+never branches on `process.env` and the default `recipe()` bundle does not
+contain the validating runtime at all.
 
 Example:
 
@@ -816,7 +837,7 @@ refs.
 
 ## React Type Exports
 
-- `AnyElementType`
+- `AnyElementType` (deprecated; use React's `ElementType`)
 - `PropAliases`
 - `ViewPropsDescriptor`
 - `RenderFunctionProps`

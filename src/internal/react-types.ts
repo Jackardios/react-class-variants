@@ -21,13 +21,14 @@ import type {
   VariantProps,
 } from './core-types';
 
+/** @deprecated Use React's `ElementType`. */
 export type AnyElementType = ElementType;
 export type AnyIntrinsicElement = keyof JSX.IntrinsicElements;
 declare const viewPropsShapeSymbol: unique symbol;
 
 // Mirrors the runtime set in engine/shared.ts (isReservedPublicProp).
 type ReservedReactPublicProps = 'children' | 'className' | 'ref' | 'render';
-type BaseProps<Base extends AnyElementType> = ComponentPropsWithRef<Base>;
+type BaseProps<Base extends ElementType> = ComponentPropsWithRef<Base>;
 type ViewPropsShape = Record<string, unknown>;
 type HasKeys<T> = [keyof T] extends [never] ? false : true;
 type HasForwardedKeys<Forwarded extends string> = [Forwarded] extends [never]
@@ -66,7 +67,7 @@ export type AnySlotRecipeLike = {
   };
 };
 
-export type PropAliases<Base extends AnyElementType> = Partial<
+export type PropAliases<Base extends ElementType> = Partial<
   Record<
     Exclude<keyof BaseProps<Base> & string, ReservedReactPublicProps>,
     string
@@ -79,7 +80,7 @@ export type ViewPropsDescriptor<TViewProps extends ViewPropsShape = {}> = {
 };
 
 type AliasProps<
-  Base extends AnyElementType,
+  Base extends ElementType,
   Aliases extends PropAliases<Base>
 > = HasKeys<Aliases> extends true
   ? {
@@ -123,10 +124,10 @@ export type RenderProp<TRecipe = never, Forwarded extends string = never> =
   | ReactElement
   | ((props: RenderFunctionProps<TRecipe, Forwarded>) => ReactNode);
 
-type BasePropKeys<Base extends AnyElementType> = keyof BaseProps<Base> & string;
+type BasePropKeys<Base extends ElementType> = keyof BaseProps<Base> & string;
 type AliasPublicPropKeys<Aliases> = Aliases[keyof Aliases] & string;
 
-type DisallowedAliasTargetKeys<Base extends AnyElementType, TRecipe> =
+type DisallowedAliasTargetKeys<Base extends ElementType, TRecipe> =
   | ReservedStyledAliasKeys<TRecipe>
   | BasePropKeys<Base>
   | Extract<VariantPropKeys<TRecipe>, string>;
@@ -137,7 +138,7 @@ type ValidatedAliasValue<
 > = AliasValue extends string ? Exclude<AliasValue, Disallowed> : AliasValue;
 
 type ValidatedPropAliases<
-  Base extends AnyElementType,
+  Base extends ElementType,
   TRecipe,
   Aliases extends PropAliases<Base>
 > = HasKeys<Aliases> extends true
@@ -150,7 +151,7 @@ type ValidatedPropAliases<
   : Aliases;
 
 type DisallowedViewPropKeys<
-  Base extends AnyElementType,
+  Base extends ElementType,
   TRecipe,
   Aliases extends PropAliases<Base>
 > =
@@ -160,7 +161,7 @@ type DisallowedViewPropKeys<
   | AliasPublicPropKeys<Aliases>;
 
 type ValidatedViewProps<
-  Base extends AnyElementType,
+  Base extends ElementType,
   TRecipe,
   Aliases extends PropAliases<Base>,
   ViewProps extends ViewPropsShape
@@ -177,14 +178,14 @@ type ValidatedViewProps<
   : ViewProps;
 
 type ValidatedViewPropsDescriptor<
-  Base extends AnyElementType,
+  Base extends ElementType,
   TRecipe,
   Aliases extends PropAliases<Base>,
   ViewProps extends ViewPropsShape
 > = ViewPropsDescriptor<ValidatedViewProps<Base, TRecipe, Aliases, ViewProps>>;
 
 type ViewPropsOption<
-  Base extends AnyElementType,
+  Base extends ElementType,
   TRecipe,
   Aliases extends PropAliases<Base>,
   ViewProps extends ViewPropsShape
@@ -201,19 +202,18 @@ type ViewPropsOption<
       viewProps?: undefined;
     };
 
-type ResolvedForwardedVariantProps<TRecipe, Forwarded extends string> = Pick<
-  ResolvedVariantProps<TRecipe>,
-  never
-> &
-  (HasForwardedKeys<Forwarded> extends true
-    ? Pick<
-        ResolvedVariantProps<TRecipe>,
-        Extract<Forwarded, keyof ResolvedVariantProps<TRecipe> & string>
-      >
-    : {});
+type ResolvedForwardedVariantProps<
+  TRecipe,
+  Forwarded extends string
+> = HasForwardedKeys<Forwarded> extends true
+  ? Pick<
+      ResolvedVariantProps<TRecipe>,
+      Extract<Forwarded, keyof ResolvedVariantProps<TRecipe> & string>
+    >
+  : {};
 
 type ResolvedAliasTargetProps<
-  Base extends AnyElementType,
+  Base extends ElementType,
   Aliases extends PropAliases<Base>
 > = HasKeys<Aliases> extends true
   ? {
@@ -224,7 +224,7 @@ type ResolvedAliasTargetProps<
   : {};
 
 type PublicBaseProps<
-  Base extends AnyElementType,
+  Base extends ElementType,
   TRecipe,
   Aliases extends PropAliases<Base>,
   ViewProps extends ViewPropsShape
@@ -237,7 +237,7 @@ type PublicBaseProps<
 >;
 
 type ResolvedBaseProps<
-  Base extends AnyElementType,
+  Base extends ElementType,
   TRecipe,
   Aliases extends PropAliases<Base>,
   Forwarded extends string,
@@ -253,7 +253,7 @@ type ResolvedBaseProps<
 >;
 
 type ResolvedHostProps<
-  Base extends AnyElementType,
+  Base extends ElementType,
   TRecipe,
   Aliases extends PropAliases<Base>,
   Forwarded extends string,
@@ -266,7 +266,7 @@ type ResolvedHostProps<
 >;
 
 type StyledComponent<
-  Base extends AnyElementType,
+  Base extends ElementType,
   TRecipe,
   WithRender extends boolean,
   Aliases extends PropAliases<Base> = {},
@@ -287,7 +287,7 @@ type StyledComponent<
 >;
 
 export type StyledComponentProps<
-  Base extends AnyElementType,
+  Base extends ElementType,
   TRecipe,
   WithRender extends boolean,
   Aliases extends PropAliases<Base>,
@@ -303,7 +303,7 @@ export type StyledComponentProps<
 >;
 
 export type HostRenderOverrides<
-  Base extends AnyElementType,
+  Base extends ElementType,
   TRecipe,
   WithRender extends boolean,
   Forwarded extends string = never
@@ -317,7 +317,7 @@ export type HostRenderOverrides<
 >;
 
 export type HostView<
-  Base extends AnyElementType,
+  Base extends ElementType,
   TRecipe,
   WithRender extends boolean,
   Aliases extends PropAliases<Base> = {},
@@ -335,7 +335,7 @@ export type HostView<
 };
 
 export type RootStyledViewProps<
-  Base extends AnyElementType,
+  Base extends ElementType,
   TRecipe extends AnyRootRecipeLike,
   WithRender extends boolean,
   Aliases extends PropAliases<Base> = {},
@@ -347,7 +347,7 @@ export type RootStyledViewProps<
 };
 
 export type SlotStyledViewProps<
-  Base extends AnyElementType,
+  Base extends ElementType,
   TRecipe extends AnySlotRecipeLike,
   WithRender extends boolean,
   Aliases extends PropAliases<Base> = {},
@@ -360,7 +360,7 @@ export type SlotStyledViewProps<
 };
 
 export type StyledOptionsCommon<
-  Base extends AnyElementType,
+  Base extends ElementType,
   TRecipe,
   Aliases extends PropAliases<Base>,
   Forwarded extends string
@@ -372,7 +372,7 @@ export type StyledOptionsCommon<
 };
 
 export type RootStyledOptions<
-  Base extends AnyElementType,
+  Base extends ElementType,
   TRecipe extends AnyRootRecipeLike,
   WithRender extends boolean = false,
   Aliases extends PropAliases<Base> = {},
@@ -409,7 +409,7 @@ type HostSlotOption<TRecipe extends AnySlotRecipeLike> =
       };
 
 export type SlotStyledOptions<
-  Base extends AnyElementType,
+  Base extends ElementType,
   TRecipe extends AnySlotRecipeLike,
   WithRender extends boolean = false,
   Aliases extends PropAliases<Base> = {},
@@ -430,15 +430,6 @@ export type SlotStyledOptions<
 } & ViewPropsOption<Base, TRecipe, Aliases, ViewProps> &
   HostSlotOption<TRecipe>;
 
-export type StyledComponentType<
-  Base extends AnyElementType,
-  TRecipe,
-  WithRender extends boolean,
-  Aliases extends PropAliases<Base> = {},
-  Forwarded extends string = never,
-  ViewProps extends ViewPropsShape = {}
-> = StyledComponent<Base, TRecipe, WithRender, Aliases, Forwarded, ViewProps>;
-
 export interface StyledFn {
   <
     Base extends AnyIntrinsicElement,
@@ -458,17 +449,10 @@ export interface StyledFn {
       Forwarded,
       ViewProps
     >
-  ): StyledComponentType<
-    Base,
-    TRecipe,
-    WithRender,
-    Aliases,
-    Forwarded,
-    ViewProps
-  >;
+  ): StyledComponent<Base, TRecipe, WithRender, Aliases, Forwarded, ViewProps>;
 
   <
-    Base extends Exclude<AnyElementType, AnyIntrinsicElement>,
+    Base extends Exclude<ElementType, AnyIntrinsicElement>,
     TRecipe extends AnyRootRecipeLike,
     const Aliases extends PropAliases<Base> = {},
     const Forwarded extends string = never,
@@ -484,7 +468,7 @@ export interface StyledFn {
       Forwarded,
       ViewProps
     >
-  ): StyledComponentType<Base, TRecipe, false, Aliases, Forwarded, ViewProps>;
+  ): StyledComponent<Base, TRecipe, false, Aliases, Forwarded, ViewProps>;
 
   <
     Base extends AnyIntrinsicElement,
@@ -504,17 +488,10 @@ export interface StyledFn {
       Forwarded,
       ViewProps
     >
-  ): StyledComponentType<
-    Base,
-    TRecipe,
-    WithRender,
-    Aliases,
-    Forwarded,
-    ViewProps
-  >;
+  ): StyledComponent<Base, TRecipe, WithRender, Aliases, Forwarded, ViewProps>;
 
   <
-    Base extends Exclude<AnyElementType, AnyIntrinsicElement>,
+    Base extends Exclude<ElementType, AnyIntrinsicElement>,
     TRecipe extends AnySlotRecipeLike,
     const Aliases extends PropAliases<Base> = {},
     const Forwarded extends string = never,
@@ -530,5 +507,5 @@ export interface StyledFn {
       Forwarded,
       ViewProps
     >
-  ): StyledComponentType<Base, TRecipe, false, Aliases, Forwarded, ViewProps>;
+  ): StyledComponent<Base, TRecipe, false, Aliases, Forwarded, ViewProps>;
 }

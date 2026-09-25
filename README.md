@@ -374,14 +374,17 @@ Supported options:
 
 ```ts
 type SystemOptions = {
+  cache?: boolean | { maxSize?: number };
   merge?: (className: string) => string;
-  validate?: 'never' | 'always';
+  validate?: 'never' | 'always'; // ValidateMode
 };
 ```
 
 Default root and core imports are lean and process-less safe. Use
 `defineConfig({ validate: 'always' })` when you want checked runtime behavior
-for a shared factory.
+for a shared factory. With `merge` set, lean root recipes memoize their results
+(`cache`, default 500 entries); pass `cache: false` to opt out. See the
+[API reference](./docs/api-reference.md#defineconfigoptions) for details.
 
 ## Utilities
 

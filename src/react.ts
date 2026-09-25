@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- public styled implementation intentionally erases recipe generics behind a typed export surface. */
+import type { ElementType } from 'react';
 import { createStyled } from './internal/builders';
 import { getCompiledRecipeOrThrow } from './internal/engine/shared';
 import { createRecipeFactory } from './internal/recipe';
@@ -8,7 +9,6 @@ import type {
   SystemOptions,
 } from './internal/core-types';
 import type {
-  AnyElementType,
   RootStyledOptions,
   SlotStyledOptions,
   StyledFn,
@@ -85,7 +85,7 @@ export function defineViewProps<
 }
 
 function styledImpl(
-  base: AnyElementType,
+  base: ElementType,
   inputRecipe: AnyRootRecipe | AnySlotRecipe,
   options?:
     | RootStyledOptions<any, any, any, any, any, any>
