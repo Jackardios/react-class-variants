@@ -17,6 +17,7 @@ import type {
   ClassNameValue,
   ResolvedVariantProps,
   Simplify,
+  SlotRenderMap,
   VariantProps,
 } from './core-types';
 
@@ -31,22 +32,9 @@ type HasKeys<T> = [keyof T] extends [never] ? false : true;
 type HasForwardedKeys<Forwarded extends string> = [Forwarded] extends [never]
   ? false
   : true;
-type RecipeVariantMap<TRecipe> = VariantProps<TRecipe>;
-type ResolvedRecipeVariantMap<TRecipe> = ResolvedVariantProps<TRecipe>;
-type StructuralSlotRenderMap<TRecipe> = TRecipe extends (
-  input?: any
-) => infer RenderMap
-  ? RenderMap extends Record<
-      string,
-      (input?: Record<string, unknown>) => string
-    >
-    ? RenderMap
-    : never
-  : never;
-type RecipeSlotRenderMap<TRecipe> = StructuralSlotRenderMap<TRecipe>;
-type RecipeSlotNames<TRecipe> = keyof RecipeSlotRenderMap<TRecipe> & string;
+type RecipeSlotNames<TRecipe> = keyof SlotRenderMap<TRecipe> & string;
 type StyledSlotClassNames<TRecipe> = Partial<{
-  [Slot in keyof RecipeSlotRenderMap<TRecipe>]: ClassNameValue;
+  [Slot in keyof SlotRenderMap<TRecipe>]: ClassNameValue;
 }>;
 type ConsumedStyledPropKeys<TRecipe> =
   | 'className'
@@ -100,9 +88,9 @@ type AliasProps<
     }
   : {};
 
-type VariantPropKeys<TRecipe> = [RecipeVariantMap<TRecipe>] extends [never]
+type VariantPropKeys<TRecipe> = [VariantProps<TRecipe>] extends [never]
   ? never
-  : keyof RecipeVariantMap<TRecipe>;
+  : keyof VariantProps<TRecipe>;
 
 type ForwardedRenderVariantProps<TRecipe, Forwarded extends string> = [
   HasForwardedKeys<Forwarded>
@@ -111,8 +99,8 @@ type ForwardedRenderVariantProps<TRecipe, Forwarded extends string> = [
   : [TRecipe] extends [never]
   ? {}
   : Pick<
-      ResolvedRecipeVariantMap<TRecipe>,
-      Extract<Forwarded, keyof ResolvedRecipeVariantMap<TRecipe> & string>
+      ResolvedVariantProps<TRecipe>,
+      Extract<Forwarded, keyof ResolvedVariantProps<TRecipe> & string>
     >;
 
 export type RenderFunctionProps<
@@ -213,13 +201,13 @@ type ViewPropsOption<
     };
 
 type ResolvedForwardedVariantProps<TRecipe, Forwarded extends string> = Pick<
-  ResolvedRecipeVariantMap<TRecipe>,
+  ResolvedVariantProps<TRecipe>,
   never
 > &
   (HasForwardedKeys<Forwarded> extends true
     ? Pick<
-        ResolvedRecipeVariantMap<TRecipe>,
-        Extract<Forwarded, keyof ResolvedRecipeVariantMap<TRecipe> & string>
+        ResolvedVariantProps<TRecipe>,
+        Extract<Forwarded, keyof ResolvedVariantProps<TRecipe> & string>
       >
     : {});
 
@@ -307,7 +295,7 @@ export type StyledComponentProps<
 > = Simplify<
   PublicBaseProps<Base, TRecipe, Aliases, ViewProps> &
     AliasProps<Base, Aliases> &
-    RecipeVariantMap<TRecipe> &
+    VariantProps<TRecipe> &
     StyledRecipePublicProps<TRecipe> &
     ViewProps &
     (WithRender extends true ? { render?: RenderProp<TRecipe, Forwarded> } : {})
@@ -354,7 +342,7 @@ export type RootStyledViewProps<
   ViewProps extends ViewPropsShape = {}
 > = {
   host: HostView<Base, TRecipe, WithRender, Aliases, Forwarded, ViewProps>;
-  variants: ResolvedRecipeVariantMap<TRecipe>;
+  variants: ResolvedVariantProps<TRecipe>;
 };
 
 export type SlotStyledViewProps<
@@ -366,8 +354,8 @@ export type SlotStyledViewProps<
   ViewProps extends ViewPropsShape = {}
 > = {
   host: HostView<Base, TRecipe, WithRender, Aliases, Forwarded, ViewProps>;
-  variants: ResolvedRecipeVariantMap<TRecipe>;
-  classes: Readonly<RecipeSlotRenderMap<TRecipe>>;
+  variants: ResolvedVariantProps<TRecipe>;
+  classes: Readonly<SlotRenderMap<TRecipe>>;
 };
 
 export type StyledOptionsCommon<
@@ -378,7 +366,7 @@ export type StyledOptionsCommon<
 > = {
   displayName?: string;
   forwardProps?: readonly Forwarded[] &
-    readonly (keyof RecipeVariantMap<TRecipe> & string)[];
+    readonly (keyof VariantProps<TRecipe> & string)[];
   propAliases?: ValidatedPropAliases<Base, TRecipe, Aliases>;
 };
 

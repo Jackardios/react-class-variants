@@ -25,6 +25,8 @@ import {
   recipe as coreRecipe,
   variantNames as coreVariantNames,
   variantOptions as coreVariantOptions,
+  type AnyRootRecipe as CoreAnyRootRecipe,
+  type AnySlotRecipe as CoreAnySlotRecipe,
   type VariantProps,
 } from '../../../dist/core';
 
@@ -114,8 +116,7 @@ expectType<boolean>(
 );
 expectType<'root' | 'icon'>({} as RootSlotNames<typeof coreToggleTabs>);
 
-const reactConfig = defineRootConfig();
-const { styled } = defineRootConfig();
+// Package-root recipes with the `/core` type helpers.
 const buttonRecipe = rootRecipe({
   base: 'inline-flex',
   variants: {
@@ -124,10 +125,18 @@ const buttonRecipe = rootRecipe({
     },
   },
 });
-const Button = styled('button', buttonRecipe);
+const rootTabs = rootRecipe({ slots: { root: 'flex' } });
 
 expectType<{ readonly tone: 'info' }>({} as VariantProps<typeof buttonRecipe>);
 expectType<'tone'[]>(coreVariantNames(buttonRecipe));
+expectAssignable<CoreAnyRootRecipe>(buttonRecipe);
+expectNotAssignable<CoreAnySlotRecipe>(buttonRecipe);
+expectAssignable<CoreAnySlotRecipe>(rootTabs);
+expectNotAssignable<CoreAnyRootRecipe>(rootTabs);
+
+const reactConfig = defineRootConfig();
+const { styled } = defineRootConfig();
+const Button = styled('button', buttonRecipe);
 const ConfiguredButton = reactConfig.styled('button', buttonRecipe);
 
 expectType<ReactNode>(

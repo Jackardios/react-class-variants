@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import {
   createRef,
   forwardRef,
+  lazy,
   memo,
   useEffect,
   type ComponentPropsWithoutRef,
@@ -979,12 +980,25 @@ describe('styled()', () => {
     );
     expect(styled(MemoLink, baseRecipe).displayName).toBe('Styled(LinkRender)');
     expect(styled(anonymous, baseRecipe).displayName).toBe('Styled(Component)');
+    expect(
+      styled(
+        lazy(async () => ({ default: RouterLink })),
+        baseRecipe
+      ).displayName
+    ).toBe('Styled(Component)');
     expect(styled(styled('button', baseRecipe), baseRecipe).displayName).toBe(
       'Styled(Styled(button))'
     );
     expect(
       styled('button', baseRecipe, { displayName: 'Button' }).displayName
     ).toBe('Button');
+    const cyclic: { $$typeof: symbol; type?: unknown } = {
+      $$typeof: Symbol.for('react.memo'),
+    };
+    cyclic.type = cyclic;
+    expect(styled(cyclic as never, baseRecipe).displayName).toBe(
+      'Styled(Component)'
+    );
     expect(
       styled(RouterLink, tabsRecipe, {
         view: ({ host }) => host.render(),
