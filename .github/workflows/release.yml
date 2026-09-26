@@ -59,6 +59,8 @@ jobs:
         run: pnpm run release:github:preflight
       - name: Check npm dist-tag repair availability
         if: steps.changesets.outputs.hasChangesets == 'false'
+        env:
+          RELEASE_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: pnpm run release:dist-tags:preflight
       - name: Publish package to npm
         if: steps.changesets.outputs.hasChangesets == 'false'
@@ -78,6 +80,8 @@ jobs:
         if: steps.changesets.outputs.hasChangesets == 'false'
         id: sync_dist_tags
         continue-on-error: true
+        env:
+          RELEASE_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: pnpm run release:dist-tags
       - name: Create or update GitHub releases
         if: steps.changesets.outputs.hasChangesets == 'false'

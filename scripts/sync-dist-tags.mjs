@@ -1,8 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import {
   execAuthenticatedNpm,
-  getReleaseAuthStrategy,
-  resolveReleaseAuth,
+  resolveReleaseToken,
 } from './npm-release-auth.mjs';
 import {
   isMainModule,
@@ -81,16 +80,14 @@ export function computeDesiredDistTags({
   return desiredDistTags;
 }
 
-async function addDistTag(packageName, tag, version, auth) {
+async function addDistTag(packageName, tag, version, token) {
   try {
     await execAuthenticatedNpm(
       ['dist-tag', 'add', `${packageName}@${version}`, tag],
-      {
-        auth,
-      }
+      { token }
     );
   } catch (error) {
-    error.message = `${error.message}\n\nThe configured npm token could not update dist-tags. Refresh RELEASE_NPM_AUTH_TOKEN/NODE_AUTH_TOKEN/NPM_TOKEN.`;
+    error.message = `${error.message}\n\nThe configured npm token could not update dist-tags. Refresh RELEASE_NPM_AUTH_TOKEN/NPM_TOKEN/NODE_AUTH_TOKEN.`;
     throw error;
   }
 }
@@ -163,14 +160,14 @@ export async function syncDistTags() {
     return;
   }
 
-  const authStrategy = getReleaseAuthStrategy(process.env);
+  const token = resolveReleaseToken(process.env);
 
-  if (authStrategy === 'oidc') {
-    // npm trusted publishing authenticates `npm publish` only. Surface the
-    // drift as an annotation so it is visible in the run summary.
+  if (!token) {
+    // Trusted publishing (OIDC) cannot update dist-tags, so surface the drift
+    // as an annotation that is visible in the run summary.
     warnAnnotation(
       [
-        `npm dist-tags for ${packageName}@${publishedVersion} need a manual repair: trusted publishing (OIDC) cannot update dist-tags.`,
+        `npm dist-tags for ${packageName}@${publishedVersion} need a manual repair: no npm token is configured for dist-tag updates.`,
         'Run:',
         formatDistTagCommands(packageName, pendingUpdates),
       ].join('\n')
@@ -178,13 +175,9 @@ export async function syncDistTags() {
     return;
   }
 
-  const auth = resolveReleaseAuth(process.env);
-
-  console.log(`Using token auth for dist-tag updates.`);
-
   for (const [tag, version] of pendingUpdates) {
     console.log(`Setting npm dist-tag ${tag} -> ${version}`);
-    await addDistTag(packageName, tag, version, auth);
+    await addDistTag(packageName, tag, version, token);
   }
 
   const finalDistTags =

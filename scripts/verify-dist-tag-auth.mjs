@@ -1,7 +1,6 @@
 import {
   execAuthenticatedNpm,
-  getReleaseAuthStrategy,
-  resolveReleaseAuth,
+  resolveReleaseToken,
 } from './npm-release-auth.mjs';
 import { npmView, readPackageJson } from './release-shared.mjs';
 
@@ -15,14 +14,14 @@ if ((await npmView(packageName, 'version')) === null) {
   process.exit(0);
 }
 
-if (getReleaseAuthStrategy(process.env) === 'oidc') {
+const token = resolveReleaseToken(process.env);
+
+if (!token) {
   console.log(
-    `npm trusted publishing OIDC is available for ${packageName}, but npm currently limits trusted publishing auth to the publish operation. Automated dist-tag repair will be skipped and any remaining drift must be repaired manually.`
+    `No npm token is configured for ${packageName}. Trusted publishing (OIDC) only authenticates the publish operation, so automated dist-tag repair will be skipped and any remaining drift must be repaired manually.`
   );
   process.exit(0);
 }
 
-await execAuthenticatedNpm(['whoami'], {
-  auth: resolveReleaseAuth(process.env),
-});
+await execAuthenticatedNpm(['whoami'], { token });
 console.log(`Validated npm token auth for dist-tag updates on ${packageName}.`);

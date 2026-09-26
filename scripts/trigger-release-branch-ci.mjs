@@ -1,37 +1,23 @@
 import { githubApi, getGitHubRepository } from './github-api.mjs';
-import { delay, isMainModule } from './release-shared.mjs';
+import { delay, isMainModule, pollUntil } from './release-shared.mjs';
 
 const defaultWorkflow = 'main.yml';
 
 async function waitForReleaseBranch(repository, branch) {
-  for (let attempt = 1; attempt <= 10; attempt += 1) {
-    const response = await githubApi(
-      `/repos/${repository}/branches/${encodeURIComponent(branch)}`,
-      {
+  const response = await pollUntil(
+    () =>
+      githubApi(`/repos/${repository}/branches/${encodeURIComponent(branch)}`, {
         env: process.env,
         expectedStatuses: [200, 404],
         includeStatus: true,
-      }
-    );
+      }),
+    ({ status }) => status === 200,
+    { attempts: 10, stepMs: 2000 }
+  );
 
-    if (response.status === 200) {
-      if (attempt > 1) {
-        console.log(
-          `Release branch ${branch} became visible on attempt ${attempt}.`
-        );
-      }
-      return;
-    }
-
-    if (attempt < 10) {
-      console.log(
-        `Waiting for release branch ${branch} to appear (attempt ${attempt}/10).`
-      );
-      await delay(attempt * 2000);
-    }
+  if (response.status !== 200) {
+    throw new Error(`Release branch ${branch} never appeared on GitHub.`);
   }
-
-  throw new Error(`Release branch ${branch} never appeared on GitHub.`);
 }
 
 export async function triggerReleaseBranchCi() {

@@ -9,11 +9,13 @@ import {
   runInherited,
 } from './release-shared.mjs';
 
+// npm keeps no commit provenance for pnpm publishes, so the local release tag
+// and the first-parent version bump are the only links between HEAD and an
+// already published version.
 export function planReleasePublish({
   headSha,
   headIntroducesVersion,
   localTagTarget,
-  publishedGitHead,
   tag,
   versionPublished,
 }) {
@@ -24,51 +26,25 @@ export function planReleasePublish({
   }
 
   if (!versionPublished) {
-    return {
-      mode: 'publish',
-      publishedCommitHint: null,
-    };
+    return { mode: 'publish', publishedCommitHint: null };
   }
 
   if (localTagTarget === headSha) {
-    return {
-      mode: 'reconcile-current-head',
-      publishedCommitHint: headSha,
-    };
+    return { mode: 'reconcile-current-head', publishedCommitHint: headSha };
   }
 
-  if (localTagTarget && localTagTarget !== headSha) {
+  if (localTagTarget) {
     return {
       mode: 'already-published-elsewhere',
       publishedCommitHint: localTagTarget,
     };
   }
 
-  if (publishedGitHead === headSha) {
-    return {
-      mode: 'restore-missing-tag',
-      publishedCommitHint: publishedGitHead,
-    };
-  }
-
-  if (publishedGitHead && publishedGitHead !== headSha) {
-    return {
-      mode: 'already-published-elsewhere',
-      publishedCommitHint: publishedGitHead,
-    };
-  }
-
   if (headIntroducesVersion) {
-    return {
-      mode: 'restore-missing-tag',
-      publishedCommitHint: headSha,
-    };
+    return { mode: 'restore-missing-tag', publishedCommitHint: headSha };
   }
 
-  return {
-    mode: 'already-published-elsewhere',
-    publishedCommitHint: null,
-  };
+  return { mode: 'already-published-elsewhere', publishedCommitHint: null };
 }
 
 export function doesFirstParentIntroduceVersion(parentVersion, version) {
@@ -158,19 +134,15 @@ export async function publishRelease() {
   const tag = buildReleaseTag(version);
   const headSha = await git(['rev-parse', 'HEAD']);
   const localTagTarget = await gitMaybe(['rev-parse', '--verify', `${tag}^{}`]);
-  // A single read is enough here: if registry lag hides an earlier publish,
-  // `changeset publish` still skips versions that already exist on npm.
+  // One read is enough: if registry lag hides an earlier publish, npm rejects
+  // the duplicate `changeset publish` and a rerun reconciles the release.
   const versionPublished =
     (await npmView(`${packageName}@${version}`, 'version')) === version;
-  const publishedGitHead = versionPublished
-    ? await npmView(`${packageName}@${version}`, 'gitHead')
-    : null;
   const currentHeadIntroducesVersion = await headIntroducesVersion(version);
   const plan = planReleasePublish({
     headSha,
     headIntroducesVersion: currentHeadIntroducesVersion,
     localTagTarget,
-    publishedGitHead,
     tag,
     versionPublished,
   });

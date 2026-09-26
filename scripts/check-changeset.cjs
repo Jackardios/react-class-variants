@@ -47,13 +47,14 @@ function resolveBaseRef(baseBranch) {
   );
 }
 
-// Files that can change what gets published or how it is released. Test and
-// lint tooling (vite/vitest, eslint) never reaches the package.
+// Sources, the manifest, and the tsconfig.json that tsup builds with change the
+// published package; workflows change how it is released. Test, lint, and
+// type-check configs never reach the package.
 function isReleaseAffecting(file) {
   return (
     file.startsWith('src/') ||
     file === 'package.json' ||
-    /^tsconfig(\..+)?\.json$/.test(file) ||
+    file === 'tsconfig.json' ||
     file.startsWith('.github/workflows/')
   );
 }
@@ -167,7 +168,10 @@ function main() {
   ).sort();
 
   const releaseAffectingFiles = changedFiles.filter(isReleaseAffecting);
-  const hasChangeset = changedFiles.some(isChangesetFile);
+  // A deleted changeset does not cover anything.
+  const hasChangeset = changedFiles.some(
+    file => isChangesetFile(file) && fs.existsSync(file)
+  );
 
   if (releaseAffectingFiles.length === 0) {
     console.log(
@@ -192,6 +196,7 @@ function main() {
 }
 
 module.exports = {
+  isReleaseAffecting,
   parseChangesetFile,
   validateChangesetFiles,
 };

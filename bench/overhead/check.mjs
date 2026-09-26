@@ -183,6 +183,12 @@ function main() {
 
     if (baseline) {
       for (const { key, label, option } of gatedBundles) {
+        // A measured older ref may predate a profile; a committed baseline
+        // must cover every gated bundle.
+        assertCondition(
+          !options.baselineFile || baseline.bundles[key],
+          `${options.baselineFile} has no "${key}" bundle; regenerate it with pnpm check:overhead:update.`
+        );
         assertBundleRegressionWithinThreshold({
           baselineMetric: baseline.bundles[key],
           currentMetric: current.bundles[key],
