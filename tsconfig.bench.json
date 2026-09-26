@@ -3,10 +3,11 @@
   "compilerOptions": {
     "allowJs": true,
     "checkJs": true,
+    // Catches real type errors in the JS bench scripts without requiring JSDoc
+    // on every parameter.
     "noImplicitAny": false,
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["src", "bench/**/*.ts", "bench/**/*.tsx", "bench/**/*.mjs"],
-  "exclude": ["node_modules", "dist", "bench/**/reports/**"]
+  "include": ["bench/**/*.ts", "bench/**/*.tsx", "bench/**/*.mjs"]
 }

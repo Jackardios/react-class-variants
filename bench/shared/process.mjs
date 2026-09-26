@@ -13,9 +13,12 @@ export function runExecFile(command, args, options = {}) {
       stdio: options.stdio ?? 'pipe',
     });
   } catch (caught) {
-    const error = /** @type {{ stdout?: Buffer; stderr?: Buffer }} */ (caught);
-    const stdout = error.stdout?.toString?.() ?? '';
-    const stderr = error.stderr?.toString?.() ?? '';
+    const error =
+      /** @type {{ stdout?: Buffer | string; stderr?: Buffer | string }} */ (
+        caught
+      );
+    const stdout = String(error.stdout ?? '');
+    const stderr = String(error.stderr ?? '');
 
     throw new Error(
       [

@@ -34,12 +34,12 @@ export async function bundleWithEsbuild({
       minify: true,
       outfile: outFile,
       platform,
-      target: 'es2018',
+      target: 'es2020',
       treeShaking: true,
       write: true,
     });
   } catch (error) {
-    const details = /** @type {{ errors?: { text: string }[] }} */ (
+    const details = /** @type {Partial<import('esbuild').BuildFailure>} */ (
       error
     ).errors
       ?.map(entry => entry.text)
