@@ -4,7 +4,7 @@
 // `vitest run --config vitest.built.config.ts`.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -24,8 +24,9 @@ export const useMemo = factory => factory();`;
 
 // Node 20 crashes in the ESM->CJS bridge before require.cache shims apply when
 // globalThis.process is undefined, so the package-root smoke test redirects
-// "react" to an ESM stub through a module.register() resolve hook instead.
-function createReactShimHooks() {
+// "react" to an ESM stub through a module.register() resolve hook instead. The
+// core entry gets a hook that rejects "react" anywhere in its module graph.
+function createReactHooks(shimReact) {
   const tempDir = mkdtempSync(resolve(tmpdir(), 'react-class-variants-'));
   const reactShimPath = resolve(tempDir, 'react-shim.mjs');
   const hooksPath = resolve(tempDir, 'react-hooks.mjs');
@@ -37,11 +38,12 @@ function createReactShimHooks() {
     `const reactShimUrl = ${JSON.stringify(pathToFileURL(reactShimPath).href)};
 
 export async function resolve(specifier, context, nextResolve) {
-  if (specifier === 'react') {
-    return {
-      shortCircuit: true,
-      url: reactShimUrl,
-    };
+  if (specifier === 'react' || specifier.startsWith('react/')) {
+    ${
+      shimReact
+        ? 'return { shortCircuit: true, url: reactShimUrl };'
+        : 'throw new Error(`${context.parentURL} imports ${specifier}`);'
+    }
   }
 
   return nextResolve(specifier, context);
@@ -62,16 +64,15 @@ register(${JSON.stringify(pathToFileURL(hooksPath).href)});
   };
 }
 
-function assertImportsWithoutProcess(entryPath, shimReact = false) {
-  const reactShimHooks = shimReact ? createReactShimHooks() : null;
+function assertImportsWithoutProcess(entryPath, shimReact) {
+  const reactHooks = createReactHooks(shimReact);
 
   try {
     execFileSync(
       process.execPath,
       [
-        ...(reactShimHooks
-          ? ['--import', pathToFileURL(reactShimHooks.registerPath).href]
-          : []),
+        '--import',
+        pathToFileURL(reactHooks.registerPath).href,
         '--input-type=module',
         '--eval',
         `
@@ -86,17 +87,12 @@ module.defineConfig().recipe({ base: 'inline-flex' });`,
       }
     );
   } finally {
-    if (reactShimHooks) {
-      rmSync(reactShimHooks.tempDir, { force: true, recursive: true });
-    }
+    rmSync(reactHooks.tempDir, { force: true, recursive: true });
   }
 }
 
 assertImportsWithoutProcess(packageRootPath, true);
-assertImportsWithoutProcess(corePath);
-
-const coreSource = readFileSync(corePath, 'utf8');
-assert.equal(/from ['"]react['"]/.test(coreSource), false);
+assertImportsWithoutProcess(corePath, false);
 
 const packageRoot = await import(pathToFileURL(packageRootPath).href);
 const { recipe, styled } = packageRoot.defineConfig();

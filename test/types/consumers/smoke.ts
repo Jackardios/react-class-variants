@@ -6,7 +6,7 @@ import { createRef, type ComponentRef, type ReactNode } from 'react';
 import * as root from 'react-class-variants';
 import * as core from 'react-class-variants/core';
 // Importing a name that is not exported is a compile error, so these lists
-// pin the public type surface of each entry.
+// catch public types that disappear from either entry.
 import type {
   AnyElementType,
   AnyRecipe,

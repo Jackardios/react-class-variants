@@ -11,7 +11,6 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
-  readFileSync,
   readdirSync,
   renameSync,
   rmSync,
@@ -31,6 +30,11 @@ const distPath = resolve(repoRoot, 'dist');
 const require = createRequire(import.meta.url);
 
 const flags = new Set(process.argv.slice(2).filter(arg => arg !== '--'));
+for (const flag of flags) {
+  if (flag !== '--exports' && flag !== '--consumers') {
+    throw new Error(`Unknown flag: ${flag}`);
+  }
+}
 const runAll = !flags.has('--exports') && !flags.has('--consumers');
 const checkExports = runAll || flags.has('--exports');
 const checkConsumers = runAll || flags.has('--consumers');
@@ -44,16 +48,14 @@ const tempRoot = mkdtempSync(join(tmpdir(), 'react-class-variants-pack-'));
 
 function run(command, args, cwd = repoRoot) {
   console.log(
-    `\n> (${relative(repoRoot, cwd) || '.'}) ${command} ${args.join(' ')}`
+    `\n> (${cwd === repoRoot ? '.' : basename(cwd)}) ${command} ${args.join(
+      ' '
+    )}`
   );
   execFileSync(command, args, { cwd, stdio: 'inherit' });
 }
 
-let restored = false;
-
 function restoreDist() {
-  if (restored) return;
-  restored = true;
   rmSync(distPath, { force: true, recursive: true });
   if (existsSync(distBackupPath)) {
     renameSync(distBackupPath, distPath);
@@ -62,11 +64,12 @@ function restoreDist() {
   rmSync(tempRoot, { force: true, recursive: true });
 }
 
-// Without handlers an interrupt kills the process before `finally` runs and
-// leaves the developer's dist/ inside .pack-check-*.
+// By default an interrupt kills Node at once and leaves the developer's dist/
+// inside .pack-check-*. A listener keeps Node alive instead: the interrupted
+// child command fails, `finally` restores dist/, and the handler, which only
+// runs once the synchronous script has finished, exits with the signal code.
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, () => {
-    restoreDist();
     process.exit(128 + (signal === 'SIGINT' ? 2 : 15));
   });
 }
@@ -109,6 +112,9 @@ function writeFixturePackageJson(projectDir, tarballPath) {
   const manifest = {
     name: `type-consumer-${basename(projectDir)}`,
     private: true,
+    // NodeNext treats .ts files as CommonJS without it, and CommonJS cannot
+    // import this ESM-only package.
+    type: 'module',
     dependencies: {
       react: `file:${resolveInstalledPackageDir('react')}`,
       'react-class-variants': `file:${relative(projectDir, tarballPath)}`,
@@ -148,16 +154,9 @@ function checkConsumerFixtures(tarballPath) {
 
   for (const fixtureName of fixtureNames) {
     const projectDir = join(workspaceRoot, fixtureName);
-    const { compilerOptions } = JSON.parse(
-      readFileSync(join(projectDir, 'tsconfig.json'), 'utf8')
-    );
-    // Under NodeNext a .ts file without "type": "module" is CommonJS and
-    // cannot import this ESM-only package, so that fixture gets an .mts entry.
-    const entryName =
-      compilerOptions.module === 'NodeNext' ? 'index.mts' : 'index.ts';
 
     mkdirSync(join(projectDir, 'src'), { recursive: true });
-    copyFileSync(smokeSourcePath, join(projectDir, 'src', entryName));
+    copyFileSync(smokeSourcePath, join(projectDir, 'src', 'index.ts'));
     writeFixturePackageJson(projectDir, tarballPath);
     run(
       'pnpm',

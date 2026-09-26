@@ -336,16 +336,22 @@ describe('styled() view components', () => {
         return host.render();
       },
     });
-    const ref = createRef<HTMLSpanElement>();
+    const ref = createRef<HTMLElement>();
 
     render(
-      <Badge ref={ref} tone="info" className="mt-2" id="badge">
+      <Badge
+        ref={ref}
+        render={<strong />}
+        tone="info"
+        className="mt-2"
+        id="badge"
+      >
         Info
       </Badge>
     );
 
     expect(hostPropKeys).toEqual(['id']);
-    expect(ref.current).toBeInstanceOf(HTMLSpanElement);
+    expect(ref.current?.tagName).toBe('STRONG');
     expect(ref.current?.className).toBe('inline-flex text-sky-700 mt-2');
     expect(ref.current?.textContent).toBe('Info');
   });

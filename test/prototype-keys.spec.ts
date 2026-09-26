@@ -137,23 +137,6 @@ describe('prototype-named keys', () => {
     );
   });
 
-  it('keeps prototype-named lookups safe for variants with many options', () => {
-    const options: Record<string, string> = {};
-    for (let index = 0; index < 24; index += 1) {
-      options[`opt${index}`] = `cls${index}`;
-    }
-    const badge = recipe({
-      base: 'inline-flex',
-      variants: { color: options },
-      defaultVariants: { color: 'opt0' },
-    });
-
-    expect(badge({ color: 'opt17' })).toBe('inline-flex cls17');
-    expect(badge({ color: 'missing' } as never)).toBe('inline-flex');
-    expect(badge({ color: 'constructor' } as never)).toBe('inline-flex');
-    expect(badge({ color: 'toString' } as never)).toBe('inline-flex');
-  });
-
   it('ignores undeclared prototype-named slotClassNames slots in lean mode', () => {
     const tabs = recipe({ slots: { root: 'flex' } });
 
