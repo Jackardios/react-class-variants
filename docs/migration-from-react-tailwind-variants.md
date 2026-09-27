@@ -19,7 +19,7 @@ If you are learning v2 from scratch, start with the [README](../README.md), the
   `react-class-variants`.
 - The recommended install target is `react-class-variants@alpha`.
 - v2 is ESM-only.
-- v2 expects Node.js `20.19+` and React `19`.
+- v2 expects Node.js `22.12+` and React `19`.
 - If you cannot move to those runtime requirements yet, stay on v1 for now.
 
 ## High-Level Mapping
@@ -632,7 +632,7 @@ Re-test these areas carefully after migration:
 ## Migration Checklist
 
 - [ ] Replace the package with `react-class-variants@alpha`
-- [ ] Confirm the app can run with React `19`, Node.js `20.19+`, and ESM-only
+- [ ] Confirm the app can run with React `19`, Node.js `22.12+`, and ESM-only
       package consumption
 - [ ] Replace `variants()` with `recipe()`
 - [ ] Rewrite every `compoundVariants` entry from `variants: { ... }` to flat
