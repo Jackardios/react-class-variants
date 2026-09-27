@@ -1,8 +1,9 @@
 import {
   execAuthenticatedNpm,
+  isNpmAuthError,
   resolveReleaseToken,
 } from './npm-release-auth.mjs';
-import { npmView, readPackageJson } from './release-shared.mjs';
+import { npmView, readPackageJson, warnAnnotation } from './release-shared.mjs';
 
 const packageJson = await readPackageJson(import.meta.url);
 const packageName = process.env.RELEASE_PACKAGE_NAME ?? packageJson.name;
@@ -23,5 +24,14 @@ if (!token) {
   process.exit(0);
 }
 
-await execAuthenticatedNpm(['whoami'], { token });
+// Dist-tag repair is optional, so an unusable token must not block publishing.
+try {
+  await execAuthenticatedNpm(['whoami'], { token });
+} catch (error) {
+  if (!isNpmAuthError(error)) throw error;
+  warnAnnotation(
+    `The configured npm token cannot authenticate for ${packageName}. Publishing still uses trusted publishing, but dist-tag repair will fall back to manual commands. Refresh or remove the NPM_TOKEN secret.`
+  );
+  process.exit(0);
+}
 console.log(`Validated npm token auth for dist-tag updates on ${packageName}.`);

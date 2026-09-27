@@ -45,11 +45,16 @@ export function sanitizeNpmCliEnv(env = process.env) {
 
 // npm trusted publishing (OIDC) only authenticates `npm publish`, so every
 // other registry mutation, such as dist-tag repair, needs an explicit token.
-// Returns null when none is configured.
+// NODE_AUTH_TOKEN is not a candidate: actions/setup-node fills it with a
+// placeholder whenever `registry-url` is set. Returns null when none is set.
 export function resolveReleaseToken(env = process.env) {
-  return (
-    env.RELEASE_NPM_AUTH_TOKEN || env.NPM_TOKEN || env.NODE_AUTH_TOKEN || null
-  );
+  return env.RELEASE_NPM_AUTH_TOKEN || env.NPM_TOKEN || null;
+}
+
+// An expired, revoked, or under-scoped token (E401/E403), as opposed to a
+// registry or network failure.
+export function isNpmAuthError(error) {
+  return /\bE40[13]\b/.test(`${error?.stderr ?? ''}\n${error?.message ?? ''}`);
 }
 
 async function withNpmAuthEnv(token, callback, env) {

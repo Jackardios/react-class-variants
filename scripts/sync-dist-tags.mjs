@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import {
   execAuthenticatedNpm,
+  isNpmAuthError,
   resolveReleaseToken,
 } from './npm-release-auth.mjs';
 import {
@@ -81,15 +82,10 @@ export function computeDesiredDistTags({
 }
 
 async function addDistTag(packageName, tag, version, token) {
-  try {
-    await execAuthenticatedNpm(
-      ['dist-tag', 'add', `${packageName}@${version}`, tag],
-      { token }
-    );
-  } catch (error) {
-    error.message = `${error.message}\n\nThe configured npm token could not update dist-tags. Refresh RELEASE_NPM_AUTH_TOKEN/NPM_TOKEN/NODE_AUTH_TOKEN.`;
-    throw error;
-  }
+  await execAuthenticatedNpm(
+    ['dist-tag', 'add', `${packageName}@${version}`, tag],
+    { token }
+  );
 }
 
 function formatDistTagCommands(packageName, updates) {
@@ -175,9 +171,21 @@ export async function syncDistTags() {
     return;
   }
 
-  for (const [tag, version] of pendingUpdates) {
+  for (const [index, [tag, version]] of pendingUpdates.entries()) {
     console.log(`Setting npm dist-tag ${tag} -> ${version}`);
-    await addDistTag(packageName, tag, version, token);
+    try {
+      await addDistTag(packageName, tag, version, token);
+    } catch (error) {
+      if (!isNpmAuthError(error)) throw error;
+      warnAnnotation(
+        [
+          `npm rejected the configured token while updating dist-tags for ${packageName}@${publishedVersion}. Refresh or remove the NPM_TOKEN secret.`,
+          'Run:',
+          formatDistTagCommands(packageName, pendingUpdates.slice(index)),
+        ].join('\n')
+      );
+      return;
+    }
   }
 
   const finalDistTags =
