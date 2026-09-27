@@ -1,6 +1,6 @@
 {
   "name": "react-class-variants",
-  "version": "2.0.0-alpha.11",
+  "version": "2.0.0-alpha.12",
   "description": "Type-safe React variants API for dynamic CSS class composition",
   "private": false,
   "type": "module",

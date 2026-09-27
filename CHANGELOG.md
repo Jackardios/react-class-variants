@@ -1,5 +1,43 @@
 # react-class-variants
 
+## 2.0.0-alpha.12
+
+### Major Changes
+
+- 13f8c4c: Build `styled()` components as plain React 19 function components with `ref` as a regular prop.
+
+  **Breaking changes:**
+
+  - `styled()` now returns a `FunctionComponent` instead of a `ForwardRefExoticComponent`. The component is a plain function rather than a `forwardRef` object, and calling it directly returns `ReactNode | Promise<ReactNode>`.
+  - `ref` is read from props. Custom bases receive it as their `ref` prop, and bases written with `forwardRef` keep working. In a `view`, `ref` still stays out of `host.props` and is attached by `host.render()`.
+  - The component type no longer declares `defaultProps`, which React 19 ignores on function components; set defaults with `defaultVariants` or in a wrapper instead.
+
+  `ComponentProps<typeof Component>`, `ComponentRef<typeof Component>`, JSX usage, and `displayName` are unchanged.
+
+### Patch Changes
+
+- 7cfbd65: Build the published ESM for ES2020 instead of ES2016. The package now ships native optional chaining, nullish coalescing, and object spread instead of downleveled helpers, which shrinks the root entry by about 5% gzip. The build needs Chrome/Edge 80, Firefox 74, or Safari 13.1 and later.
+- 626b222: Mark the duplicate type aliases as deprecated: `ClassValue` (use `ClassNameValue`), `Recipe` (use `AnyRecipe`), and `AnyElementType` (use React's `ElementType`). They remain exported, so existing code keeps compiling, and editors now point to the canonical names.
+- 7a96ac4: Treat explicitly `undefined` compound selector values as absent keys in both runtimes, consistent with `defaultVariants` and input props. Strict mode no longer throws at recipe creation for them, and the lean runtime no longer compiles them into matches-only-when-unset selectors. `undefined` entries inside selector arrays are filtered out; an array that ends up empty never matches.
+- 646f511: Fix type helpers across entry points and the default `styled()` display name.
+
+  - Package-root type helpers (`VariantProps`, `ResolvedVariantProps`, `RecipeInput`, `RecipeResolved`, `RecipeConfigOf`, `VariantName`, `SlotNames`, `variantNames()`, `variantOptions()`) no longer resolve to `never` for recipes created through `react-class-variants/core` (and vice versa). The two entries ship separate declaration files, so the recipe brand is now a type-only string key instead of a per-file `unique symbol`, and `AnyRootRecipe` / `AnySlotRecipe` accept recipes with boolean variants from either entry.
+  - `styled()` now derives its default `displayName` from the base component's `displayName` or function name (unwrapping `forwardRef` and `memo`), for example `Styled(RouterLink)`. Previously component bases produced the full function source or `Styled([object Object])`.
+
+- 7a96ac4: Drop compound variants that reference undeclared variant keys in the lean runtime. Previously the unknown key was skipped but the compound's `className` still compiled, so the compound applied on every render; it now never applies, matching cva/tailwind-variants semantics. Strict mode (`validate: 'always'`) keeps throwing at recipe creation.
+- 7a96ac4: Memoize merged refs in the `styled()` render paths per ref pair. The render-prop and `host.render()` paths previously created a new callback ref every render, so React detached (`null`) and re-attached both underlying refs on every re-render; stable ref pairs now keep one identity across renders.
+- 7a96ac4: Throw a descriptive error when `styled()`, `variantNames()`, or `variantOptions()` receives a function without compiled recipe metadata, and when `styled()` receives `null` or `undefined`, instead of an opaque `TypeError`. The message also hints at duplicated copies of the package, the other way a real recipe can lose its per-module brand.
+- 7a96ac4: Create engine lookup tables (variant indexes, slot indexes, variant option maps) with null prototypes. Prototype-named keys and values such as `constructor` or `toString` no longer crash slot overrides, silently bypass strict slot validation, or leak `Object.prototype` members into class strings. Strict mode (`validate: 'always'`) now rejects variant keys that shadow an `Object.prototype` member at recipe creation.
+- 7a96ac4: Use own-property checks for `propAliases` and `forwardProps` in `resolve()`. Inherited `Object.prototype` members (e.g. an alias public key named `toString`) no longer count as present props or leak functions into resolved props, and strict mode no longer throws spurious "would overwrite an existing resolved prop" errors for prototype-named targets. Own `__proto__` input keys (e.g. from `JSON.parse`) and `propAliases` targets named `__proto__` are dropped (rejected in strict mode) instead of swapping the prototype of the resolved props object.
+- 7a96ac4: Encode result-cache keys with self-delimiting tokens. Boolean `true` versus the string `'true'`, option keys containing the old `\x00` separator, and empty-string versus unset selections no longer collide, so cached output can no longer depend on call history. Malformed non-string selection values (e.g. `null` or a number passed to a boolean variant) are type-tagged and coerced, so cache-enabled recipes neither crash nor serve poisoned entries for garbage input.
+- 7a96ac4: Propagate React 19 callback-ref cleanups through `mergeRefs`, `useMergeRefs`, and the merged refs inside `styled()`. When an inner ref returns a cleanup, the merged ref now returns a combined cleanup that runs it and null-resets refs that returned none; previously cleanups were discarded and never ran. Refs without cleanups keep the legacy null-call behavior unchanged.
+- 6dc395a: Speed up `styled()` rendering. Each render now builds one props object instead of copying the props several times, and slotted views get a plain `classes` map of slot functions rather than lazy getters. The component bundle is about 7.5% smaller gzipped. The rendered output is unchanged except for two edge cases: strict mode now validates a slotted component's `className` like a root one (`className={false}` throws instead of being ignored), and lean `viewProps` that list a reserved prop such as `className` or `children` no longer swallow it.
+
+  `propAliases` now read every alias from the raw input, so a chain such as `{ b: 'c', a: 'b' }` maps `c` to `b` and `b` to `a` independently. In lean mode, an alias that strict mode would reject is dropped instead of half-applied: an alias or target that is a reserved prop or `__proto__`, an alias that is a variant key, an alias reused by two targets, or a target that is also listed in `forwardProps`.
+
+- 3f5463b: Reduce the memory each `styled()` component keeps. Components without `propAliases` now share one internal table of props to skip instead of building their own, which brings a component definition from about 275 to 215 bytes in Node 22.
+- 5a79c2e: Unify the lean and validating recipe engines into one implementation. Validation now sits behind a runtime object that `defineConfig({ validate: 'always' })` selects, so the default `recipe()` bundle still excludes it. The component bundle shrinks by about 8% gzip, validating recipes resolve faster, and lean and validating output can no longer drift apart.
+
 ## 2.0.0-alpha.11
 
 ### Patch Changes
