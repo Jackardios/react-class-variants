@@ -268,7 +268,7 @@ For changes that touch recipe resolution, class merging, `styled()` behavior, pr
 - The publish path is rerunnable after a partial success: if the version is already on npm, the workflow skips republishing, treats an already-tagged earlier release commit as a clean no-op on newer commits, and restores the local release tag only when `HEAD` is the commit that introduced the version.
 - Dist-tags follow an explicit policy in CI: prereleases move `alpha` to the published version and keep `latest` on the newest stable release when one exists, otherwise `latest` remains on the published prerelease. Stable publishes move `latest`.
 - Post-publish reconciliation always attempts GitHub Release sync. npm dist-tag sync is attempted only when the `NPM_TOKEN` secret is set; OIDC-only runs, and runs whose token npm rejects, log the required manual repair commands instead of failing the publish.
-- npm registry reads in the release path are retry-aware so short propagation delays after publish do not immediately look like missing versions or broken dist-tags.
+- npm registry reads in the release path are retry-aware for up to about three minutes, so propagation delays after publish do not immediately look like missing versions or broken dist-tags.
 - The current automation covers alpha releases and the stable `2.0.0` publish from `next`; if the release branch changes after alpha, update the workflow branch filters in the same change.
 
 Post-publish verification:

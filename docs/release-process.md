@@ -84,7 +84,7 @@ In practice, this means the version-package PR is the staging step and the publi
 - the release workflow validates GitHub release/changelog readiness before publish and checks whether automated npm dist-tag repair is available in the current environment
 - the publish wrapper checks the registry once before publishing and streams `changeset publish` output live; if registry lag hides an earlier publish, npm rejects the duplicate and a rerun reconciles the release
 - the publish wrapper is safe to rerun after a partial success: it skips duplicate publishes, treats an already-tagged earlier release commit as a no-op on newer commits, and only recreates a missing local tag when `HEAD` is the commit that introduced the version
-- post-publish npm lookups retry through short registry propagation delays before deciding that a version or dist-tag update is missing
+- post-publish npm lookups retry for up to about three minutes of registry propagation before deciding that a version or dist-tag update is missing
 - the same release path works for the stable `2.0.0` publish from `next`; if you later move day-to-day releases from `next` to `main`, update workflow branch filters in the same change
 - avoid manual `npm publish` unless it is explicitly required
 
