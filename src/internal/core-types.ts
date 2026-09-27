@@ -31,14 +31,12 @@ export type SlotVariantsSchema<Slots extends string> = Record<
 type AnyVariantsSchema = Record<string, Record<string, unknown>>;
 type BooleanOptionKey = 'true' | 'false';
 
-type IsMixedBooleanVariant<Options extends Record<string, unknown>> = Extract<
-  keyof Options & string,
-  BooleanOptionKey
-> extends never
-  ? false
-  : Exclude<keyof Options & string, BooleanOptionKey> extends never
-  ? false
-  : true;
+type IsMixedBooleanVariant<Options extends Record<string, unknown>> =
+  Extract<keyof Options & string, BooleanOptionKey> extends never
+    ? false
+    : Exclude<keyof Options & string, BooleanOptionKey> extends never
+      ? false
+      : true;
 
 type RejectMixedBooleanVariants<Variants extends AnyVariantsSchema> = {
   [Key in keyof Variants]: Variants[Key] extends infer Options extends Record<
@@ -69,7 +67,7 @@ type NoExtraProperties<Actual extends object, Allowed extends object> = Actual &
 
 type DefaultVariantsInput<
   Variants extends AnyVariantsSchema,
-  Defaults extends DefaultVariantsShape<Variants>
+  Defaults extends DefaultVariantsShape<Variants>,
 > = DefaultVariantsShape<NoInfer<Variants>> &
   NoExtraProperties<Defaults, DefaultVariantsShape<NoInfer<Variants>>>;
 
@@ -81,19 +79,19 @@ type BooleanVariantKeys<Variants extends AnyVariantsSchema> = {
     ? 'true' extends keyof Options
       ? Key
       : 'false' extends keyof Options
-      ? Key
-      : never
+        ? Key
+        : never
     : never;
 }[keyof Variants];
 
 type OptionalVariantKeys<
   Variants extends AnyVariantsSchema,
-  Defaults extends object
+  Defaults extends object,
 > = BooleanVariantKeys<Variants> | Extract<keyof Variants, keyof Defaults>;
 
 export type VariantInput<
   Variants extends AnyVariantsSchema,
-  Defaults extends object
+  Defaults extends object,
 > = keyof Variants extends never
   ? {}
   : Simplify<
@@ -130,7 +128,7 @@ export type RootCompoundVariant<Variants extends RootVariantsSchema> = Simplify<
 
 export type SlotCompoundVariant<
   Slots extends string,
-  Variants extends SlotVariantsSchema<Slots>
+  Variants extends SlotVariantsSchema<Slots>,
 > = Simplify<
   CompoundSelectorInput<Variants> & {
     className: SlotClassNameMap<Slots>;
@@ -139,7 +137,7 @@ export type SlotCompoundVariant<
 
 export type RootRecipeConfig<
   Variants extends RootVariantsSchema = {},
-  Defaults extends Partial<VariantSelectionValues<Variants>> = {}
+  Defaults extends Partial<VariantSelectionValues<Variants>> = {},
 > = {
   base?: ClassNameValue;
   slots?: never;
@@ -150,7 +148,7 @@ export type RootRecipeConfig<
 
 export type RootRecipeConfigInput<
   Variants extends RootVariantsSchema = {},
-  Defaults extends Partial<VariantSelectionValues<Variants>> = {}
+  Defaults extends Partial<VariantSelectionValues<Variants>> = {},
 > = {
   base?: ClassNameValue;
   slots?: never;
@@ -165,7 +163,7 @@ export type SlotRecipeConfig<
     ClassNameValue
   >,
   Variants extends SlotVariantsSchema<keyof SlotDefs & string> = {},
-  Defaults extends Partial<VariantSelectionValues<Variants>> = {}
+  Defaults extends Partial<VariantSelectionValues<Variants>> = {},
 > = {
   base?: never;
   slots: SlotDefs;
@@ -183,7 +181,7 @@ export type SlotRecipeConfigInput<
     ClassNameValue
   >,
   Variants extends SlotVariantsSchema<keyof SlotDefs & string> = {},
-  Defaults extends Partial<VariantSelectionValues<Variants>> = {}
+  Defaults extends Partial<VariantSelectionValues<Variants>> = {},
 > = {
   base?: never;
   slots: SlotDefs;
@@ -201,15 +199,14 @@ export type RecipeConfig = AnyRootRecipeConfig | AnySlotRecipeConfig;
 
 export type ResolveOptions<
   VariantKeys extends string = string,
-  PropAliases extends Record<string, string> = Record<string, string>
+  PropAliases extends Record<string, string> = Record<string, string>,
 > = {
   forwardProps?: readonly VariantKeys[];
   propAliases?: PropAliases;
 };
 
-type ResolveInputProps<TInput> = TInput extends Record<string, unknown>
-  ? TInput
-  : {};
+type ResolveInputProps<TInput> =
+  TInput extends Record<string, unknown> ? TInput : {};
 
 type ResolveInputPropAliases<TOptions> = TOptions extends {
   propAliases?: infer PropAliases;
@@ -237,7 +234,7 @@ type NonVariantResolveInputProps<TRecipe, TInput> = Omit<
 >;
 
 type HasSpecificResolvePropAliases<
-  TPropAliases extends Record<string, string>
+  TPropAliases extends Record<string, string>,
 > = string extends keyof TPropAliases ? false : true;
 
 type HasExactResolveForwardProps<TForwardProps extends readonly string[]> =
@@ -245,7 +242,7 @@ type HasExactResolveForwardProps<TForwardProps extends readonly string[]> =
 
 type ResolveAliasedPropKeys<
   TProps,
-  TPropAliases extends Record<string, string>
+  TPropAliases extends Record<string, string>,
 > =
   | Exclude<keyof TProps, TPropAliases[keyof TPropAliases] & string>
   | (keyof TPropAliases & string);
@@ -253,34 +250,37 @@ type ResolveAliasedPropKeys<
 type ResolveAliasedPropValue<
   TProps,
   TPropAliases extends Record<string, string>,
-  Key extends PropertyKey
+  Key extends PropertyKey,
 > = Key extends keyof TPropAliases & string
   ? TPropAliases[Key] extends keyof TProps
     ? TProps[TPropAliases[Key]]
     : Key extends keyof TProps
-    ? TProps[Key]
-    : never
+      ? TProps[Key]
+      : never
   : Key extends keyof TProps
-  ? TProps[Key]
-  : never;
+    ? TProps[Key]
+    : never;
 
 type ApplyResolvePropAliases<
   TProps,
-  TPropAliases extends Record<string, string>
-> = HasSpecificResolvePropAliases<TPropAliases> extends true
-  ? Simplify<{
-      [Key in ResolveAliasedPropKeys<
-        TProps,
-        TPropAliases
-      > as ResolveAliasedPropValue<TProps, TPropAliases, Key> extends never
-        ? never
-        : Key]: ResolveAliasedPropValue<TProps, TPropAliases, Key>;
-    }>
-  : TProps;
+  TPropAliases extends Record<string, string>,
+> =
+  HasSpecificResolvePropAliases<TPropAliases> extends true
+    ? Simplify<{
+        [
+          Key in ResolveAliasedPropKeys<
+            TProps,
+            TPropAliases
+          > as ResolveAliasedPropValue<TProps, TPropAliases, Key> extends never
+            ? never
+            : Key
+        ]: ResolveAliasedPropValue<TProps, TPropAliases, Key>;
+      }>
+    : TProps;
 
 type ResolveForwardPropKeys<
   TRecipe,
-  TForwardProps extends readonly string[]
+  TForwardProps extends readonly string[],
 > = Extract<
   TForwardProps[number],
   keyof ResolvedVariantProps<TRecipe> & string
@@ -289,7 +289,7 @@ type ResolveForwardPropKeys<
 type ApplyResolveForwardProps<
   TRecipe,
   TProps,
-  TForwardProps extends readonly string[] | undefined
+  TForwardProps extends readonly string[] | undefined,
 > = TForwardProps extends readonly string[]
   ? HasExactResolveForwardProps<TForwardProps> extends true
     ? Simplify<
@@ -356,12 +356,8 @@ type SlotResolveInputContext<TRecipe> = Partial<VariantProps<TRecipe>> & {
   slotClassNames?: SlotRecipeSlotClassNames<TRecipe>;
 };
 
-type ContextualResolveInput<TContext, TInput> = TInput extends Record<
-  string,
-  unknown
->
-  ? TContext & TInput
-  : TInput;
+type ContextualResolveInput<TContext, TInput> =
+  TInput extends Record<string, unknown> ? TContext & TInput : TInput;
 
 export type SlotRenderInput<TRecipe> = Partial<VariantProps<TRecipe>> & {
   className?: ClassNameValue;
@@ -385,7 +381,7 @@ export type RecipeTypeMetadata<
   Slots extends string,
   Variants extends AnyVariantsSchema,
   Defaults extends object,
-  Config = never
+  Config = never,
 > = {
   mode: Mode;
   slots: Slots;
@@ -404,7 +400,7 @@ type RecipeBrand<
   Slots extends string,
   Variants extends AnyVariantsSchema,
   Defaults extends object,
-  Config
+  Config,
 > = {
   readonly '~rcv'?: RecipeTypeMetadata<Mode, Slots, Variants, Defaults, Config>;
 };
@@ -412,7 +408,7 @@ type RecipeBrand<
 export type RootResolveResult<
   TRecipe,
   TInput extends Record<string, unknown> | undefined = undefined,
-  TOptions extends ResolveOptions | undefined = undefined
+  TOptions extends ResolveOptions | undefined = undefined,
 > = {
   variants: ResolvedVariantProps<TRecipe>;
   resolvedProps: RootResolvedProps<TRecipe, TInput, TOptions>;
@@ -421,7 +417,7 @@ export type RootResolveResult<
 export type SlotResolveResult<
   TRecipe,
   TInput extends Record<string, unknown> | undefined = undefined,
-  TOptions extends ResolveOptions | undefined = undefined
+  TOptions extends ResolveOptions | undefined = undefined,
 > = {
   variants: ResolvedVariantProps<TRecipe>;
   slots: SlotRenderMap<TRecipe>;
@@ -431,14 +427,13 @@ export type SlotResolveResult<
 export type RootRecipe<
   Variants extends RootVariantsSchema = {},
   Defaults extends object = {},
-  Config = RootRecipeConfig<Variants, any>
+  Config = RootRecipeConfig<Variants, any>,
 > = RecipeBrand<'root', never, Variants, Defaults, Config> & {
   (input?: RootRecipeInput<RootRecipe<Variants, Defaults, Config>>): string;
   resolve<
     TInput extends Record<string, unknown> | undefined = undefined,
     const TOptions extends
-      | ResolveOptions<Extract<keyof Variants, string>>
-      | undefined = undefined
+      ResolveOptions<Extract<keyof Variants, string>> | undefined = undefined,
   >(
     input?: TInput,
     options?: TOptions
@@ -453,7 +448,7 @@ export type SlotRecipe<
   Slots extends string = string,
   Variants extends SlotVariantsSchema<Slots> = {},
   Defaults extends object = {},
-  Config = SlotRecipeConfig<Record<Slots, ClassNameValue>, any, any>
+  Config = SlotRecipeConfig<Record<Slots, ClassNameValue>, any, any>,
 > = RecipeBrand<'slot', Slots, Variants, Defaults, Config> & {
   (
     input?: SlotRecipeInput<SlotRecipe<Slots, Variants, Defaults, Config>>
@@ -461,8 +456,7 @@ export type SlotRecipe<
   resolve<
     TInput extends Record<string, unknown> | undefined = undefined,
     const TOptions extends
-      | ResolveOptions<Extract<keyof Variants, string>>
-      | undefined = undefined
+      ResolveOptions<Extract<keyof Variants, string>> | undefined = undefined,
   >(
     input?: ContextualResolveInput<
       SlotResolveInputContext<SlotRecipe<Slots, Variants, Defaults, Config>>,
@@ -504,7 +498,7 @@ export type RecipeFactory = {
   <
     const SlotDefs extends Record<string, ClassNameValue>,
     const Variants extends SlotVariantsSchema<keyof SlotDefs & string> = {},
-    const Defaults extends Partial<VariantSelectionValues<Variants>> = {}
+    const Defaults extends Partial<VariantSelectionValues<Variants>> = {},
   >(
     config: SlotRecipeConfigInput<SlotDefs, Variants, Defaults>
   ): SlotRecipe<
@@ -516,51 +510,43 @@ export type RecipeFactory = {
 
   <
     const Variants extends RootVariantsSchema = {},
-    const Defaults extends Partial<VariantSelectionValues<Variants>> = {}
+    const Defaults extends Partial<VariantSelectionValues<Variants>> = {},
   >(
     config: RootRecipeConfigInput<Variants, Defaults>
   ): RootRecipe<Variants, Defaults, RootRecipeConfig<Variants, Defaults>>;
 };
 
-export type VariantProps<TRecipe> = TRecipe extends RecipeBrand<
-  any,
-  any,
-  infer Variants extends AnyVariantsSchema,
-  infer Defaults extends object,
-  any
->
-  ? VariantInput<Variants, Defaults>
-  : never;
+export type VariantProps<TRecipe> =
+  TRecipe extends RecipeBrand<
+    any,
+    any,
+    infer Variants extends AnyVariantsSchema,
+    infer Defaults extends object,
+    any
+  >
+    ? VariantInput<Variants, Defaults>
+    : never;
 
-export type ResolvedVariantProps<TRecipe> = TRecipe extends RecipeBrand<
-  any,
-  any,
-  infer Variants extends AnyVariantsSchema,
-  any,
-  any
->
-  ? ResolvedVariantInput<Variants>
-  : never;
+export type ResolvedVariantProps<TRecipe> =
+  TRecipe extends RecipeBrand<
+    any,
+    any,
+    infer Variants extends AnyVariantsSchema,
+    any,
+    any
+  >
+    ? ResolvedVariantInput<Variants>
+    : never;
 
-export type SlotNames<TRecipe> = TRecipe extends RecipeBrand<
-  any,
-  infer Slots,
-  any,
-  any,
-  any
->
-  ? Slots & string
-  : never;
+export type SlotNames<TRecipe> =
+  TRecipe extends RecipeBrand<any, infer Slots, any, any, any>
+    ? Slots & string
+    : never;
 
-export type RecipeConfigOf<TRecipe> = TRecipe extends RecipeBrand<
-  any,
-  any,
-  any,
-  any,
-  infer Config
->
-  ? Config
-  : never;
+export type RecipeConfigOf<TRecipe> =
+  TRecipe extends RecipeBrand<any, any, any, any, infer Config>
+    ? Config
+    : never;
 
 export type VariantSource = AnyRecipe | { variants?: AnyVariantsSchema };
 
@@ -569,8 +555,8 @@ type VariantSchemaOfSource<TSource> = TSource extends AnyRecipe
     ? NonNullable<Variants>
     : {}
   : TSource extends { variants?: infer Variants }
-  ? NonNullable<Variants>
-  : {};
+    ? NonNullable<Variants>
+    : {};
 
 type VariantOptionKeys<TOptions> = Extract<keyof TOptions, string>;
 
@@ -579,21 +565,22 @@ export type VariantName<TSource> = Extract<
   string
 >;
 
-export type VariantOption<TSource, Name extends VariantName<TSource>> = Extract<
-  VariantOptionKeys<VariantSchemaOfSource<TSource>[Name]>,
-  BooleanOptionKey
-> extends never
-  ? VariantOptionKeys<VariantSchemaOfSource<TSource>[Name]>
-  : boolean;
+export type VariantOption<TSource, Name extends VariantName<TSource>> =
+  Extract<
+    VariantOptionKeys<VariantSchemaOfSource<TSource>[Name]>,
+    BooleanOptionKey
+  > extends never
+    ? VariantOptionKeys<VariantSchemaOfSource<TSource>[Name]>
+    : boolean;
 
 export type RecipeInput<TRecipe> = TRecipe extends AnyRootRecipe
   ? RootRecipeInput<TRecipe>
   : TRecipe extends AnySlotRecipe
-  ? SlotRecipeInput<TRecipe>
-  : never;
+    ? SlotRecipeInput<TRecipe>
+    : never;
 
 export type RecipeResolved<TRecipe> = TRecipe extends AnyRootRecipe
   ? RootResolveResult<TRecipe>
   : TRecipe extends AnySlotRecipe
-  ? SlotResolveResult<TRecipe>
-  : never;
+    ? SlotResolveResult<TRecipe>
+    : never;

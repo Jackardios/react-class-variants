@@ -88,8 +88,8 @@ function benchmarkRuntimeTask(collection, task) {
     task.scenario === 'complexExplicit'
       ? 100
       : task.scenario.startsWith('simple')
-      ? 250
-      : 150;
+        ? 250
+        : 150;
 
   return benchmarkOps(() => resolver(props), {
     batchSize,

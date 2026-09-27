@@ -40,8 +40,8 @@ export function getPublicSurface(coreModule, reactModule) {
     typeof reactModule.defineConfig === 'function'
       ? reactModule.defineConfig()
       : typeof reactModule.defineReactConfig === 'function'
-      ? reactModule.defineReactConfig()
-      : null;
+        ? reactModule.defineReactConfig()
+        : null;
 
   const recipeAccess = coreModule.recipe
     ? {
@@ -50,26 +50,26 @@ export function getPublicSurface(coreModule, reactModule) {
         module: 'core',
       }
     : coreModule.variants
-    ? {
-        exportName: 'variants',
-        kind: 'direct',
-        module: 'core',
-      }
-    : coreFactory?.recipe
-    ? {
-        exportName: 'defineConfig',
-        kind: 'factory',
-        module: 'core',
-        property: 'recipe',
-      }
-    : coreFactory?.variants
-    ? {
-        exportName: 'defineConfig',
-        kind: 'factory',
-        module: 'core',
-        property: 'variants',
-      }
-    : null;
+      ? {
+          exportName: 'variants',
+          kind: 'direct',
+          module: 'core',
+        }
+      : coreFactory?.recipe
+        ? {
+            exportName: 'defineConfig',
+            kind: 'factory',
+            module: 'core',
+            property: 'recipe',
+          }
+        : coreFactory?.variants
+          ? {
+              exportName: 'defineConfig',
+              kind: 'factory',
+              module: 'core',
+              property: 'variants',
+            }
+          : null;
 
   const styledAccess = reactModule.styled
     ? {
@@ -78,42 +78,42 @@ export function getPublicSurface(coreModule, reactModule) {
         module: 'react',
       }
     : coreModule.styled
-    ? {
-        exportName: 'styled',
-        kind: 'direct',
-        module: 'core',
-      }
-    : coreModule.variantComponent
-    ? {
-        exportName: 'variantComponent',
-        kind: 'direct',
-        module: 'core',
-      }
-    : reactFactory?.styled
-    ? {
-        exportName:
-          typeof reactModule.defineConfig === 'function'
-            ? 'defineConfig'
-            : 'defineReactConfig',
-        kind: 'factory',
-        module: 'react',
-        property: 'styled',
-      }
-    : coreFactory?.styled
-    ? {
-        exportName: 'defineConfig',
-        kind: 'factory',
-        module: 'core',
-        property: 'styled',
-      }
-    : coreFactory?.variantComponent
-    ? {
-        exportName: 'defineConfig',
-        kind: 'factory',
-        module: 'core',
-        property: 'variantComponent',
-      }
-    : null;
+      ? {
+          exportName: 'styled',
+          kind: 'direct',
+          module: 'core',
+        }
+      : coreModule.variantComponent
+        ? {
+            exportName: 'variantComponent',
+            kind: 'direct',
+            module: 'core',
+          }
+        : reactFactory?.styled
+          ? {
+              exportName:
+                typeof reactModule.defineConfig === 'function'
+                  ? 'defineConfig'
+                  : 'defineReactConfig',
+              kind: 'factory',
+              module: 'react',
+              property: 'styled',
+            }
+          : coreFactory?.styled
+            ? {
+                exportName: 'defineConfig',
+                kind: 'factory',
+                module: 'core',
+                property: 'styled',
+              }
+            : coreFactory?.variantComponent
+              ? {
+                  exportName: 'defineConfig',
+                  kind: 'factory',
+                  module: 'core',
+                  property: 'variantComponent',
+                }
+              : null;
 
   if (!recipeAccess) {
     throw new Error(
@@ -131,11 +131,11 @@ export function getPublicSurface(coreModule, reactModule) {
           module: 'react',
         }
       : coreModule.mergeProps
-      ? {
-          exportName: 'mergeProps',
-          module: 'core',
-        }
-      : null,
+        ? {
+            exportName: 'mergeProps',
+            module: 'core',
+          }
+        : null,
     recipeAccess,
     styledAccess,
   };

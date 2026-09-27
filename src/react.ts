@@ -76,8 +76,8 @@ export type {
 
 export function defineViewProps<
   TViewProps extends Record<string, unknown>,
-  const Keys extends readonly (keyof TViewProps &
-    string)[] = readonly (keyof TViewProps & string)[]
+  const Keys extends readonly (keyof TViewProps & string)[] =
+    readonly (keyof TViewProps & string)[],
 >(...keys: Keys): ViewPropsDescriptor<Pick<TViewProps, Keys[number]>> {
   return {
     keys: [...new Set(keys)],

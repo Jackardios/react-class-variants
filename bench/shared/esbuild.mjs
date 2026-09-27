@@ -1,5 +1,15 @@
 import { build } from 'esbuild';
 
+/**
+ * @param {{
+ *   absWorkingDir: string;
+ *   define?: Record<string, string>;
+ *   entryFile: string;
+ *   external?: string[];
+ *   outFile: string;
+ *   platform?: import('esbuild').Platform;
+ * }} options
+ */
 export async function bundleWithEsbuild({
   absWorkingDir,
   define,
@@ -24,12 +34,14 @@ export async function bundleWithEsbuild({
       minify: true,
       outfile: outFile,
       platform,
-      target: 'es2018',
+      target: 'es2020',
       treeShaking: true,
       write: true,
     });
   } catch (error) {
-    const details = error.errors
+    const details = /** @type {Partial<import('esbuild').BuildFailure>} */ (
+      error
+    ).errors
       ?.map(entry => entry.text)
       .filter(Boolean)
       .join('\n');

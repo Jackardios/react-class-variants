@@ -1,4 +1,4 @@
-export const simpleSlotConfig = {
+export const simpleSlotConfig = /** @type {const} */ ({
   slots: {
     root: 'inline-flex items-center gap-2 rounded-md',
     label: 'font-medium',
@@ -34,9 +34,9 @@ export const simpleSlotConfig = {
     tone: 'primary',
     size: 'md',
   },
-};
+});
 
-export const complexSlotConfig = {
+export const complexSlotConfig = /** @type {const} */ ({
   slots: {
     root: 'inline-flex items-center justify-center gap-2 rounded-md',
     label: ['font-medium', 'leading-none'],
@@ -119,7 +119,7 @@ export const complexSlotConfig = {
     emphasis: 'quiet',
     disabled: false,
   },
-};
+});
 
 export function makeSimpleSlotConfig() {
   return {
@@ -196,7 +196,7 @@ export function makeComplexSlotConfig() {
   };
 }
 
-export const slotScenarioInputs = {
+export const slotScenarioInputs = /** @type {const} */ ({
   complex: {
     disabled: true,
     emphasis: 'loud',
@@ -213,4 +213,4 @@ export const slotScenarioInputs = {
     size: 'md',
     tone: 'secondary',
   },
-};
+});

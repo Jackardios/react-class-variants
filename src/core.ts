@@ -59,14 +59,14 @@ export const recipe = defaultRecipeFactory;
 export function defineRecipeConfig<
   const SlotDefs extends Record<string, ClassNameValue>,
   const Variants extends SlotVariantsSchema<keyof SlotDefs & string> = {},
-  const Defaults extends Partial<VariantSelectionValues<Variants>> = {}
+  const Defaults extends Partial<VariantSelectionValues<Variants>> = {},
 >(
   config: SlotRecipeConfigInput<SlotDefs, Variants, Defaults>
 ): SlotRecipeConfig<SlotDefs, Variants, Defaults>;
 
 export function defineRecipeConfig<
   const Variants extends RootVariantsSchema = {},
-  const Defaults extends Partial<VariantSelectionValues<Variants>> = {}
+  const Defaults extends Partial<VariantSelectionValues<Variants>> = {},
 >(
   config: RootRecipeConfigInput<Variants, Defaults>
 ): RootRecipeConfig<Variants, Defaults>;
@@ -97,7 +97,7 @@ export function variantNames<const TSource extends VariantSource>(
 
 export function variantOptions<
   const TSource extends VariantSource,
-  const Name extends VariantName<TSource>
+  const Name extends VariantName<TSource>,
 >(source: TSource, variantName: Name): VariantOption<TSource, Name>[] {
   if (isRecipe(source)) {
     const variant = getCompiledRecipeOrThrow(
@@ -115,8 +115,7 @@ export function variantOptions<
   }
 
   const options = source.variants?.[variantName] as
-    | Record<string, unknown>
-    | undefined;
+    Record<string, unknown> | undefined;
 
   if (!options) {
     return [];

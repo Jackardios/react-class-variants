@@ -113,9 +113,10 @@ function createClientRerenderBench(
       toggle = false;
       container = document.createElement('div');
       document.body.appendChild(container);
-      root = createRoot(container);
+      const nextRoot = createRoot(container);
+      root = nextRoot;
       flushSync(() => {
-        root.render(createNode(toggle));
+        nextRoot.render(createNode(toggle));
       });
     },
     teardown() {

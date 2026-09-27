@@ -376,7 +376,7 @@ export function createSlotRecipe(compiled: SlotCompiledRecipe): AnyRecipe {
 
   slotRecipe.resolve = <
     TInput extends Record<string, unknown> | undefined = undefined,
-    const TOptions extends ResolveOptions | undefined = undefined
+    const TOptions extends ResolveOptions | undefined = undefined,
   >(
     input?: TInput,
     options?: TOptions

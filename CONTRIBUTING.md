@@ -45,6 +45,7 @@ pnpm test
 pnpm test:coverage
 pnpm lint
 pnpm lint:all
+pnpm lint:bench
 pnpm lint:eslint
 pnpm lint:format
 pnpm build
@@ -57,7 +58,8 @@ What they do:
 - `pnpm test:coverage`: runtime tests with enforced coverage thresholds (`vite.config.ts`); part of `pnpm run verify`
 - `pnpm lint`: TypeScript publish-surface check for `src/`
 - `pnpm lint:all`: TypeScript check for `src/` plus runtime test files
-- `pnpm lint:eslint`: ESLint for `src/`, `test/`, and `scripts/`
+- `pnpm lint:bench`: TypeScript check for `bench/` (JS files through `checkJs`)
+- `pnpm lint:eslint`: ESLint for `src/`, `test/`, `scripts/`, and `bench/`
 - `pnpm lint:format`: Prettier check
 - `pnpm build`: ESM + declaration build through `tsup`
 

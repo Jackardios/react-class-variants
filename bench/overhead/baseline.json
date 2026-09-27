@@ -1,13 +1,13 @@
 {
   "bundles": {
     "recipeOnly": {
-      "gzipBytes": 3803
+      "gzipBytes": 3817
     },
     "slottedRecipe": {
-      "gzipBytes": 3837
+      "gzipBytes": 3852
     },
     "component": {
-      "gzipBytes": 7206
+      "gzipBytes": 5920
     }
   }
 }

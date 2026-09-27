@@ -4,6 +4,7 @@ import prettierConfig from 'eslint-config-prettier';
 
 const scriptGlobals = {
   URL: 'readonly',
+  clearTimeout: 'readonly',
   console: 'readonly',
   fetch: 'readonly',
   module: 'readonly',
@@ -18,7 +19,7 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   prettierConfig,
   {
-    ignores: ['dist/**', 'coverage/**', 'node_modules/**', 'bench/**'],
+    ignores: ['dist/**', 'coverage/**', 'node_modules/**'],
   },
   {
     files: ['src/**/*.ts', 'src/**/*.tsx'],
@@ -33,7 +34,14 @@ export default tseslint.config(
     },
   },
   {
-    files: ['test/**/*.ts', 'test/**/*.tsx', 'test/**/*.mts', 'test/**/*.cts'],
+    files: [
+      'test/**/*.ts',
+      'test/**/*.tsx',
+      'test/**/*.mts',
+      'test/**/*.cts',
+      'bench/**/*.ts',
+      'bench/**/*.tsx',
+    ],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
@@ -43,7 +51,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['scripts/**/*.mjs', 'scripts/**/*.cjs'],
+    files: ['scripts/**/*.mjs', 'scripts/**/*.cjs', 'bench/**/*.mjs'],
     languageOptions: {
       globals: scriptGlobals,
     },

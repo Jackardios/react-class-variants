@@ -1,4 +1,4 @@
-export const simpleRootConfig = {
+export const simpleRootConfig = /** @type {const} */ ({
   base: 'inline-flex items-center rounded-md font-medium transition-colors',
   variants: {
     tone: {
@@ -15,9 +15,9 @@ export const simpleRootConfig = {
     tone: 'primary',
     size: 'md',
   },
-};
+});
 
-export const multipleRootConfig = {
+export const multipleRootConfig = /** @type {const} */ ({
   base: 'inline-flex items-center rounded-md font-medium transition-colors',
   variants: {
     tone: {
@@ -40,9 +40,9 @@ export const multipleRootConfig = {
     size: 'md',
     disabled: false,
   },
-};
+});
 
-export const complexRootConfig = {
+export const complexRootConfig = /** @type {const} */ ({
   base: 'inline-flex items-center justify-center rounded-md font-medium transition',
   variants: {
     tone: {
@@ -88,15 +88,15 @@ export const complexRootConfig = {
       className: 'border-rose-600 text-rose-600',
     },
   ],
-};
+});
 
-export const complexRootNoCompoundsConfig = {
+export const complexRootNoCompoundsConfig = /** @type {const} */ ({
   base: complexRootConfig.base,
   variants: complexRootConfig.variants,
   defaultVariants: complexRootConfig.defaultVariants,
-};
+});
 
-export const manyCompoundRootConfig = {
+export const manyCompoundRootConfig = /** @type {const} */ ({
   base: 'component',
   variants: {
     a: { a1: 'a1', a2: 'a2', a3: 'a3' },
@@ -120,7 +120,7 @@ export const manyCompoundRootConfig = {
     { a: ['a1', 'a2'], b: ['b1', 'b2'], className: 'cv-array-1' },
     { c: ['c1', 'c2'], d: ['d1', 'd2'], className: 'cv-array-2' },
   ],
-};
+});
 
 export function makeSimpleRootConfig() {
   return {
@@ -182,7 +182,7 @@ export function makeComplexRootNoCompoundsConfig() {
   };
 }
 
-export const rootScenarioInputs = {
+export const rootScenarioInputs = /** @type {const} */ ({
   complexAllProps: {
     disabled: true,
     size: 'lg',
@@ -242,4 +242,4 @@ export const rootScenarioInputs = {
     size: 'lg',
     tone: 'secondary',
   },
-};
+});

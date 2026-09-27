@@ -192,7 +192,7 @@ Bundle-size comparisons use minified synthetic consumers via esbuild with:
 
 - `format=esm`
 - `platform=browser`
-- `target=es2018`
+- `target=es2020`, the package's own build target
 - tree-shaking enabled
 - `react` marked external
 
