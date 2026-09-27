@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- public recipe types intentionally carry erased runtime metadata through a hidden symbol brand. */
 export type ClassNameValue = string | null | readonly string[];
+/** @deprecated Use `ClassNameValue`. */
 export type ClassValue = ClassNameValue;
 
 export type ValidateMode = 'never' | 'always';
@@ -496,6 +497,7 @@ export type AnySlotRecipe = RecipeBrand<'slot', any, any, any, any> & {
 };
 
 export type AnyRecipe = AnyRootRecipe | AnySlotRecipe;
+/** @deprecated Use `AnyRecipe`. */
 export type Recipe = AnyRecipe;
 
 export type RecipeFactory = {

@@ -96,6 +96,9 @@ Exports:
 - `recipe()`
 - `defineConfig()` for `{ recipe, styled }`
 - `defineRecipeConfig()`
+- `defineViewProps()`
+- `variantNames()`
+- `variantOptions()`
 - `hasOwnProperty()`
 - `mergeProps()`
 - `mergeRefs()`
@@ -109,10 +112,14 @@ Exports:
 - `recipe()`
 - core `defineConfig()`
 - `defineRecipeConfig()`
+- `variantNames()`
+- `variantOptions()`
 - `hasOwnProperty()`
 - core recipe types
 
-Does not export React runtime helpers such as `styled()`, `mergeProps()`, or ref utilities.
+Does not export React runtime helpers such as `styled()`, `defineViewProps()`, `mergeProps()`, or ref utilities.
+
+Deprecated type aliases stay exported for compatibility: `ClassValue` (use `ClassNameValue`), `Recipe` (use `AnyRecipe`), and `AnyElementType` (use React's `ElementType`). Do not use them in new code, tests, or docs.
 
 ### API Invariants
 

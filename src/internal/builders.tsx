@@ -4,6 +4,7 @@ import {
   createElement,
   isValidElement,
   type ComponentType,
+  type ElementType,
   type FunctionComponent,
   type ReactElement,
   type ReactNode,
@@ -11,7 +12,6 @@ import {
 } from 'react';
 import type { ClassNameValue, ResolveOptions } from './core-types';
 import type {
-  AnyElementType,
   RenderProp,
   RootStyledOptions,
   SlotStyledOptions,
@@ -60,7 +60,7 @@ const hostStateSymbol = Symbol('react-class-variants.host-state');
 
 // Per-component host settings, built once in styled().
 type HostSetup = {
-  base: AnyElementType;
+  base: ElementType;
   // viewProps keys: visible in host.props, never rendered.
   consumed: SkipKeys | undefined;
   // host.render() override keys assignMergedProps skips: className, ref, and
@@ -89,7 +89,7 @@ type HostViewObject = {
 // Renders `base` from a props object this module owns (never React's frozen
 // props), so it may be mutated in place. `props.ref` is the outer ref.
 function renderElement(
-  base: AnyElementType,
+  base: ElementType,
   props: Record<string, unknown>,
   render: RenderProp | undefined
 ): ReactNode {
@@ -191,7 +191,7 @@ function getHostSlotIndex(
 }
 
 function createHostSetup(
-  base: AnyElementType,
+  base: ElementType,
   compiled: CompiledRecipe,
   options: AnyStyledOptions,
   aliasKeys: SkipKeys | undefined,
@@ -250,7 +250,7 @@ function ensureRenderSupported(
 }
 
 function createDirectComponent(
-  base: AnyElementType,
+  base: ElementType,
   compiled: RootCompiledRecipe,
   resolveOptions: NormalizedResolveOptions | undefined,
   skip: SkipKeys,
@@ -347,7 +347,7 @@ function createSlotViewComponent(
 
 // react.ts has already validated the base/options combination.
 export function createStyled(
-  base: AnyElementType,
+  base: ElementType,
   compiled: CompiledRecipe,
   options: AnyStyledOptions | undefined
 ) {
