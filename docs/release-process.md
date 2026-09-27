@@ -23,16 +23,9 @@ Defined in `.github/workflows/main.yml`.
 - cancels an in-progress run when the same PR or branch is updated
 - runs `pnpm run verify` on Node `20.x`, `22.x`, and `24.x` through the reusable `.github/workflows/verify.yml`
 - runs `pnpm run check:overhead` once, against the committed `bench/overhead/baseline.json`
+- on pull requests to `next` and `main`, runs `scripts/check-changeset.cjs` to verify that release-affecting changes are covered by a changeset; `Version Packages` PRs and Dependabot PRs skip it
 - reports the combined result as a single `build` check, which branch protection requires
-
-### `Changeset Check` workflow
-
-Defined in `.github/workflows/changeset-check.yml`.
-
-- runs on pull requests targeting `next`
-- also runs on pull requests targeting `main`
-- executes `scripts/check-changeset.cjs`
-- verifies that release-affecting changes are covered by a changeset
+- pins every action to a commit SHA; Dependabot (`.github/dependabot.yml`) proposes action and devDependency updates monthly
 
 ### `Release` workflow
 

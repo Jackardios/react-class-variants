@@ -259,7 +259,8 @@ For changes that touch recipe resolution, class merging, `styled()` behavior, pr
 - Alpha releases publish from `next`.
 - Changesets prerelease mode is active under the `alpha` tag.
 - `changeset publish` creates the canonical `v*` git tag.
-- `CI` and `Release` share the reusable `.github/workflows/verify.yml` matrix (Node `20.x` / `22.x` / `24.x`). `CI` also runs `check:overhead` and reports everything as the single `build` check that branch protection requires on `next` and `main`.
+- `CI` and `Release` share the reusable `.github/workflows/verify.yml` matrix (Node `20.x` / `22.x` / `24.x`). `CI` also runs `check:overhead` and, on pull requests, the changeset coverage check, and reports everything as the single `build` check that branch protection requires on `next` and `main`.
+- Workflow actions are pinned to commit SHAs with the version in a trailing comment; Dependabot keeps them and the devDependencies current.
 - `CI` runs on pull requests and on pushes to `main` and `v1-maintenance`; pushes to `next` are verified by `Release`.
 - Use `pnpm changeset add --empty` when a PR touches release-affecting files but should not ship a version.
 - The `Release` workflow manually dispatches `CI` on `changeset-release/next` after `changesets/action` updates the release branch, because pushes made with the default GitHub Actions token do not trigger `push` or `pull_request` workflows.
