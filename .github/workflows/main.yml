@@ -25,13 +25,16 @@ jobs:
   overhead:
     name: Overhead
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
       - name: Setup PNPM
-        uses: pnpm/action-setup@v5
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: 24.x
           cache: 'pnpm'
@@ -40,13 +43,36 @@ jobs:
       - name: Check bundle overhead
         run: pnpm run check:overhead
 
+  changeset:
+    name: Changeset
+    # Version Packages PRs consume changesets instead of adding them, and
+    # Dependabot only bumps devDependencies and actions, which do not ship.
+    if: |
+      github.event_name == 'pull_request' &&
+      (github.base_ref == 'next' || github.base_ref == 'main') &&
+      !startsWith(github.head_ref, 'changeset-release/') &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          # Fetches origin/<base>, which the script diffs against.
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check changeset coverage
+        run: node scripts/check-changeset.cjs
+
   # Branch protection requires a single `build` check; this job reports the
-  # combined result of the matrix and the overhead gate under that name.
+  # combined result of the other jobs under that name. `changeset` is skipped
+  # outside pull requests to next and main.
   build:
     name: build
     if: always()
-    needs: [verify, overhead]
+    needs: [verify, overhead, changeset]
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Require all CI jobs to pass
         env:
@@ -54,7 +80,7 @@ jobs:
         run: |
           echo "Job results: $RESULTS"
           for result in $RESULTS; do
-            if [ "$result" != "success" ]; then
+            if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
               exit 1
             fi
           done

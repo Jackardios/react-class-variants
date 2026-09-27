@@ -1,0 +1,25 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: next
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: ['*']
+
+  # The package has no runtime dependencies, so these are all devDependencies.
+  # Minor and patch updates share one PR; majors get their own.
+  - package-ecosystem: npm
+    directory: /
+    target-branch: next
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    groups:
+      dev-dependencies:
+        update-types: [minor, patch]

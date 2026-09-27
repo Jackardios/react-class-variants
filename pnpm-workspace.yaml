@@ -1,2 +1,4 @@
 onlyBuiltDependencies:
   - esbuild
+# Refuse versions published less than a day ago when resolving new ones.
+minimumReleaseAge: 1440

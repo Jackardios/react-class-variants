@@ -33,7 +33,7 @@ CI and the release gate both run `pnpm run verify` on Node `20.x`, `22.x`, and `
 5. Run `pnpm run ci` when the branch should be fully release-ready.
 6. Open or update the PR against `next`.
 
-PRs to `next` and `main` also run the changeset coverage check in CI.
+PRs to `next` and `main` also run the changeset coverage check in CI, as part of the required `build` check.
 
 ## Command Guide
 

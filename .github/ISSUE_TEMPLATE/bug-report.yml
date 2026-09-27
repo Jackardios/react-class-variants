@@ -18,8 +18,8 @@ body:
     id: package_version
     attributes:
       label: Package version
-      description: Include the exact npm version, for example `2.0.0-alpha.3` or `1.0.3`.
-      placeholder: 2.0.0-alpha.3
+      description: Include the exact npm version, for example `2.0.0-alpha.12` or `1.0.4`.
+      placeholder: 2.0.0-alpha.12
     validations:
       required: true
   - type: dropdown
