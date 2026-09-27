@@ -55,6 +55,9 @@ type RenderFunction = (props: Record<string, unknown>) => ReactNode;
 const directSkipKeys = ['render'];
 // View paths expose these through the host view, outside host.props.
 const viewSkipKeys = ['children', 'className', 'ref', 'render'];
+// Components without prop aliases share these instead of building their own.
+const sharedDirectSkip = /* @__PURE__ */ createSkipKeys(directSkipKeys);
+const sharedViewSkip = /* @__PURE__ */ createSkipKeys(viewSkipKeys);
 
 const hostStateSymbol = Symbol('react-class-variants.host-state');
 
@@ -357,10 +360,13 @@ export function createStyled(
     options as ResolveOptions | undefined
   );
   // Slotted recipes always have a view (checked in react.ts).
-  const skip = createSkipKeys(
-    options?.view ? viewSkipKeys : directSkipKeys,
-    resolveOptions?.aliasKeys
-  );
+  const isView = Boolean(options?.view);
+  const aliasKeys = resolveOptions?.aliasKeys;
+  const skip = aliasKeys
+    ? createSkipKeys(isView ? viewSkipKeys : directSkipKeys, aliasKeys)
+    : isView
+      ? sharedViewSkip
+      : sharedDirectSkip;
   let Component: FunctionComponent<Record<string, unknown>>;
 
   if (compiled.mode === 'slot') {

@@ -194,21 +194,10 @@ export function compileVariants<TClassName>(params: {
     params;
   const compiledVariants: Array<CompiledVariant<TClassName>> = [];
   const defaults = defaultVariants as Record<string, unknown> | undefined;
+  const variantMap: NonNullable<typeof variants> = variants ?? {};
 
-  if (!variants) {
-    if (validate && defaults) {
-      for (const key in defaults) {
-        if (!hasOwnKey(defaults, key)) continue;
-        throw new Error(
-          `react-class-variants: defaultVariants key "${key}" is not declared in variants.`
-        );
-      }
-    }
-    return compiledVariants;
-  }
-
-  for (const variantKey in variants) {
-    if (!hasOwnKey(variants, variantKey)) continue;
+  for (const variantKey in variantMap) {
+    if (!hasOwnKey(variantMap, variantKey)) continue;
 
     if (isReservedPublicProp(mode, variantKey)) {
       throw new Error(
@@ -222,7 +211,7 @@ export function compileVariants<TClassName>(params: {
       );
     }
 
-    const optionMap = variants[variantKey] ?? {};
+    const optionMap = variantMap[variantKey] ?? {};
     let falseClass: TClassName | undefined;
     let hasNamedOption = false;
     let isBoolean = false;
@@ -296,7 +285,7 @@ export function compileVariants<TClassName>(params: {
   if (validate && defaults) {
     for (const key in defaults) {
       if (!hasOwnKey(defaults, key)) continue;
-      if (!hasOwnKey(variants, key)) {
+      if (!hasOwnKey(variantMap, key)) {
         throw new Error(
           `react-class-variants: defaultVariants key "${key}" is not declared in variants.`
         );
