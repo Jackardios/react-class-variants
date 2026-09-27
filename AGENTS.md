@@ -119,7 +119,7 @@ Exports:
 
 Does not export React runtime helpers such as `styled()`, `defineViewProps()`, `mergeProps()`, or ref utilities.
 
-Deprecated type aliases stay exported until the stable line: `ClassValue` (use `ClassNameValue`), `Recipe` (use `AnyRecipe`), and `AnyElementType` (use React's `ElementType`). Do not use them in new code, tests, or docs.
+Deprecated type aliases stay exported for compatibility: `ClassValue` (use `ClassNameValue`), `Recipe` (use `AnyRecipe`), and `AnyElementType` (use React's `ElementType`). Do not use them in new code, tests, or docs.
 
 ### API Invariants
 

@@ -710,17 +710,49 @@ The option type is exported as `ValidateMode` (`'never' | 'always'`).
 - `'always'`: strict validation everywhere
 - `'never'`: lean runtime with no validation
 
-Both modes reject reserved variant keys and variants that mix boolean and named
-options. On top of that, strict mode:
+Both modes throw on structural errors:
 
-- rejects malformed configs when a recipe is created: undeclared compound or
-  default keys, invalid default values, variant keys that shadow
-  `Object.prototype` members, and invalid `className` values
-- checks every call: required variants, unknown option values, unknown props on
-  direct calls, and `propAliases` / `forwardProps` / `viewProps` conflicts
-- deep-freezes the config
+- recipe configs with both `base` and `slots`, a slotted recipe without a
+  `slots` object, a variant key that is a reserved prop (`children`,
+  `className`, `ref`, `render`, and `slotClassNames` on slotted recipes), a
+  variant that mixes boolean and named options, and slotted variant values
+  that are not slot className maps
+- `styled()` given a value that is not a recipe, `withRender` on a
+  non-intrinsic base, a slotted recipe or `viewProps` without `view`, or an
+  undeclared or missing `hostSlot`
 
-Lean mode skips these checks and drops input it cannot use.
+Strict mode adds these checks when a recipe is created, and then deep-freezes
+the config:
+
+- undeclared `defaultVariants` or `compoundVariants` keys, and values those
+  variants do not declare
+- variant keys that shadow `Object.prototype` members
+- invalid `className` values, and slot className maps that name undeclared
+  slots
+
+It checks prop routing options once per `styled()` component, and
+`propAliases` / `forwardProps` again on every `resolve()` call that passes
+them:
+
+- aliases or targets that are reserved props or `__proto__`, aliases that are
+  variant keys, aliases reused by two targets, and targets that are also
+  listed in `forwardProps`
+- `forwardProps` keys that are not declared variants
+- `viewProps` keys that are reserved props, variant keys, or alias keys
+
+On every call, strict mode also rejects:
+
+- missing required variants and undeclared option values
+- unknown props on direct recipe calls, and `className` on a direct slotted
+  call
+- invalid `className` values, and invalid or undeclared `slotClassNames` slots
+- unknown slot override props and undeclared override values
+- a `render` prop on a component without `withRender`
+- an alias whose target prop is also passed directly
+
+Lean mode skips the strict checks and ignores input it cannot use: undeclared
+values add no class, invalid `slotClassNames` and unsupported `render` props
+are ignored, and aliases that strict mode would reject are dropped.
 
 There is deliberately no environment-based mode such as "validate in
 development": the choice is made explicitly per factory, so the published code
