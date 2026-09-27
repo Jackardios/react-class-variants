@@ -21,12 +21,14 @@ export function delay(ms) {
 }
 
 // Polls `read` until `predicate` accepts its value, waiting `attempt * stepMs`
-// between attempts. Returns the last value read either way so callers can
-// report what the registry actually returned.
+// between attempts. The defaults wait about 165 seconds in total: a trusted
+// publish has taken over 90 seconds to appear in the registry. Returns the
+// last value read either way so callers can report what the registry
+// actually returned.
 export async function pollUntil(
   read,
   predicate,
-  { attempts = 8, stepMs = 1500 } = {}
+  { attempts = 12, stepMs = 2500 } = {}
 ) {
   let lastValue = null;
 
