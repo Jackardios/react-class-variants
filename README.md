@@ -25,7 +25,7 @@ The current v2 alpha surface is built around:
 - Package name: `react-class-variants`
 - Current line: `2.0.0-alpha.x`
 - Recommended install: `react-class-variants@alpha`
-- Runtime requirements: Node.js `20.19+` and React `19`
+- Runtime requirements: Node.js `22.12+` and React `19`
 - Module format: ESM-only
 
 ## Installation

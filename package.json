@@ -90,7 +90,7 @@
   },
   "homepage": "https://github.com/Jackardios/react-class-variants#readme",
   "engines": {
-    "node": ">=20.19.0"
+    "node": ">=22.12.0"
   },
   "packageManager": "pnpm@10.34.5",
   "devDependencies": {
@@ -100,7 +100,7 @@
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
-    "@types/node": "^20.19.43",
+    "@types/node": "^22.20.4",
     "@types/react": "^19.1.11",
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^6.1.1",

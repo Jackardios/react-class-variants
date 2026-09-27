@@ -21,7 +21,7 @@ Defined in `.github/workflows/main.yml`.
 - runs on every pull request and on pushes to `main` and `v1-maintenance`; pushes to `next` are verified by the `Release` workflow
 - can be dispatched manually for an existing branch
 - cancels an in-progress run when the same PR or branch is updated
-- runs `pnpm run verify` on Node `20.x`, `22.x`, and `24.x` through the reusable `.github/workflows/verify.yml`
+- runs `pnpm run verify` on Node `22.x`, `24.x`, and `26.x` through the reusable `.github/workflows/verify.yml`
 - runs `pnpm run check:overhead` once, against the committed `bench/overhead/baseline.json`
 - on pull requests to `next` and `main`, runs `scripts/check-changeset.cjs` to verify that release-affecting changes are covered by a changeset; `Version Packages` PRs and Dependabot PRs skip it
 - reports the combined result as a single `build` check, which branch protection requires
@@ -32,7 +32,7 @@ Defined in `.github/workflows/main.yml`.
 Defined in `.github/workflows/release.yml`.
 
 - runs on pushes to `next`
-- runs the same reusable `pnpm run verify` matrix as CI on Node `20.x`, `22.x`, and `24.x`
+- runs the same reusable `pnpm run verify` matrix as CI on Node `22.x`, `24.x`, and `26.x`
 - uses `changesets/action`
 - uses npm trusted publishing via GitHub Actions OIDC
 - validates GitHub release/changelog readiness with `scripts/verify-github-release.mjs`
