@@ -46,7 +46,7 @@ Defined in `.github/workflows/release.yml`.
 - checks whether automated npm dist-tag repair is available with `scripts/verify-dist-tag-auth.mjs`
 - publishes through the rerunnable `scripts/release-publish.mjs` wrapper
 - relies on the package `prepack` lifecycle to build `dist/` for clean-checkout tarballs because `dist/` is gitignored
-- relies on `scripts/test-types-exports.mjs` to validate packed exports in that same clean-checkout style locally
+- relies on `scripts/test-types-packed.mjs` to validate packed exports in that same clean-checkout style locally
 - reconciles GitHub Releases after publish, and attempts npm dist-tag repair only when token-based auth is available
 
 The release workflow has two paths:

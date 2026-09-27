@@ -1,6 +1,10 @@
+// Checks of the built package that the Vitest suite cannot cover: importing
+// the entries in an environment without `process`, the React-free core entry,
+// and server rendering in plain Node. Behavioral coverage of dist/ comes from
+// `vitest run --config vitest.built.config.ts`.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -20,46 +24,55 @@ export const useMemo = factory => factory();`;
 
 // Node 20 crashes in the ESM->CJS bridge before require.cache shims apply when
 // globalThis.process is undefined, so the package-root smoke test redirects
-// "react" to an ESM stub via a loader instead.
-function createReactShimLoader() {
+// "react" to an ESM stub through a module.register() resolve hook instead. The
+// core entry gets a hook that rejects "react" anywhere in its module graph.
+function createReactHooks(shimReact) {
   const tempDir = mkdtempSync(resolve(tmpdir(), 'react-class-variants-'));
   const reactShimPath = resolve(tempDir, 'react-shim.mjs');
-  const loaderPath = resolve(tempDir, 'react-loader.mjs');
+  const hooksPath = resolve(tempDir, 'react-hooks.mjs');
+  const registerPath = resolve(tempDir, 'register.mjs');
 
   writeFileSync(reactShimPath, reactShimSource);
   writeFileSync(
-    loaderPath,
+    hooksPath,
     `const reactShimUrl = ${JSON.stringify(pathToFileURL(reactShimPath).href)};
 
 export async function resolve(specifier, context, nextResolve) {
-  if (specifier === 'react') {
-    return {
-      shortCircuit: true,
-      url: reactShimUrl,
-    };
+  if (specifier === 'react' || specifier.startsWith('react/')) {
+    ${
+      shimReact
+        ? 'return { shortCircuit: true, url: reactShimUrl };'
+        : 'throw new Error(`${context.parentURL} imports ${specifier}`);'
+    }
   }
 
   return nextResolve(specifier, context);
 }
 `
   );
+  writeFileSync(
+    registerPath,
+    `import { register } from 'node:module';
+
+register(${JSON.stringify(pathToFileURL(hooksPath).href)});
+`
+  );
 
   return {
-    loaderPath,
+    registerPath,
     tempDir,
   };
 }
 
-function assertImportsWithoutProcess(entryPath, shimReact = false) {
-  const reactShimLoader = shimReact ? createReactShimLoader() : null;
+function assertImportsWithoutProcess(entryPath, shimReact) {
+  const reactHooks = createReactHooks(shimReact);
 
   try {
     execFileSync(
       process.execPath,
       [
-        ...(reactShimLoader
-          ? ['--no-warnings', '--loader', reactShimLoader.loaderPath]
-          : []),
+        '--import',
+        pathToFileURL(reactHooks.registerPath).href,
         '--input-type=module',
         '--eval',
         `
@@ -74,315 +87,44 @@ module.defineConfig().recipe({ base: 'inline-flex' });`,
       }
     );
   } finally {
-    if (reactShimLoader) {
-      rmSync(reactShimLoader.tempDir, { force: true, recursive: true });
-    }
+    rmSync(reactHooks.tempDir, { force: true, recursive: true });
   }
 }
 
 assertImportsWithoutProcess(packageRootPath, true);
-assertImportsWithoutProcess(corePath);
+assertImportsWithoutProcess(corePath, false);
 
 const packageRoot = await import(pathToFileURL(packageRootPath).href);
-const core = await import(pathToFileURL(corePath).href);
+const { recipe, styled } = packageRoot.defineConfig();
 
-assert.equal(typeof packageRoot.defineViewProps, 'function');
-assert.equal('styled' in packageRoot, false);
-assert.equal(typeof packageRoot.defineConfig().styled, 'function');
-
-const coreSource = readFileSync(corePath, 'utf8');
-assert.equal(/from ['"]react['"]/.test(coreSource), false);
-const defaultConfiguredPackage = packageRoot.defineConfig();
-
-const rootRecipe = core.recipe({
-  base: 'inline-flex items-center',
-  variants: {
-    tone: {
-      primary: 'bg-blue text-white',
-      ghost: 'bg-transparent text-slate-900',
-    },
-    disabled: {
-      true: 'opacity-50',
-    },
-  },
-  defaultVariants: {
-    tone: 'primary',
-    disabled: false,
-  },
-});
-
-assert.equal(rootRecipe(), 'inline-flex items-center bg-blue text-white');
-assert.deepEqual(
-  rootRecipe.resolve(
-    {
-      disabled: true,
-      htmlSize: 12,
-      type: 'button',
-    },
-    {
-      forwardProps: ['disabled'],
-      propAliases: { size: 'htmlSize' },
-    }
-  ),
-  {
-    variants: {
-      tone: 'primary',
-      disabled: true,
-    },
-    resolvedProps: {
-      type: 'button',
-      size: 12,
-      disabled: true,
-      className: 'inline-flex items-center bg-blue text-white opacity-50',
-    },
-  }
-);
-
-const slotRecipe = core.recipe({
+const buttonRecipe = recipe({
   slots: {
-    root: 'inline-flex items-center gap-2',
+    root: 'inline-flex items-center',
     label: 'truncate',
-    spinner: 'hidden size-4',
   },
   variants: {
     tone: {
-      primary: {
-        root: 'bg-blue text-white',
-        spinner: 'text-blue-100',
-      },
-      ghost: {
-        root: 'bg-transparent text-slate-900',
-        spinner: 'text-slate-500',
-      },
-    },
-    loading: {
-      true: {
-        label: 'opacity-0',
-        spinner: 'inline-block animate-spin',
-      },
+      primary: { root: 'bg-blue text-white' },
     },
   },
-  defaultVariants: {
-    tone: 'primary',
-    loading: false,
-  },
 });
-
-const renderedSlots = slotRecipe({ loading: true });
-const { root, label, spinner } = renderedSlots;
-assert.equal(root(), 'inline-flex items-center gap-2 bg-blue text-white');
-assert.equal(
-  root({ tone: 'ghost', className: 'rounded-md' }),
-  'inline-flex items-center gap-2 bg-transparent text-slate-900 rounded-md'
-);
-assert.equal(label(), 'truncate opacity-0');
-assert.equal(
-  spinner(),
-  'hidden size-4 text-blue-100 inline-block animate-spin'
-);
-
-const resolvedSlotRecipe = slotRecipe.resolve(
-  {
-    className: 'external',
-    id: 'save',
-    loading: true,
-  },
-  {
-    forwardProps: ['loading'],
-  }
-);
-assert.deepEqual(resolvedSlotRecipe.variants, {
-  tone: 'primary',
-  loading: true,
-});
-assert.deepEqual(resolvedSlotRecipe.resolvedProps, {
-  className: 'external',
-  id: 'save',
-  loading: true,
-});
-assert.equal(
-  resolvedSlotRecipe.slots.root({ className: 'rounded-md' }),
-  'inline-flex items-center gap-2 bg-blue text-white rounded-md'
-);
-
-const Button = defaultConfiguredPackage.styled('button', rootRecipe);
-const buttonMarkup = renderToStaticMarkup(
-  React.createElement(Button, { tone: 'primary', type: 'button' }, 'Press')
-);
-assert.match(
-  buttonMarkup,
-  /class="inline-flex items-center bg-blue text-white"/
-);
-assert.match(buttonMarkup, /type="button"/);
-
-const Badge = defaultConfiguredPackage.styled('span', rootRecipe, {
-  view: ({ host, variants }) =>
-    host.render({ 'data-tone': variants.tone, children: host.children }),
-});
-const badgeMarkup = renderToStaticMarkup(
-  React.createElement(Badge, { tone: 'ghost' }, 'Info')
-);
-assert.match(badgeMarkup, /data-tone="ghost"/);
-assert.match(
-  badgeMarkup,
-  /class="inline-flex items-center bg-transparent text-slate-900"/
-);
-
-const RuntimeIcon = props =>
-  React.createElement('svg', { ...props, 'data-slot': 'icon' });
-
-const ViewPropButton = defaultConfiguredPackage.styled('button', slotRecipe, {
-  viewProps: packageRoot.defineViewProps('icon', 'shortcut'),
+const Button = styled('button', buttonRecipe, {
   view: ({ host, classes }) =>
     host.render({
-      'data-shortcut': host.props.shortcut,
-      children: [
-        host.props.icon
-          ? React.createElement(host.props.icon, {
-              className: classes.spinner({ tone: 'ghost' }),
-              key: 'icon',
-            })
-          : null,
-        React.createElement(
-          'span',
-          { className: classes.label(), key: 'label' },
-          host.children
-        ),
-      ],
+      children: React.createElement(
+        'span',
+        { className: classes.label() },
+        host.children
+      ),
     }),
 });
-const viewPropButtonMarkup = renderToStaticMarkup(
-  React.createElement(
-    ViewPropButton,
-    { icon: RuntimeIcon, shortcut: 'K' },
-    'Shortcut'
-  )
-);
-assert.match(viewPropButtonMarkup, /data-shortcut="K"/);
-assert.doesNotMatch(viewPropButtonMarkup, /\sicon=/);
-assert.doesNotMatch(viewPropButtonMarkup, /\sshortcut=/);
-
-const SlotButton = defaultConfiguredPackage.styled('button', slotRecipe, {
-  view: ({ host, classes, variants }) =>
-    host.render({
-      'aria-busy': variants.loading || undefined,
-      children: [
-        variants.loading
-          ? React.createElement('span', {
-              className: classes.spinner(),
-              'data-slot': 'spinner',
-              key: 'spinner',
-            })
-          : null,
-        React.createElement(
-          'span',
-          { className: classes.label(), 'data-slot': 'label', key: 'label' },
-          host.children
-        ),
-      ],
-    }),
-});
-const slotButtonMarkup = renderToStaticMarkup(
-  React.createElement(
-    SlotButton,
-    { className: 'rounded-md', loading: true },
-    'Save'
-  )
-);
-assert.match(slotButtonMarkup, /aria-busy="true"/);
-assert.match(
-  slotButtonMarkup,
-  /class="inline-flex items-center gap-2 bg-blue text-white rounded-md"/
-);
-assert.match(
-  slotButtonMarkup,
-  /class="hidden size-4 text-blue-100 inline-block animate-spin" data-slot="spinner"/
+const markup = renderToStaticMarkup(
+  React.createElement(Button, { tone: 'primary', type: 'button' }, 'Press')
 );
 
-const configuredCore = core.defineConfig({
-  merge: className => className,
-});
 assert.equal(
-  configuredCore.recipe({
-    base: 'inline-flex',
-    variants: {
-      tone: {
-        info: 'text-sky-700',
-      },
-    },
-  })({ tone: 'info' }),
-  'inline-flex text-sky-700'
+  markup,
+  '<button type="button" class="inline-flex items-center bg-blue text-white"><span class="truncate">Press</span></button>'
 );
-
-const leanDefaultRecipe = core.recipe({
-  base: 'inline-flex',
-  variants: {
-    tone: {
-      info: 'text-sky-700',
-    },
-  },
-});
-assert.equal(leanDefaultRecipe(), 'inline-flex');
-assert.equal(packageRoot.recipe({ base: 'inline-flex' })(), 'inline-flex');
-
-const validationDefaultRecipe = core
-  .defineConfig({
-    validate: 'always',
-  })
-  .recipe({
-    base: 'inline-flex',
-    variants: {
-      tone: {
-        info: 'text-sky-700',
-      },
-    },
-  });
-assert.throws(
-  () => validationDefaultRecipe(),
-  /missing required recipe variant "tone"/
-);
-assert.throws(
-  () =>
-    core.defineConfig({ validate: 'always' }).recipe({
-      base: 'inline-flex',
-      variants: {
-        tone: {
-          info: 'text-sky-700',
-        },
-      },
-    })(),
-  /missing required recipe variant "tone"/
-);
-assert.throws(
-  () =>
-    packageRoot.defineConfig({ validate: 'always' }).recipe({
-      base: 'inline-flex',
-      variants: {
-        tone: {
-          info: 'text-sky-700',
-        },
-      },
-    })(),
-  /missing required recipe variant "tone"/
-);
-
-const configuredPackage = packageRoot.defineConfig({
-  merge: className => className,
-});
-const ConfiguredButton = configuredPackage.styled(
-  'button',
-  configuredPackage.recipe({
-    base: 'inline-flex',
-    variants: {
-      tone: {
-        info: 'text-sky-700',
-      },
-    },
-  })
-);
-const configuredMarkup = renderToStaticMarkup(
-  React.createElement(ConfiguredButton, { tone: 'info', type: 'button' }, 'Go')
-);
-assert.match(configuredMarkup, /class="inline-flex text-sky-700"/);
 
 console.log('Built runtime smoke checks passed.');

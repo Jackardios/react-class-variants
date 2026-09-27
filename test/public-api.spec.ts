@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import * as core from '../src/core';
 import * as packageRoot from '../src';
@@ -35,5 +36,18 @@ describe('public api', () => {
     expect(typeof core.variantOptions).toBe('function');
     expect('styled' in core).toBe(false);
     expect('mergeProps' in core).toBe(false);
+  });
+
+  it('creates configured recipes from the core defineConfig()', () => {
+    const config = core.defineConfig({
+      merge: className => className.toUpperCase(),
+    });
+    const badge = config.recipe({
+      base: 'inline-flex',
+      variants: { tone: { info: 'text-sky-700' } },
+    });
+
+    expect(Object.keys(config)).toEqual(['recipe']);
+    expect(badge({ tone: 'info' })).toBe('INLINE-FLEX TEXT-SKY-700');
   });
 });
