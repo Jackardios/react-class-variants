@@ -279,4 +279,34 @@ describe('recipe().resolve()', () => {
         .resolve(input, { propAliases })
     ).toThrow(/conflicts with a reserved public prop/);
   });
+
+  it('drops aliases onto forwarded variants and __proto__ aliases in lean mode', () => {
+    const config = {
+      base: 'inline-flex',
+      variants: { size: { sm: 'text-sm' } },
+    };
+    const input = JSON.parse(
+      '{"size":"sm","htmlSize":"H","__proto__":"P"}'
+    ) as never;
+    const options = {
+      forwardProps: ['size'],
+      propAliases: { size: 'htmlSize', title: '__proto__' },
+    } as never;
+    const strict = defineConfig({ validate: 'always' }).recipe(config);
+
+    expect(recipe(config).resolve(input, options).resolvedProps).toEqual({
+      className: 'inline-flex text-sm',
+      htmlSize: 'H',
+      size: 'sm',
+    });
+    expect(() =>
+      strict.resolve(input, {
+        forwardProps: ['size'],
+        propAliases: { size: 'htmlSize' },
+      } as never)
+    ).toThrow(/forwardProps key "size" conflicts with propAliases target/);
+    expect(() =>
+      strict.resolve(input, { propAliases: { title: '__proto__' } } as never)
+    ).toThrow(/prop alias "__proto__" is not allowed/);
+  });
 });

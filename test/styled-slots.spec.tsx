@@ -378,4 +378,17 @@ describe('styled() slotted recipes', () => {
       );
     }
   });
+
+  it('validates a slotted className like a root className in strict mode', () => {
+    const strict = defineConfig({ validate: 'always' });
+    const Card = strict.styled(
+      'article',
+      strict.recipe({ slots: { root: 'r' } }),
+      { view: ({ host }) => host.render() }
+    );
+
+    expect(() => render(<Card className={false as never} />)).toThrow(
+      /invalid slot input\.className/
+    );
+  });
 });

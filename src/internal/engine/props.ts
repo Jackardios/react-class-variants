@@ -81,8 +81,8 @@ export function createResolvedProps(
   }
 
   // forwardProps keys are declared variants, which the copy loop never
-  // copies, and they cannot double as alias targets (see
-  // normalizeResolveOptions), so nothing can be overwritten here.
+  // copies, and aliases targeting them are rejected or dropped (see
+  // getPropAliasProblem), so nothing can be overwritten here.
   const forwardPropEntries = options?.forwardPropEntries;
   if (forwardPropEntries !== undefined) {
     for (const [key, index] of forwardPropEntries) {
@@ -102,14 +102,19 @@ function isNormalizedResolveOptions(
 function getPropAliasProblem(
   mode: CompiledRecipe['mode'],
   variantIndex: Readonly<VariantIndex>,
-  aliasKeys: Readonly<Record<string, true>> | undefined,
+  aliasKeys: SkipKeys | undefined,
+  forwardProps: readonly string[] | undefined,
   nativeKey: string,
   aliasKey: string
 ) {
   // Writing resolvedProps['__proto__'] would swap its prototype instead of
-  // copying data (see createResolvedProps).
+  // copying data, and the copy loop drops a '__proto__' input key, so an
+  // alias on either side could never apply as data (see createResolvedProps).
   if (nativeKey === '__proto__') {
     return 'prop alias target "__proto__" is not allowed.';
+  }
+  if (aliasKey === '__proto__') {
+    return 'prop alias "__proto__" is not allowed.';
   }
   if (isReservedPublicProp(mode, nativeKey)) {
     return `prop alias target "${nativeKey}" conflicts with a reserved public prop.`;
@@ -122,6 +127,9 @@ function getPropAliasProblem(
   }
   if (aliasKeys !== undefined && aliasKeys[aliasKey] === true) {
     return `prop alias "${aliasKey}" cannot be reused.`;
+  }
+  if (forwardProps?.includes(nativeKey)) {
+    return `forwardProps key "${nativeKey}" conflicts with propAliases target "${nativeKey}".`;
   }
   return undefined;
 }
@@ -156,6 +164,7 @@ export function normalizeResolveOptions(
         compiled.mode,
         variantIndex,
         aliasKeys,
+        forwardProps,
         nativeKey,
         aliasKey
       );
@@ -184,15 +193,6 @@ export function normalizeResolveOptions(
       if (compiled.validate && index === undefined) {
         throw new Error(
           `react-class-variants: forwardProps key "${key}" is not declared in variants.`
-        );
-      }
-
-      if (
-        compiled.validate &&
-        propAliasEntries?.some(([nativeKey]) => nativeKey === key)
-      ) {
-        throw new Error(
-          `react-class-variants: forwardProps key "${key}" conflicts with propAliases target "${key}".`
         );
       }
 

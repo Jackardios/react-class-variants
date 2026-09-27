@@ -395,4 +395,25 @@ describe('styled() view components', () => {
       'react-class-variants: viewProps key "htmlSize" conflicts with a prop alias public key.'
     );
   });
+
+  it('keeps reserved props working when lean viewProps list them', () => {
+    const Badge = styled(
+      'div',
+      recipe({ base: 'b', variants: { tone: { info: 't-info' } } }),
+      {
+        viewProps: { keys: ['className', 'children'] } as never,
+        view: ({ host }) => host.render(),
+      }
+    );
+
+    render(
+      <Badge tone="info" className="uc" data-testid="badge">
+        kid
+      </Badge>
+    );
+
+    const badge = screen.getByTestId('badge');
+    expect(badge.className).toBe('b t-info uc');
+    expect(badge.textContent).toBe('kid');
+  });
 });

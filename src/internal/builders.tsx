@@ -63,7 +63,8 @@ type HostSetup = {
   base: AnyElementType;
   // viewProps keys: visible in host.props, never rendered.
   consumed: SkipKeys | undefined;
-  // host.render() override keys handled outside assignMergedProps.
+  // host.render() override keys assignMergedProps skips: className, ref, and
+  // render are merged separately, viewProps keys are dropped.
   overrideSkip: SkipKeys;
   withRender: boolean;
 };
