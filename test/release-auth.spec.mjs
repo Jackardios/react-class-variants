@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import {
+  isNpmAuthError,
   resolveReleaseToken,
   sanitizeNpmCliEnv,
 } from '../scripts/npm-release-auth.mjs';
@@ -25,20 +26,30 @@ describe('npm release auth helpers', () => {
   it('resolves the dist-tag token in precedence order', () => {
     expect(
       resolveReleaseToken({
-        NODE_AUTH_TOKEN: 'node-token',
         NPM_TOKEN: 'npm-token',
         RELEASE_NPM_AUTH_TOKEN: 'release-token',
       })
     ).toBe('release-token');
+    expect(resolveReleaseToken({ NPM_TOKEN: 'npm-token' })).toBe('npm-token');
+  });
+
+  // actions/setup-node exports a placeholder NODE_AUTH_TOKEN when
+  // `registry-url` is set, so it must never count as a configured token.
+  it('ignores NODE_AUTH_TOKEN', () => {
     expect(
-      resolveReleaseToken({
-        NODE_AUTH_TOKEN: 'node-token',
-        NPM_TOKEN: 'npm-token',
+      resolveReleaseToken({ NODE_AUTH_TOKEN: 'XXXXX-XXXXX-XXXXX-XXXXX' })
+    ).toBe(null);
+  });
+
+  it('tells auth failures apart from other npm errors', () => {
+    expect(
+      isNpmAuthError({
+        stderr: 'npm error code E401\nnpm error 401 Unauthorized',
       })
-    ).toBe('npm-token');
-    expect(resolveReleaseToken({ NODE_AUTH_TOKEN: 'node-token' })).toBe(
-      'node-token'
-    );
+    ).toBe(true);
+    expect(isNpmAuthError({ stderr: 'npm error code E403' })).toBe(true);
+    expect(isNpmAuthError({ stderr: 'npm error code ETIMEDOUT' })).toBe(false);
+    expect(isNpmAuthError(new Error('socket hang up'))).toBe(false);
   });
 
   // Trusted publishing (OIDC) only authenticates `npm publish`, and an unset

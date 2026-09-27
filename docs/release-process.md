@@ -165,7 +165,7 @@ These settings live outside the repository and should be reviewed periodically.
 
 - keep trusted publishing configured for `react-class-variants`
 - keep the package's trusted publisher configuration pointed at `.github/workflows/release.yml` on `Jackardios/react-class-variants`
-- a repository-level `NPM_TOKEN` secret is not required for publish; when it is set, the release workflow passes it to the dist-tag steps as `RELEASE_NPM_AUTH_TOKEN` and repairs dist-tags automatically, otherwise drift must be repaired manually
+- a repository-level `NPM_TOKEN` secret is not required for publish; when it is set, the release workflow passes it to the dist-tag steps as `RELEASE_NPM_AUTH_TOKEN` and repairs dist-tags automatically, otherwise drift must be repaired manually; an expired or revoked token only produces a warning with the manual commands and never blocks the publish
 - if legacy releases still matter, keep trusted publishing configured for `react-tailwind-variants`
 - optional manual repair still needs interactive npm auth or a valid npm token outside the trusted-publishing workflow
 

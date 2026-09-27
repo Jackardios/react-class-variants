@@ -190,7 +190,7 @@ Do not treat any one of those layers as authoritative on its own. The shipped co
 - The release workflow dispatches `CI` for the `changeset-release/next` branch after it updates the version-package PR, so release PRs receive the same checks as normal PRs.
 - GitHub release bodies are generated from the matching `CHANGELOG.md` section.
 - Before publishing, the release workflow validates GitHub release/changelog readiness and checks whether automated npm dist-tag repair is available in the current environment.
-- On GitHub Actions, npm trusted publishing covers `npm publish`, but npm currently requires interactive auth or a token for `dist-tag` mutations, so runs without an `NPM_TOKEN` secret log manual repair commands instead of attempting the mutation.
+- On GitHub Actions, npm trusted publishing covers `npm publish`, but npm currently requires interactive auth or a token for `dist-tag` mutations, so runs without a usable `NPM_TOKEN` secret log manual repair commands instead of attempting or failing the mutation.
 - The publish step is intentionally rerunnable: if npm publication already succeeded on a prior attempt, the workflow skips republishing, treats an already-tagged earlier release commit as a clean no-op on newer commits, and only recreates the local `v*` tag when `HEAD` is the commit that introduced the version.
 - After a successful alpha publish, verify npm dist-tags explicitly. Token-authenticated repair can sync them to repo policy automatically; runs without a token leave any required `dist-tag add` commands in the logs for manual follow-up.
 - Post-publish reconciliation still attempts GitHub Release sync independently of npm tag state, so a manual npm follow-up does not block release-page repair.
