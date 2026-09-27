@@ -72,7 +72,7 @@ type HostSetup = {
 type HostState = {
   children: ReactNode;
   className: string;
-  forwardedRef: Ref<unknown> | undefined;
+  ref: Ref<unknown> | undefined;
   props: Record<string, unknown>;
   render: RenderProp | undefined;
   setup: HostSetup;
@@ -137,7 +137,7 @@ function renderHostView(
   props.children = state.children;
   props.className = state.className;
 
-  let ref = state.forwardedRef;
+  let ref = state.ref;
   let render = state.render;
 
   if (overrides) {
@@ -288,7 +288,7 @@ function createRootViewComponent(
       host: createHostView({
         children: rawProps.children as ReactNode,
         className: resolved.className,
-        forwardedRef: rawProps.ref as Ref<unknown> | undefined,
+        ref: rawProps.ref as Ref<unknown> | undefined,
         props: resolved.props,
         render: setup.withRender
           ? (rawProps.render as RenderProp | undefined)
@@ -333,7 +333,7 @@ function createSlotViewComponent(
           resolved.slotClassNames,
           rawProps.className as ClassNameValue | undefined
         ),
-        forwardedRef: rawProps.ref as Ref<unknown> | undefined,
+        ref: rawProps.ref as Ref<unknown> | undefined,
         props: resolved.props,
         render: setup.withRender
           ? (rawProps.render as RenderProp | undefined)

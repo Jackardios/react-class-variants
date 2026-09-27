@@ -134,6 +134,7 @@ Does not export React runtime helpers such as `styled()`, `mergeProps()`, or ref
 
 - The only React builder.
 - Supports intrinsic elements and custom React component bases.
+- Returns a plain React 19 function component; `ref` is a regular prop (no `forwardRef`).
 - Slotted recipes require `view`.
 - `withRender` is supported only for intrinsic bases.
 
