@@ -22,7 +22,7 @@ Install dependencies:
 pnpm install
 ```
 
-CI and the release gate both run `pnpm run verify` on Node `20.x`, `22.x`, and `24.x`. Local development only needs to satisfy the package minimum in `package.json`, but it is useful to keep the full support matrix in mind when touching runtime or packaging behavior.
+CI and the release gate both run `pnpm run verify` on Node `20.x`, `22.x`, and `24.x`; CI also runs `pnpm run check:overhead` once. Local development only needs to satisfy the package minimum in `package.json`, but it is useful to keep the full support matrix in mind when touching runtime or packaging behavior.
 
 ## Typical Contributor Flow
 
@@ -96,7 +96,10 @@ pnpm bench:diagnostics:competitors
 pnpm bench:competitors
 pnpm bench:overhead
 pnpm check:overhead
+pnpm check:overhead:update
 ```
+
+`pnpm check:overhead` runs in CI against the committed `bench/overhead/baseline.json`. When a change intentionally moves the bundle budget, run `pnpm check:overhead:update` and commit the new baseline in the same PR.
 
 Use these when:
 
@@ -135,7 +138,7 @@ Add a changeset for any:
 Notes:
 
 - documentation-only changes usually do not need a changeset
-- if a PR intentionally touches release-affecting files but should not ship a version, use an empty changeset
+- if a PR intentionally touches release-affecting files but should not ship a version, add an empty changeset with `pnpm changeset add --empty`
 - if a prerelease redesign replaces an unreleased API, rewrite or delete stale pending `.changeset/*.md` files before the next alpha so `changeset pre exit` does not carry obsolete notes into the stable release plan
 
 Use:
@@ -181,9 +184,9 @@ Do not treat any one of those layers as authoritative on its own. The shipped co
 - The release workflow dispatches `CI` for the `changeset-release/next` branch after it updates the version-package PR, so release PRs receive the same checks as normal PRs.
 - GitHub release bodies are generated from the matching `CHANGELOG.md` section.
 - Before publishing, the release workflow validates GitHub release/changelog readiness and checks whether automated npm dist-tag repair is available in the current environment.
-- On GitHub Actions, npm trusted publishing covers `npm publish`, but npm currently requires interactive auth or a token for `dist-tag` mutations, so OIDC-only runs log manual repair commands instead of attempting the mutation.
-- The publish step is intentionally rerunnable: if npm publication already succeeded on a prior attempt, the workflow skips republishing, treats an already-tagged earlier release commit as a clean no-op on newer commits, and only recreates the local `v*` tag when it has a provenance signal for the current `HEAD`.
-- After a successful alpha publish, verify npm dist-tags explicitly. Token-authenticated repair can sync them to repo policy automatically; OIDC-only runs leave any required `dist-tag add` commands in the logs for manual follow-up.
+- On GitHub Actions, npm trusted publishing covers `npm publish`, but npm currently requires interactive auth or a token for `dist-tag` mutations, so runs without an `NPM_TOKEN` secret log manual repair commands instead of attempting the mutation.
+- The publish step is intentionally rerunnable: if npm publication already succeeded on a prior attempt, the workflow skips republishing, treats an already-tagged earlier release commit as a clean no-op on newer commits, and only recreates the local `v*` tag when `HEAD` is the commit that introduced the version.
+- After a successful alpha publish, verify npm dist-tags explicitly. Token-authenticated repair can sync them to repo policy automatically; runs without a token leave any required `dist-tag add` commands in the logs for manual follow-up.
 - Post-publish reconciliation still attempts GitHub Release sync independently of npm tag state, so a manual npm follow-up does not block release-page repair.
 - The npm post-publish path waits through short registry propagation delays before deciding that a freshly published version or dist-tag update is still missing.
 - The current workflow is also valid for the stable `2.0.0` release from `next`; if the active release branch changes after alpha, update the workflow branch filters together with that policy change.

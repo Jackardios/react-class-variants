@@ -8,28 +8,8 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
   verify:
-    name: Verify Release (Node ${{ matrix.node-version }})
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: [20.x, 22.x, 24.x]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v5
-        with:
-          version: 10
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'pnpm'
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Verify
-        run: pnpm run verify
+    name: Verify Release
+    uses: ./.github/workflows/verify.yml
 
   publish:
     name: Release
@@ -79,6 +59,8 @@ jobs:
         run: pnpm run release:github:preflight
       - name: Check npm dist-tag repair availability
         if: steps.changesets.outputs.hasChangesets == 'false'
+        env:
+          RELEASE_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: pnpm run release:dist-tags:preflight
       - name: Publish package to npm
         if: steps.changesets.outputs.hasChangesets == 'false'
@@ -98,6 +80,8 @@ jobs:
         if: steps.changesets.outputs.hasChangesets == 'false'
         id: sync_dist_tags
         continue-on-error: true
+        env:
+          RELEASE_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: pnpm run release:dist-tags
       - name: Create or update GitHub releases
         if: steps.changesets.outputs.hasChangesets == 'false'

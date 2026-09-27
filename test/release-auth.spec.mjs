@@ -1,34 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
-  buildGitHubActionsIdTokenUrl,
-  getReleaseAuthStrategy,
+  resolveReleaseToken,
   sanitizeNpmCliEnv,
 } from '../scripts/npm-release-auth.mjs';
 
 describe('npm release auth helpers', () => {
-  it('prefers GitHub OIDC over explicit tokens by default', () => {
-    expect(
-      getReleaseAuthStrategy({
-        ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'request-token',
-        ACTIONS_ID_TOKEN_REQUEST_URL:
-          'https://token.actions.githubusercontent.com',
-        NODE_AUTH_TOKEN: 'npm-token',
-      })
-    ).toBe('oidc');
-  });
-
-  it('honors explicit token mode when requested', () => {
-    expect(
-      getReleaseAuthStrategy({
-        ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'request-token',
-        ACTIONS_ID_TOKEN_REQUEST_URL:
-          'https://token.actions.githubusercontent.com',
-        NODE_AUTH_TOKEN: 'npm-token',
-        RELEASE_NPM_AUTH_MODE: 'token',
-      })
-    ).toBe('token');
-  });
-
   it('removes pnpm-specific npm config env keys before invoking npm cli', () => {
     const env = sanitizeNpmCliEnv({
       PATH: '/usr/bin',
@@ -45,13 +21,39 @@ describe('npm release auth helpers', () => {
     expect(env.npm_config_verify_deps_before_run).toBeUndefined();
   });
 
-  it('appends the npm audience to the GitHub OIDC request URL', () => {
+  it('resolves the dist-tag token in precedence order', () => {
     expect(
-      buildGitHubActionsIdTokenUrl(
-        'https://token.actions.githubusercontent.com/?existing=value'
-      )
-    ).toBe(
-      'https://token.actions.githubusercontent.com/?existing=value&audience=npm%3Aregistry.npmjs.org'
+      resolveReleaseToken({
+        NODE_AUTH_TOKEN: 'node-token',
+        NPM_TOKEN: 'npm-token',
+        RELEASE_NPM_AUTH_TOKEN: 'release-token',
+      })
+    ).toBe('release-token');
+    expect(
+      resolveReleaseToken({
+        NODE_AUTH_TOKEN: 'node-token',
+        NPM_TOKEN: 'npm-token',
+      })
+    ).toBe('npm-token');
+    expect(resolveReleaseToken({ NODE_AUTH_TOKEN: 'node-token' })).toBe(
+      'node-token'
     );
+  });
+
+  // Trusted publishing (OIDC) only authenticates `npm publish`, and an unset
+  // secret reaches the workflow step as an empty string.
+  it('uses a configured token even when GitHub OIDC is available', () => {
+    const oidcEnv = {
+      ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'request-token',
+      ACTIONS_ID_TOKEN_REQUEST_URL:
+        'https://token.actions.githubusercontent.com',
+    };
+
+    expect(
+      resolveReleaseToken({ ...oidcEnv, RELEASE_NPM_AUTH_TOKEN: 'npm-token' })
+    ).toBe('npm-token');
+    expect(
+      resolveReleaseToken({ ...oidcEnv, RELEASE_NPM_AUTH_TOKEN: '' })
+    ).toBe(null);
   });
 });

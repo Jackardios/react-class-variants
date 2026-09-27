@@ -1,15 +1,22 @@
 import { createRequire } from 'node:module';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   doesFirstParentIntroduceVersion,
   planReleasePublish,
 } from '../scripts/release-publish.mjs';
-import { extractReleaseNotes } from '../scripts/release-shared.mjs';
+import {
+  extractReleaseNotes,
+  pollUntil,
+  warnAnnotation,
+} from '../scripts/release-shared.mjs';
 import { computeDesiredDistTags } from '../scripts/sync-dist-tags.mjs';
 import { buildGitHubReleasePayload } from '../scripts/sync-github-releases.mjs';
 
 const require = createRequire(import.meta.url);
-const { parseChangesetFile } = require('../scripts/check-changeset.cjs');
+const {
+  isReleaseAffecting,
+  parseChangesetFile,
+} = require('../scripts/check-changeset.cjs');
 
 describe('release notes extraction', () => {
   it('returns the matching changelog section body', () => {
@@ -72,18 +79,29 @@ describe('release publish planning', () => {
     ).toBe(false);
   });
 
-  it('skips republish and recreates the local tag when registry provenance matches HEAD', () => {
+  it('publishes an unpublished version', () => {
     expect(
       planReleasePublish({
         headSha: 'abc123',
-        headIntroducesVersion: false,
+        headIntroducesVersion: true,
         localTagTarget: null,
-        publishedGitHead: 'abc123',
+        tag: 'v2.0.0-alpha.8',
+        versionPublished: false,
+      })
+    ).toEqual({ mode: 'publish', publishedCommitHint: null });
+  });
+
+  it('reconciles a rerun on the already-tagged release commit', () => {
+    expect(
+      planReleasePublish({
+        headSha: 'abc123',
+        headIntroducesVersion: true,
+        localTagTarget: 'abc123',
         tag: 'v2.0.0-alpha.8',
         versionPublished: true,
       })
     ).toEqual({
-      mode: 'restore-missing-tag',
+      mode: 'reconcile-current-head',
       publishedCommitHint: 'abc123',
     });
   });
@@ -94,7 +112,6 @@ describe('release publish planning', () => {
         headSha: 'abc123',
         headIntroducesVersion: false,
         localTagTarget: 'def456',
-        publishedGitHead: null,
         tag: 'v2.0.0-alpha.8',
         versionPublished: true,
       })
@@ -110,7 +127,6 @@ describe('release publish planning', () => {
         headSha: 'abc123',
         headIntroducesVersion: false,
         localTagTarget: null,
-        publishedGitHead: null,
         tag: 'v2.0.0-alpha.8',
         versionPublished: true,
       })
@@ -126,7 +142,6 @@ describe('release publish planning', () => {
         headSha: 'abc123',
         headIntroducesVersion: true,
         localTagTarget: null,
-        publishedGitHead: null,
         tag: 'v2.0.0-alpha.8',
         versionPublished: true,
       })
@@ -142,7 +157,6 @@ describe('release publish planning', () => {
         headSha: 'abc123',
         headIntroducesVersion: false,
         localTagTarget: 'zzz999',
-        publishedGitHead: null,
         tag: 'v2.0.0-alpha.8',
         versionPublished: false,
       })
@@ -177,6 +191,21 @@ describe('release metadata helpers', () => {
       )
     ).toEqual({
       latest: '2.0.0',
+    });
+  });
+
+  it('keeps latest on the newest stable release when a prerelease follows it', () => {
+    expect(
+      Object.fromEntries(
+        computeDesiredDistTags({
+          prereleaseTag: 'alpha',
+          publishedVersion: '2.11.0-alpha.0',
+          publishedVersions: ['2.9.0', '2.10.0', '2.11.0-alpha.0', '2.2.0'],
+        })
+      )
+    ).toEqual({
+      alpha: '2.11.0-alpha.0',
+      latest: '2.10.0',
     });
   });
 
@@ -229,6 +258,29 @@ Document a no-release repo maintenance change.
     });
   });
 
+  it('accepts empty changesets written by `changeset add --empty`', () => {
+    // Raw @changesets/write output for `--empty` (before prettier) and the
+    // prettier-formatted variant that lands on disk.
+    for (const contents of ['---\n\n---\n\n\n  ', '---\n---\n']) {
+      expect(parseChangesetFile('.changeset/empty.md', contents)).toEqual({
+        body: '',
+        releases: [],
+      });
+    }
+  });
+
+  it('still requires a summary for changesets that release packages', () => {
+    expect(() =>
+      parseChangesetFile(
+        '.changeset/example.md',
+        `---
+'react-class-variants': patch
+---
+`
+      )
+    ).toThrow(/must include a non-empty summary body/);
+  });
+
   it('rejects malformed frontmatter before release time', () => {
     expect(() =>
       parseChangesetFile(
@@ -239,5 +291,66 @@ Broken changeset file.
 `
       )
     ).toThrow(/must start with YAML frontmatter/);
+  });
+});
+
+describe('release shared helpers', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it('polls until the predicate accepts a value and returns the last read', async () => {
+    const reads = [null, 'pending', 'done'];
+    const read = vi.fn(() => reads.shift());
+
+    await expect(
+      pollUntil(read, value => value === 'done', { stepMs: 0 })
+    ).resolves.toBe('done');
+    expect(read).toHaveBeenCalledTimes(3);
+
+    await expect(
+      pollUntil(
+        () => 'stale',
+        () => false,
+        { attempts: 2, stepMs: 0 }
+      )
+    ).resolves.toBe('stale');
+  });
+
+  it('escapes multi-line GitHub Actions annotations', () => {
+    vi.stubEnv('GITHUB_ACTIONS', 'true');
+    const log = vi
+      .spyOn(globalThis.console, 'log')
+      .mockImplementation(() => {});
+
+    warnAnnotation('100% done\r\nnext line');
+
+    expect(log).toHaveBeenCalledWith('::warning::100%25 done%0D%0Anext line');
+  });
+});
+
+describe('changeset coverage rules', () => {
+  it('requires changesets only for files that reach the package or its release', () => {
+    for (const file of [
+      'src/index.ts',
+      'package.json',
+      'tsconfig.json',
+      '.github/workflows/release.yml',
+    ]) {
+      expect(isReleaseAffecting(file), file).toBe(true);
+    }
+
+    for (const file of [
+      'test/recipe.spec.ts',
+      'tsconfig.test.json',
+      'tsconfig.build.json',
+      'vite.config.ts',
+      'eslint.config.mjs',
+      'docs/api-reference.md',
+      'scripts/release-publish.mjs',
+    ]) {
+      expect(isReleaseAffecting(file), file).toBe(false);
+    }
   });
 });

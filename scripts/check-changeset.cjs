@@ -47,14 +47,14 @@ function resolveBaseRef(baseBranch) {
   );
 }
 
+// Sources, the manifest, and the tsconfig.json that tsup builds with change the
+// published package; workflows change how it is released. Test, lint, and
+// type-check configs never reach the package.
 function isReleaseAffecting(file) {
   return (
     file.startsWith('src/') ||
     file === 'package.json' ||
-    file === 'tsd.json' ||
-    /^tsconfig(\..+)?\.json$/.test(file) ||
-    /^vite\.config\.[cm]?[jt]s$/.test(file) ||
-    /^eslint\.config\.[cm]?js$/.test(file) ||
+    file === 'tsconfig.json' ||
     file.startsWith('.github/workflows/')
   );
 }
@@ -113,7 +113,9 @@ function parseChangesetFile(filePath, contents) {
     }
   }
 
-  if (!body) {
+  // `changeset add --empty` writes empty frontmatter and no body; that is the
+  // documented way to mark a PR as intentionally no-release.
+  if (!body && releases.length > 0) {
     throw new Error(`${filePath} must include a non-empty summary body.`);
   }
 
@@ -166,7 +168,10 @@ function main() {
   ).sort();
 
   const releaseAffectingFiles = changedFiles.filter(isReleaseAffecting);
-  const hasChangeset = changedFiles.some(isChangesetFile);
+  // A deleted changeset does not cover anything.
+  const hasChangeset = changedFiles.some(
+    file => isChangesetFile(file) && fs.existsSync(file)
+  );
 
   if (releaseAffectingFiles.length === 0) {
     console.log(
@@ -185,12 +190,13 @@ function main() {
     console.error(`- ${file}`);
   }
   console.error(
-    '\nAdd a .changeset/*.md file for release intent, or add an empty changeset if the PR should stay no-release by design.'
+    '\nAdd a changeset with `pnpm changeset`, or run `pnpm changeset add --empty` if the PR should stay no-release by design.'
   );
   process.exit(1);
 }
 
 module.exports = {
+  isReleaseAffecting,
   parseChangesetFile,
   validateChangesetFiles,
 };

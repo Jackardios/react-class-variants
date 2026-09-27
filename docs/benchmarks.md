@@ -61,9 +61,9 @@ This includes:
 - synthetic TypeScript diagnostics
 
 `bench/overhead/reports/current.json` is a local measurement artifact, not the
-committed historical baseline. Use it to inspect the current run, and use
+committed baseline. Use it to inspect the current run, and use
 `pnpm check:overhead` when you need pass/fail regression checks against the
-configured baseline ref.
+committed baseline in `bench/overhead/baseline.json`.
 
 The overhead pipeline measures both the package root React surface and the `react-class-variants/core` entrypoint so recipe-only consumers are represented separately.
 
@@ -75,14 +75,23 @@ Use this for:
 
 - pass/fail regression checks instead of raw measurement output
 - bundle-sensitive entrypoint changes
-- validating a change against the repo's configured baseline ref
+- validating a change against the committed bundle baseline
 
-The package script currently checks bundle regressions for the recipe-only and
-slotted-recipe profiles. For ad hoc comparisons or custom thresholds, run the
-check script directly with its CLI flags.
+The package script compares gzip sizes against
+[`bench/overhead/baseline.json`](../bench/overhead/baseline.json): recipe-only
+and slotted-recipe profiles may grow by at most 15%, the component profile by
+at most 10%. CI runs this gate on every pull request.
 
-The current package script compares against the baseline ref configured in
-`package.json`, currently `4fe016c`.
+When a change intentionally moves the bundle budget, regenerate the baseline and
+commit it in the same PR:
+
+```bash
+pnpm check:overhead:update
+```
+
+For ad hoc comparisons against another commit, run the check script directly
+with `--baseline-ref <git-ref>` (it builds that ref in a temporary directory) or
+with custom thresholds such as `--recipe-max-regression 0.05`.
 
 ## Directory Layout
 

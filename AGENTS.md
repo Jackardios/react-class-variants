@@ -80,7 +80,8 @@ pnpm bench
 pnpm bench:diagnostics:competitors
 pnpm bench:competitors
 pnpm bench:overhead
-pnpm check:overhead
+pnpm check:overhead        # gzip gate against bench/overhead/baseline.json (also runs in CI)
+pnpm check:overhead:update # rewrite the baseline when a PR intentionally changes bundle size
 ```
 
 Use these only when you touch hot paths, entry points, or bundle-size-sensitive behavior. See `docs/benchmarks.md` for the full benchmark workflow.
@@ -241,13 +242,15 @@ For changes that touch recipe resolution, class merging, `styled()` behavior, pr
 - Alpha releases publish from `next`.
 - Changesets prerelease mode is active under the `alpha` tag.
 - `changeset publish` creates the canonical `v*` git tag.
-- The `Release` workflow verifies the same Node `20.x` / `22.x` / `24.x` matrix as CI before publishing.
+- `CI` and `Release` share the reusable `.github/workflows/verify.yml` matrix (Node `20.x` / `22.x` / `24.x`). `CI` also runs `check:overhead` and reports everything as the single `build` check that branch protection requires on `next` and `main`.
+- `CI` runs on pull requests and on pushes to `main` and `v1-maintenance`; pushes to `next` are verified by `Release`.
+- Use `pnpm changeset add --empty` when a PR touches release-affecting files but should not ship a version.
 - The `Release` workflow manually dispatches `CI` on `changeset-release/next` after `changesets/action` updates the release branch, because pushes made with the default GitHub Actions token do not trigger `push` or `pull_request` workflows.
 - GitHub release bodies are generated from the matching `CHANGELOG.md` section for each `v*` tag.
 - Before publish, the workflow validates changeset file structure and GitHub release/changelog readiness, and it checks whether automated dist-tag repair is available in the current environment.
-- The publish path is rerunnable after a partial success: if the version is already on npm, the workflow skips republishing, treats an already-tagged earlier release commit as a clean no-op on newer commits, and restores the local release tag only when it has a provenance signal for the current `HEAD`.
+- The publish path is rerunnable after a partial success: if the version is already on npm, the workflow skips republishing, treats an already-tagged earlier release commit as a clean no-op on newer commits, and restores the local release tag only when `HEAD` is the commit that introduced the version.
 - Dist-tags follow an explicit policy in CI: prereleases move `alpha` to the published version and keep `latest` on the newest stable release when one exists, otherwise `latest` remains on the published prerelease. Stable publishes move `latest`.
-- Post-publish reconciliation always attempts GitHub Release sync. npm dist-tag sync is attempted only when token-based auth is available; OIDC-only runs log the required manual repair commands instead of failing the publish.
+- Post-publish reconciliation always attempts GitHub Release sync. npm dist-tag sync is attempted only when the `NPM_TOKEN` secret is set; OIDC-only runs log the required manual repair commands instead of failing the publish.
 - npm registry reads in the release path are retry-aware so short propagation delays after publish do not immediately look like missing versions or broken dist-tags.
 - The current automation covers alpha releases and the stable `2.0.0` publish from `next`; if the release branch changes after alpha, update the workflow branch filters in the same change.
 

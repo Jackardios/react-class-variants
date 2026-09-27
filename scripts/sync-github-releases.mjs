@@ -1,27 +1,11 @@
-import { execFile } from 'node:child_process';
-import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { promisify } from 'node:util';
 import { githubApi, getGitHubRepository } from './github-api.mjs';
 import {
   extractReleaseNotes,
+  git,
+  isMainModule,
   isPrereleaseVersion,
   readChangelog,
 } from './release-shared.mjs';
-
-const execFileAsync = promisify(execFile);
-const isMain =
-  process.argv[1] &&
-  fileURLToPath(import.meta.url) === resolve(process.argv[1]);
-
-async function git(args) {
-  const { stdout } = await execFileAsync('git', args, {
-    env: process.env,
-    maxBuffer: 1024 * 1024 * 10,
-  });
-
-  return stdout.trim();
-}
 
 async function getReleaseTagsAtHead() {
   const output = await git(['tag', '--points-at', 'HEAD', 'v*']);
@@ -100,6 +84,6 @@ export async function syncGitHubReleases() {
   }
 }
 
-if (isMain) {
+if (isMainModule(import.meta.url)) {
   await syncGitHubReleases();
 }

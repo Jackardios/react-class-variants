@@ -1,84 +1,21 @@
-import { execFile } from 'node:child_process';
-import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { promisify } from 'node:util';
-import { sanitizeNpmCliEnv } from './npm-release-auth.mjs';
-import { buildReleaseTag, readPackageJson } from './release-shared.mjs';
+import {
+  buildReleaseTag,
+  git,
+  gitMaybe,
+  isMainModule,
+  npmView,
+  pollUntil,
+  readPackageJson,
+  runInherited,
+} from './release-shared.mjs';
 
-const execFileAsync = promisify(execFile);
-const isMain =
-  process.argv[1] &&
-  fileURLToPath(import.meta.url) === resolve(process.argv[1]);
-
-async function git(args) {
-  const { stdout } = await execFileAsync('git', args, {
-    env: process.env,
-    maxBuffer: 1024 * 1024 * 10,
-  });
-
-  return stdout.trim();
-}
-
-async function gitMaybe(args) {
-  try {
-    return await git(args);
-  } catch {
-    return null;
-  }
-}
-
-async function npmView(packageSpec, field) {
-  try {
-    const { stdout } = await execFileAsync(
-      'npm',
-      ['view', packageSpec, field, '--json'],
-      {
-        env: sanitizeNpmCliEnv(process.env),
-        maxBuffer: 1024 * 1024 * 10,
-      }
-    );
-
-    return stdout.trim() ? JSON.parse(stdout) : null;
-  } catch (error) {
-    const stderr = `${error.stderr ?? ''}`;
-
-    if (stderr.includes('E404')) {
-      return null;
-    }
-
-    throw error;
-  }
-}
-
-function delay(ms) {
-  return new Promise(resolvePromise => {
-    setTimeout(resolvePromise, ms);
-  });
-}
-
-async function waitForPublishedValue({ field, packageSpec, predicate }) {
-  let lastValue = null;
-
-  for (let attempt = 1; attempt <= 8; attempt += 1) {
-    lastValue = await npmView(packageSpec, field);
-
-    if (predicate(lastValue)) {
-      return lastValue;
-    }
-
-    if (attempt < 8) {
-      await delay(attempt * 1500);
-    }
-  }
-
-  return lastValue;
-}
-
+// npm keeps no commit provenance for pnpm publishes, so the local release tag
+// and the first-parent version bump are the only links between HEAD and an
+// already published version.
 export function planReleasePublish({
   headSha,
   headIntroducesVersion,
   localTagTarget,
-  publishedGitHead,
   tag,
   versionPublished,
 }) {
@@ -89,51 +26,25 @@ export function planReleasePublish({
   }
 
   if (!versionPublished) {
-    return {
-      mode: 'publish',
-      publishedCommitHint: null,
-    };
+    return { mode: 'publish', publishedCommitHint: null };
   }
 
   if (localTagTarget === headSha) {
-    return {
-      mode: 'reconcile-current-head',
-      publishedCommitHint: headSha,
-    };
+    return { mode: 'reconcile-current-head', publishedCommitHint: headSha };
   }
 
-  if (localTagTarget && localTagTarget !== headSha) {
+  if (localTagTarget) {
     return {
       mode: 'already-published-elsewhere',
       publishedCommitHint: localTagTarget,
     };
   }
 
-  if (publishedGitHead === headSha) {
-    return {
-      mode: 'restore-missing-tag',
-      publishedCommitHint: publishedGitHead,
-    };
-  }
-
-  if (publishedGitHead && publishedGitHead !== headSha) {
-    return {
-      mode: 'already-published-elsewhere',
-      publishedCommitHint: publishedGitHead,
-    };
-  }
-
   if (headIntroducesVersion) {
-    return {
-      mode: 'restore-missing-tag',
-      publishedCommitHint: headSha,
-    };
+    return { mode: 'restore-missing-tag', publishedCommitHint: headSha };
   }
 
-  return {
-    mode: 'already-published-elsewhere',
-    publishedCommitHint: null,
-  };
+  return { mode: 'already-published-elsewhere', publishedCommitHint: null };
 }
 
 export function doesFirstParentIntroduceVersion(parentVersion, version) {
@@ -163,11 +74,11 @@ async function finalizePublishedRelease({
     console.log(`Release tag ${tag} already points at ${headSha}.`);
   }
 
-  const publishedVersion = await waitForPublishedValue({
-    field: 'version',
-    packageSpec: `${packageName}@${version}`,
-    predicate: value => value === version,
-  });
+  // The registry can lag behind a fresh publish, so poll before failing.
+  const publishedVersion = await pollUntil(
+    () => npmView(`${packageName}@${version}`, 'version'),
+    value => value === version
+  );
 
   if (publishedVersion !== version) {
     throw new Error(
@@ -182,10 +93,7 @@ async function ensureLocalTagAtHead(tag, headSha) {
   const currentTarget = await gitMaybe(['rev-parse', '--verify', `${tag}^{}`]);
 
   if (!currentTarget) {
-    await execFileAsync('git', ['tag', tag, headSha], {
-      env: process.env,
-      maxBuffer: 1024 * 1024 * 10,
-    });
+    await git(['tag', tag, headSha]);
     return 'created';
   }
 
@@ -226,43 +134,22 @@ export async function publishRelease() {
   const tag = buildReleaseTag(version);
   const headSha = await git(['rev-parse', 'HEAD']);
   const localTagTarget = await gitMaybe(['rev-parse', '--verify', `${tag}^{}`]);
+  // One read is enough: if registry lag hides an earlier publish, npm rejects
+  // the duplicate `changeset publish` and a rerun reconciles the release.
   const versionPublished =
-    (await waitForPublishedValue({
-      field: 'version',
-      packageSpec: `${packageName}@${version}`,
-      predicate: value => value === version,
-    })) === version;
-  const publishedGitHead = versionPublished
-    ? await npmView(`${packageName}@${version}`, 'gitHead')
-    : null;
+    (await npmView(`${packageName}@${version}`, 'version')) === version;
   const currentHeadIntroducesVersion = await headIntroducesVersion(version);
   const plan = planReleasePublish({
     headSha,
     headIntroducesVersion: currentHeadIntroducesVersion,
     localTagTarget,
-    publishedGitHead,
     tag,
     versionPublished,
   });
 
   if (plan.mode === 'publish') {
     console.log(`Publishing ${packageName}@${version} via changeset publish.`);
-    const { stderr, stdout } = await execFileAsync(
-      'pnpm',
-      ['exec', 'changeset', 'publish'],
-      {
-        env: process.env,
-        maxBuffer: 1024 * 1024 * 20,
-      }
-    );
-
-    if (stdout) {
-      process.stdout.write(stdout);
-    }
-
-    if (stderr) {
-      process.stderr.write(stderr);
-    }
+    await runInherited('pnpm', ['exec', 'changeset', 'publish']);
   } else if (plan.mode === 'already-published-elsewhere') {
     console.log(
       `Skipping publish because ${packageName}@${version} is already released${
@@ -285,6 +172,6 @@ export async function publishRelease() {
   });
 }
 
-if (isMain) {
+if (isMainModule(import.meta.url)) {
   await publishRelease();
 }
