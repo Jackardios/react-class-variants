@@ -7,6 +7,7 @@ import {
   type RecipeConfigOf,
   type RecipeInput,
   type RootStyledViewProps,
+  type VariantProps,
   type SlotStyledViewProps,
 } from 'react-class-variants';
 import {
@@ -409,3 +410,14 @@ MultipartButton({
 
 // @ts-expect-error validate: 'dev' was removed; use validate: 'always' explicitly
 defineConfig({ validate: 'dev' });
+
+// Root-entry type helpers must understand recipes created through the core
+// subpath: the two entries ship separate declaration files.
+type CoreButtonVariants = VariantProps<typeof coreButtonRecipe>;
+type _CrossEntryTone = Expect<
+  Equal<NonNullable<CoreButtonVariants['tone']>, 'neutral' | 'accent'>
+>;
+const crossEntryInput: RecipeInput<typeof coreButtonRecipe> = {
+  tone: 'neutral',
+};
+void crossEntryInput;

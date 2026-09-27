@@ -40,7 +40,11 @@ import type {
   SlotCompiledRecipe,
 } from './engine/shared';
 import { flattenClassName } from './class-name';
-import { getRefProperty, mergeTwoRefs } from './react-utils';
+import {
+  getComponentDisplayName,
+  getRefProperty,
+  mergeTwoRefs,
+} from './react-utils';
 import { mergeProps } from '../utils';
 
 const hostStateSymbol = Symbol('react-class-variants.host-state');
@@ -684,7 +688,8 @@ export function createRootStyled<
     compiled,
     options as ResolveOptions | undefined
   );
-  const displayName = options?.displayName ?? `Styled(${String(base)})`;
+  const displayName =
+    options?.displayName ?? `Styled(${getComponentDisplayName(base)})`;
 
   if (!options?.view && isIntrinsicBase(base) && !withRender) {
     return createIntrinsicRootFastStyled(
@@ -784,7 +789,8 @@ export function createSlotStyled<
     compiled,
     options as ResolveOptions
   );
-  const displayName = options.displayName ?? `Styled(${String(base)})`;
+  const displayName =
+    options.displayName ?? `Styled(${getComponentDisplayName(base)})`;
 
   return createSlotViewStyled<
     Base,

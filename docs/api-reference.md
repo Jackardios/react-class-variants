@@ -407,7 +407,9 @@ type StyledOptionsCommon = {
 Overrides the generated React component name.
 
 By default, `styled()` uses `Styled(<base>)`, for example
-`Styled(button)` or `Styled(RouterLink)`.
+`Styled(button)` or `Styled(RouterLink)`. For component bases the name comes
+from the base's `displayName`, then its function name; `forwardRef` and `memo`
+wrappers are unwrapped. Anonymous components fall back to `Styled(Component)`.
 
 Example:
 
