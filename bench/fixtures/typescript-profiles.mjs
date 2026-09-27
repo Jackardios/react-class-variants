@@ -193,7 +193,7 @@ const merged = mergeProps(
   { className: buttonRecipe() },
   { className: buttonRecipe({ tone: 'primary' }) }
 );
-const outputs: ReactNode[] = [node];
+const outputs: Array<ReactNode | Promise<ReactNode>> = [node];
 
 void merged;
 outputs.length;
@@ -253,7 +253,7 @@ void merge${index};
     "import type { ReactNode } from 'react';",
     ...importLines,
     ...setupLines,
-    'const outputs: ReactNode[] = [];',
+    'const outputs: Array<ReactNode | Promise<ReactNode>> = [];',
     ...blocks,
     'outputs.length;',
   ].join('\n');
