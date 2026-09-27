@@ -137,15 +137,6 @@ function createVariantIndex(
   return variantIndex;
 }
 
-export function getVariantIndex(
-  variantIndex: Readonly<VariantIndex> | undefined,
-  key: string
-): number | undefined {
-  // variantIndex is a null-prototype object, so a plain read cannot pick up
-  // inherited Object.prototype members.
-  return variantIndex ? variantIndex[key] : undefined;
-}
-
 export function ensureVariantIndex(
   compiled: CompiledRecipe
 ): Readonly<VariantIndex> {
@@ -367,7 +358,7 @@ export function buildValidatedSelection(
 
     for (const key in source) {
       if (!hasOwnKey(source, key) || key === publicProp) continue;
-      if (getVariantIndex(variantIndex, key) === undefined) {
+      if (variantIndex[key] === undefined) {
         throw new Error(
           `react-class-variants: unknown recipe prop "${key}". Use resolve() for arbitrary component props.`
         );

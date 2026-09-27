@@ -233,4 +233,34 @@ describe('styled() render prop', () => {
     expect(attach).toHaveBeenCalledTimes(1);
     expect(outerRef.current).toBeNull();
   });
+
+  it('passes render through a slotted host view', () => {
+    const linkRecipe = recipe({
+      slots: { root: 'inline-flex', icon: 'size-4' },
+      variants: { tone: { primary: { root: 'text-blue-600' } } },
+    });
+    const LinkButton = styled('button', linkRecipe, {
+      withRender: true,
+      view: ({ host, classes }) =>
+        host.render({
+          children: (
+            <>
+              <span data-testid="icon" className={classes.icon()} />
+              {host.children}
+            </>
+          ),
+        }),
+    });
+
+    render(
+      <LinkButton tone="primary" render={<a href="/docs" />}>
+        Docs
+      </LinkButton>
+    );
+
+    const link = screen.getByRole('link', { name: 'Docs' });
+    expect(link.className).toBe('inline-flex text-blue-600');
+    expect(link.getAttribute('href')).toBe('/docs');
+    expect(screen.getByTestId('icon').className).toBe('size-4');
+  });
 });

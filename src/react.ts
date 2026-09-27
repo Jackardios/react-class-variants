@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- public styled implementation intentionally erases recipe generics behind a typed export surface. */
-import { createRootStyled, createSlotStyled } from './internal/builders';
+import { createStyled } from './internal/builders';
 import { getCompiledRecipeOrThrow } from './internal/engine/shared';
 import { createRecipeFactory } from './internal/recipe';
 import type {
@@ -103,17 +103,9 @@ function styledImpl(
     );
   }
 
-  if (isSlotRecipe) {
-    if (!options?.view) {
-      throw new Error(
-        'react-class-variants: slotted recipes require a view component.'
-      );
-    }
-
-    return createSlotStyled(
-      base,
-      inputRecipe as AnySlotRecipe,
-      options as SlotStyledOptions<any, any, any, any, any, any>
+  if (isSlotRecipe && !options?.view) {
+    throw new Error(
+      'react-class-variants: slotted recipes require a view component.'
     );
   }
 
@@ -123,11 +115,7 @@ function styledImpl(
     );
   }
 
-  return createRootStyled(
-    base,
-    inputRecipe as AnyRootRecipe,
-    options as RootStyledOptions<any, any, any, any, any, any> | undefined
-  );
+  return createStyled(base, compiled, options);
 }
 
 export const styled: StyledFn = styledImpl as StyledFn;
