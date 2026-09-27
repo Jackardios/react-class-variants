@@ -1,6 +1,7 @@
 // Checks of the built package that the Vitest suite cannot cover: importing
 // the entries in an environment without `process`, the React-free core entry,
-// tree-shaking of the validating runtime, and server rendering in plain Node. Behavioral coverage of dist/ comes from
+// tree-shaking of the engine and the validating runtime, and server rendering
+// in plain Node. Behavioral coverage of dist/ comes from
 // `vitest run --config vitest.built.config.ts`.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -95,12 +96,13 @@ module.defineConfig().recipe({ base: 'inline-flex' });`,
 assertImportsWithoutProcess(packageRootPath, true);
 assertImportsWithoutProcess(corePath, false);
 
-// A bundle that only uses the default lean recipe() must not include the
-// validating runtime (recipe.ts); defineConfig({ validate: 'always' }) must.
+// Helper-only imports must not include the recipe engine, and bundles that
+// only use the default recipe() must not include the validating runtime.
 async function bundleEntry(source) {
   const result = await build({
     absWorkingDir: repoRoot,
     bundle: true,
+    external: ['react', 'react-dom'],
     format: 'esm',
     logLevel: 'silent',
     minify: true,
@@ -111,15 +113,42 @@ async function bundleEntry(source) {
   return result.outputFiles[0].text;
 }
 
-const validatingMessage = 'missing required recipe variant';
-const leanBundle = await bundleEntry(
-  `import { recipe } from './dist/core.js';\nconsole.log(recipe({ base: 'x' })());`
-);
-const validatingBundle = await bundleEntry(
-  `import { defineConfig } from './dist/core.js';\nconsole.log(defineConfig({ validate: 'always' }).recipe({ base: 'x' })());`
-);
-assert.equal(leanBundle.includes(validatingMessage), false);
-assert.equal(validatingBundle.includes(validatingMessage), true);
+const engineMarker = 'slotted recipes require a slots object';
+const validatingMarkers = [
+  'missing required recipe variant',
+  'unknown recipe prop',
+  'unknown slot override prop',
+  'Object.isFrozen',
+];
+
+for (const source of [
+  `import { hasOwnProperty } from './dist/core.js';\nconsole.log(hasOwnProperty);`,
+  `import { mergeProps } from './dist/index.js';\nconsole.log(mergeProps);`,
+]) {
+  assert.equal(
+    (await bundleEntry(source)).includes(engineMarker),
+    false,
+    source
+  );
+}
+
+for (const entry of ['core', 'index']) {
+  const leanBundle = await bundleEntry(
+    `import { recipe } from './dist/${entry}.js';\nconsole.log(recipe({ base: 'x' })(), recipe({ slots: { root: 'x' } })().root());`
+  );
+  const validatingBundle = await bundleEntry(
+    `import { defineConfig } from './dist/${entry}.js';\nconsole.log(defineConfig({ validate: 'always' }).recipe({ base: 'x' })());`
+  );
+
+  for (const marker of validatingMarkers) {
+    assert.equal(leanBundle.includes(marker), false, `${entry}: ${marker}`);
+    assert.equal(
+      validatingBundle.includes(marker),
+      true,
+      `${entry}: ${marker}`
+    );
+  }
+}
 
 const packageRoot = await import(pathToFileURL(packageRootPath).href);
 const { recipe, styled } = packageRoot.defineConfig();

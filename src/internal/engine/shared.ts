@@ -1,7 +1,7 @@
 import type { AnyRecipe, RecipeConfig, SystemOptions } from '../core-types';
 import type { CompiledCompounds } from './compounds';
 
-export const compiledRecipeSymbol = Symbol('react-class-variants.compiled');
+const compiledRecipeSymbol = Symbol('react-class-variants.compiled');
 
 const sharedReservedPublicProps = new Set([
   'children',
@@ -125,7 +125,7 @@ export function normalizeSelectionValue(
   return isBoolean ? (value as boolean) : optionKeyForValue(value);
 }
 
-export function createVariantIndex(
+function createVariantIndex(
   variantTable: readonly { key: string }[]
 ): VariantIndex {
   const variantIndex = createNullProtoRecord<number>();

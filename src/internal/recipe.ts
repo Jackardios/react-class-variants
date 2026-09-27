@@ -25,7 +25,7 @@ function createStrictRecipeFactory(options: SystemOptions): RecipeFactory {
   // Validated configs are frozen after compilation so later mutations fail
   // loudly instead of silently diverging from the compiled recipe.
   return ((config: RecipeConfig) => {
-    const recipe = factory(config as never);
+    const recipe = factory(config);
     deepFreeze(config);
     return recipe;
   }) as RecipeFactory;

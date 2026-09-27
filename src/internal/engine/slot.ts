@@ -370,15 +370,13 @@ export function createSlotRenderers(
     slotIndex += 1
   ) {
     slots[compiled.slotNames[slotIndex]] = input =>
-      input
-        ? resolveSlotClassName(
-            compiled,
-            slotIndex,
-            overrideSelection(compiled, selection, input),
-            slotClassNames,
-            input.className as ClassNameValue | undefined
-          )
-        : resolveSlotClassName(compiled, slotIndex, selection, slotClassNames);
+      resolveSlotClassNameForRender(
+        compiled,
+        slotIndex,
+        selection,
+        slotClassNames,
+        input
+      );
   }
 
   return slots;

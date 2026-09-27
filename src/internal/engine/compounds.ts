@@ -7,7 +7,7 @@ import {
   type CompiledVariant,
 } from './shared';
 
-export type CompiledExpected =
+type CompiledExpected =
   | CompiledSelectionValue
   | readonly CompiledSelectionValue[];
 

@@ -13,7 +13,7 @@ const normalizedResolveOptionsSymbol = Symbol(
   'react-class-variants.normalized-resolve-options'
 );
 
-export type ForwardPropEntry = readonly [key: string, index: number];
+type ForwardPropEntry = readonly [key: string, index: number];
 
 export type NormalizedResolveOptions = {
   readonly [normalizedResolveOptionsSymbol]: true;

@@ -165,7 +165,7 @@ Does not export React runtime helpers such as `styled()`, `mergeProps()`, or ref
 ### Runtime and engine layers
 
 - `src/internal/recipe-default.ts`: lean runtime and the default `recipe()` factory; never imports the validating runtime
-- `src/internal/recipe.ts`: `createRecipeFactory()` and the validating runtime used by `defineConfig({ validate: 'always' })`
+- `src/internal/recipe.ts`: `createRecipeFactory()` and the validating `RecipeRuntime` used by `defineConfig({ validate: 'always' })`; it wires validation helpers from `engine/shared.ts` and `engine/slot.ts`
 - `src/internal/engine/root.ts`: root recipe compilation, class resolution, and root `resolve()`
 - `src/internal/engine/slot.ts`: slotted recipe compilation, slot renderers, and slot `resolve()`
 - `src/internal/engine/shared.ts`: compiled recipe types, the `RecipeRuntime` strategy, variant compilation, and selection builders
@@ -173,7 +173,7 @@ Does not export React runtime helpers such as `styled()`, `mergeProps()`, or ref
 - `src/internal/engine/props.ts`: `resolve()` option normalization, prop aliases, and forwarded props
 - `src/internal/engine/cache.ts`: lean root result cache and its key encoding
 
-Lean and validating recipes share one engine. Validation-only work sits behind `compiled.validate` (compile time) or the `RecipeRuntime` object that the factory picks (per call), so a bundle that only uses the default `recipe()` never contains the validating runtime. `scripts/test-built-runtime.mjs` asserts this.
+Lean and validating recipes share one engine. Small validation checks are guarded by `compiled.validate` (at compile time and on each call); per-call validation lives in the validating `RecipeRuntime` object, which only `recipe.ts` references, so a bundle that only uses the default `recipe()` never contains it. `defaultRecipeFactory` is marked `/* @__PURE__ */` so helper-only imports drop the engine. `scripts/test-built-runtime.mjs` asserts both.
 
 ### React adapter and utilities
 
