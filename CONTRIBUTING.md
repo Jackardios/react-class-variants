@@ -12,7 +12,7 @@ Do not use `main` as the day-to-day v2 development branch while v2 remains in al
 
 ## Local Setup
 
-- Node.js `20.19+`
+- Node.js `22.12+`
 - `pnpm`
 - React `19` for local test expectations
 
@@ -22,7 +22,7 @@ Install dependencies:
 pnpm install
 ```
 
-CI and the release gate both run `pnpm run verify` on Node `20.x`, `22.x`, and `24.x`; CI also runs `pnpm run check:overhead` once. Local development only needs to satisfy the package minimum in `package.json`, but it is useful to keep the full support matrix in mind when touching runtime or packaging behavior.
+CI and the release gate both run `pnpm run verify` on Node `22.x`, `24.x`, and `26.x`; CI also runs `pnpm run check:overhead` once. Local development only needs to satisfy the package minimum in `package.json`, but it is useful to keep the full support matrix in mind when touching runtime or packaging behavior.
 
 ## Typical Contributor Flow
 
