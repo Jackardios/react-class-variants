@@ -13,33 +13,27 @@ import {
   flattenUserClassName,
   validateClassNameValue,
 } from '../class-name';
+import { compileCompounds, forEachMatchingCompound } from './compounds';
+import {
+  createResolvedProps,
+  normalizeResolveOptions,
+  type NormalizedResolveOptions,
+} from './props';
 import {
   attachCompiled,
-  buildSelection,
-  compileCompounds,
-  compileLeanCompounds,
   compileVariants,
   createNullProtoRecord,
-  createResolvedProps,
   ensureVariantIndex,
-  forEachMatchingCompound,
-  forEachMatchingLeanCompound,
-  freezeConfig,
   hasOwnKey,
   isAllowedVariantValue,
   isPlainObject,
   materializeSelection,
-  normalizeResolveOptions,
   normalizeSelectionValue,
   readVariantClassName,
   type CompiledSelectionValue,
-  type LeanSlotClassTable,
-  type NormalizedResolveOptions,
   type RuntimeSystemOptions,
   type SlotClassTable,
   type SlotCompiledRecipe,
-  type LeanSlotCompiledRecipe,
-  type StrictSlotCompiledRecipe,
 } from './shared';
 
 const emptySlotClassTable: SlotClassTable = [];
@@ -177,23 +171,24 @@ function compileSlotBase(config: AnySlotRecipeConfig, validate: boolean) {
   };
 }
 
-export function compileStrictSlotRecipe(
+export function compileSlotRecipe(
   config: AnySlotRecipeConfig,
   options: RuntimeSystemOptions
-): StrictSlotCompiledRecipe {
-  const compiledBase = compileSlotBase(config, options.validate);
+): SlotCompiledRecipe {
+  const { validate } = options;
+  const compiledBase = compileSlotBase(config, validate);
   const variantTable = compileVariants({
     compileClassName: (context, value) =>
       compileSlotClassTable(
         value,
         compiledBase.slotNames,
         compiledBase.slotIndex,
-        options.validate,
+        validate,
         context
       ),
     defaultVariants: config.defaultVariants,
     mode: 'slot',
-    validate: options.validate,
+    validate,
     variants: config.variants,
   });
   const compounds = compileCompounds({
@@ -202,73 +197,12 @@ export function compileStrictSlotRecipe(
         value,
         compiledBase.slotNames,
         compiledBase.slotIndex,
-        options.validate,
+        validate,
         context,
-        !options.validate
+        !validate
       ),
     compounds: config.compoundVariants,
-    validate: options.validate,
-    variantTable,
-  });
-
-  freezeConfig(config, options.freeze);
-
-  return {
-    base: compiledBase.base,
-    compounds,
-    merge: options.merge,
-    mode: 'slot',
-    runtime: 'strict',
-    slotIndex: compiledBase.slotIndex,
-    slotNames: compiledBase.slotNames,
-    validate: options.validate,
-    variantTable,
-  };
-}
-
-function compileLeanSlotPayload(
-  value: unknown,
-  slotNames: readonly string[],
-  slotIndex: Readonly<Record<string, number>>,
-  invalidAsEmpty = false
-): LeanSlotClassTable {
-  return compileSlotClassTable(
-    value,
-    slotNames,
-    slotIndex,
-    false,
-    '',
-    invalidAsEmpty
-  );
-}
-
-export function compileLeanSlotRecipe(
-  config: AnySlotRecipeConfig,
-  options: RuntimeSystemOptions
-): LeanSlotCompiledRecipe {
-  const compiledBase = compileSlotBase(config, false);
-  const variantTable = compileVariants({
-    compileClassName: (_context, value) =>
-      compileLeanSlotPayload(
-        value,
-        compiledBase.slotNames,
-        compiledBase.slotIndex
-      ),
-    defaultVariants: config.defaultVariants,
-    mode: 'slot',
-    validate: false,
-    variants: config.variants,
-  });
-  const compounds = compileLeanCompounds({
-    compileClassName: (_context, value) =>
-      compileLeanSlotPayload(
-        value,
-        compiledBase.slotNames,
-        compiledBase.slotIndex,
-        true
-      ),
-    compounds: config.compoundVariants,
-    validate: false,
+    validate,
     variantTable,
   });
 
@@ -277,54 +211,22 @@ export function compileLeanSlotRecipe(
     compounds,
     merge: options.merge,
     mode: 'slot',
-    runtime: 'lean',
+    runtime: options.runtime,
     slotIndex: compiledBase.slotIndex,
     slotNames: compiledBase.slotNames,
-    validate: false,
+    validate,
     variantTable,
   };
 }
 
-function buildSlotSelectionLean(
-  compiled: LeanSlotCompiledRecipe,
-  input: Record<string, unknown> | undefined
-) {
-  const selection = new Array<CompiledSelectionValue>(
-    compiled.variantTable.length
-  );
-  const source = input ?? {};
-
-  for (let index = 0; index < compiled.variantTable.length; index += 1) {
-    const variant = compiled.variantTable[index];
-    let value = source[variant.key];
-
-    if (value === undefined) {
-      value = variant.defaultValue;
-    }
-
-    if (value === undefined && variant.isBoolean) {
-      selection[index] = false;
-      continue;
-    }
-
-    if (value === undefined) {
-      continue;
-    }
-
-    selection[index] = normalizeSelectionValue(variant.isBoolean, value);
-  }
-
-  return selection;
-}
-
-function resolveStrictSlotSelection(
-  compiled: StrictSlotCompiledRecipe,
+// Applies per-slot variant overrides on top of the recipe-level selection.
+function overrideSelection(
+  compiled: SlotCompiledRecipe,
   parentSelection: readonly CompiledSelectionValue[],
-  input: Record<string, unknown> | undefined
+  input: Record<string, unknown>
 ) {
-  if (!input) {
-    return parentSelection;
-  }
+  const { validateOverride } = compiled.runtime;
+  if (validateOverride) validateOverride(compiled, input);
 
   let nextSelection: CompiledSelectionValue[] | undefined;
   const variantIndex = ensureVariantIndex(compiled);
@@ -333,53 +235,7 @@ function resolveStrictSlotSelection(
     if (!hasOwnKey(input, key) || key === 'className') continue;
 
     const index = variantIndex[key];
-    if (index === undefined) {
-      if (compiled.validate) {
-        throw new Error(
-          `react-class-variants: unknown slot override prop "${key}".`
-        );
-      }
-      continue;
-    }
-
-    const value = input[key];
-    if (value === undefined) continue;
-    const variant = compiled.variantTable[index];
-
-    if (compiled.validate && !isAllowedVariantValue(variant, value)) {
-      throw new Error(
-        `react-class-variants: invalid slot override value "${String(
-          value
-        )}" for variant "${variant.key}".`
-      );
-    }
-
-    nextSelection ??= parentSelection.slice();
-    nextSelection[index] = normalizeSelectionValue(variant.isBoolean, value);
-  }
-
-  return nextSelection ?? parentSelection;
-}
-
-function resolveLeanSlotSelection(
-  compiled: LeanSlotCompiledRecipe,
-  parentSelection: readonly CompiledSelectionValue[],
-  input: Record<string, unknown> | undefined
-) {
-  if (!input) {
-    return parentSelection;
-  }
-
-  let nextSelection: CompiledSelectionValue[] | undefined;
-  const variantIndex = ensureVariantIndex(compiled);
-
-  for (const key in input) {
-    if (!hasOwnKey(input, key) || key === 'className') continue;
-
-    const index = variantIndex[key];
-    if (index === undefined) {
-      continue;
-    }
+    if (index === undefined) continue;
 
     const value = input[key];
     if (value === undefined) continue;
@@ -394,11 +250,39 @@ function resolveLeanSlotSelection(
   return nextSelection ?? parentSelection;
 }
 
-function resolveStrictSlotClassName(
-  compiled: StrictSlotCompiledRecipe,
+export function validateSlotOverride(
+  compiled: SlotCompiledRecipe,
+  input: Record<string, unknown>
+) {
+  const variantIndex = ensureVariantIndex(compiled);
+
+  for (const key in input) {
+    if (!hasOwnKey(input, key) || key === 'className') continue;
+
+    const index = variantIndex[key];
+    if (index === undefined) {
+      throw new Error(
+        `react-class-variants: unknown slot override prop "${key}".`
+      );
+    }
+
+    const value = input[key];
+    const variant = compiled.variantTable[index];
+    if (value !== undefined && !isAllowedVariantValue(variant, value)) {
+      throw new Error(
+        `react-class-variants: invalid slot override value "${String(
+          value
+        )}" for variant "${variant.key}".`
+      );
+    }
+  }
+}
+
+function resolveSlotClassName(
+  compiled: SlotCompiledRecipe,
   slotIndex: number,
   selection: readonly CompiledSelectionValue[],
-  slotClassNames?: SlotClassTable,
+  slotClassNames: SlotClassTable,
   className?: ClassNameValue
 ) {
   let output = readSlotClassName(compiled.base, slotIndex) ?? '';
@@ -424,52 +308,9 @@ function resolveStrictSlotClassName(
     output,
     readSlotClassName(slotClassNames, slotIndex)
   );
-
   output = appendClassName(
     output,
-    flattenUserClassName('slot input.className', className, true)
-  );
-
-  return compiled.merge ? compiled.merge(output) : output;
-}
-
-function resolveLeanSlotClassName(
-  compiled: LeanSlotCompiledRecipe,
-  slotIndex: number,
-  selection: readonly CompiledSelectionValue[],
-  slotClassNames?: SlotClassTable,
-  className?: ClassNameValue
-) {
-  let output = readSlotClassName(compiled.base, slotIndex) ?? '';
-
-  for (let index = 0; index < compiled.variantTable.length; index += 1) {
-    output = appendClassName(
-      output,
-      readSlotClassName(
-        readVariantClassName(compiled.variantTable[index], selection[index]),
-        slotIndex
-      )
-    );
-  }
-
-  forEachMatchingLeanCompound(
-    compiled.compounds,
-    selection,
-    compoundClassName => {
-      output = appendClassName(
-        output,
-        readSlotClassName(compoundClassName, slotIndex)
-      );
-    }
-  );
-
-  output = appendClassName(
-    output,
-    readSlotClassName(slotClassNames, slotIndex)
-  );
-  output = appendClassName(
-    output,
-    flattenUserClassName('slot input.className', className, false)
+    flattenUserClassName('slot input.className', className, compiled.validate)
   );
 
   return compiled.merge ? compiled.merge(output) : output;
@@ -482,32 +323,21 @@ export function resolveSlotClassNameForRender(
   slotClassNames: SlotClassTable,
   input?: Record<string, unknown>
 ) {
-  if (compiled.runtime === 'lean') {
-    const selection = resolveLeanSlotSelection(
-      compiled,
-      parentSelection,
-      input
-    );
-    return resolveLeanSlotClassName(
+  if (!input) {
+    return resolveSlotClassName(
       compiled,
       slotIndex,
-      selection,
-      slotClassNames,
-      input?.className as ClassNameValue | undefined
+      parentSelection,
+      slotClassNames
     );
   }
 
-  const selection = resolveStrictSlotSelection(
-    compiled,
-    parentSelection,
-    input
-  );
-  return resolveStrictSlotClassName(
+  return resolveSlotClassName(
     compiled,
     slotIndex,
-    selection,
+    overrideSelection(compiled, parentSelection, input),
     slotClassNames,
-    input?.className as ClassNameValue | undefined
+    input.className as ClassNameValue | undefined
   );
 }
 
@@ -516,10 +346,7 @@ export function resolveSlotViewState(
   input: Record<string, unknown> | undefined,
   options: NormalizedResolveOptions | undefined
 ) {
-  const selection =
-    compiled.runtime === 'lean'
-      ? buildSlotSelectionLean(compiled, input)
-      : buildSelection(compiled, input, 'recipe', true, ['slotClassNames']);
+  const selection = compiled.runtime.select(compiled, input, true);
 
   return {
     resolvedProps: createResolvedProps(compiled, input, options, selection),
@@ -529,99 +356,37 @@ export function resolveSlotViewState(
   };
 }
 
-function createStrictSlotRenderers(
-  compiled: StrictSlotCompiledRecipe,
+export function createSlotRenderers(
+  compiled: SlotCompiledRecipe,
   selection: readonly CompiledSelectionValue[],
   slotClassNames: SlotClassTable
 ) {
   const slots =
     createNullProtoRecord<(input?: Record<string, unknown>) => string>();
-  ensureVariantIndex(compiled);
 
   for (
     let slotIndex = 0;
     slotIndex < compiled.slotNames.length;
     slotIndex += 1
   ) {
-    const slotName = compiled.slotNames[slotIndex];
-    slots[slotName] = input => {
-      const slotSelection = resolveStrictSlotSelection(
-        compiled,
-        selection,
-        input
-      );
-      return resolveStrictSlotClassName(
+    slots[compiled.slotNames[slotIndex]] = input =>
+      resolveSlotClassNameForRender(
         compiled,
         slotIndex,
-        slotSelection,
+        selection,
         slotClassNames,
-        input?.className as ClassNameValue | undefined
+        input
       );
-    };
   }
 
   return slots;
 }
 
-function createLeanSlotRenderers(
-  compiled: LeanSlotCompiledRecipe,
-  selection: readonly CompiledSelectionValue[],
-  slotClassNames: SlotClassTable
-) {
-  const slots =
-    createNullProtoRecord<(input?: Record<string, unknown>) => string>();
-  ensureVariantIndex(compiled);
-
-  for (
-    let slotIndex = 0;
-    slotIndex < compiled.slotNames.length;
-    slotIndex += 1
-  ) {
-    const slotName = compiled.slotNames[slotIndex];
-    slots[slotName] = input => {
-      if (!input) {
-        return resolveLeanSlotClassName(
-          compiled,
-          slotIndex,
-          selection,
-          slotClassNames
-        );
-      }
-
-      const slotSelection = resolveLeanSlotSelection(
-        compiled,
-        selection,
-        input
-      );
-      return resolveLeanSlotClassName(
-        compiled,
-        slotIndex,
-        slotSelection,
-        slotClassNames,
-        input.className as ClassNameValue | undefined
-      );
-    };
-  }
-
-  return slots;
-}
-
-export function createStrictSlotRecipe(
-  compiled: StrictSlotCompiledRecipe
-): AnyRecipe {
+export function createSlotRecipe(compiled: SlotCompiledRecipe): AnyRecipe {
   const slotRecipe = ((input?: Record<string, unknown>) => {
-    if (input && 'className' in input) {
-      throw new Error(
-        'react-class-variants: className cannot be passed directly to a slotted recipe call. Use slot functions instead.'
-      );
-    }
-
-    const selection = buildSelection(compiled, input, 'recipe', false, [
-      'slotClassNames',
-    ]);
-    return createStrictSlotRenderers(
+    return createSlotRenderers(
       compiled,
-      selection,
+      compiled.runtime.select(compiled, input, false),
       resolveTopLevelSlotClassNames(compiled, input)
     );
   }) as SlotRecipe & {
@@ -636,10 +401,7 @@ export function createStrictSlotRecipe(
     options?: TOptions
   ): SlotResolveResult<AnySlotRecipe, TInput, TOptions> => {
     const normalizedOptions = normalizeResolveOptions(compiled, options);
-    const selection = buildSelection(compiled, input, 'recipe', true, [
-      'slotClassNames',
-    ]);
-    const slotClassNames = resolveTopLevelSlotClassNames(compiled, input);
+    const selection = compiled.runtime.select(compiled, input, true);
 
     return {
       resolvedProps: createResolvedProps(
@@ -648,51 +410,11 @@ export function createStrictSlotRecipe(
         normalizedOptions,
         selection
       ) as SlotResolveResult<AnySlotRecipe, TInput, TOptions>['resolvedProps'],
-      slots: createStrictSlotRenderers(compiled, selection, slotClassNames),
-      variants: materializeSelection(compiled, selection) as SlotResolveResult<
-        AnySlotRecipe,
-        TInput,
-        TOptions
-      >['variants'],
-    };
-  };
-
-  return attachCompiled(slotRecipe as AnyRecipe, compiled);
-}
-
-export function createLeanSlotRecipe(
-  compiled: LeanSlotCompiledRecipe
-): AnyRecipe {
-  const slotRecipe = ((input?: Record<string, unknown>) => {
-    const selection = buildSlotSelectionLean(compiled, input);
-    return createLeanSlotRenderers(
-      compiled,
-      selection,
-      resolveTopLevelSlotClassNames(compiled, input)
-    );
-  }) as SlotRecipe & {
-    resolve: SlotRecipe['resolve'];
-  };
-
-  slotRecipe.resolve = <
-    TInput extends Record<string, unknown> | undefined = undefined,
-    const TOptions extends ResolveOptions | undefined = undefined
-  >(
-    input?: TInput,
-    options?: TOptions
-  ): SlotResolveResult<AnySlotRecipe, TInput, TOptions> => {
-    const normalizedOptions = normalizeResolveOptions(compiled, options);
-    const selection = buildSlotSelectionLean(compiled, input);
-    const slotClassNames = resolveTopLevelSlotClassNames(compiled, input);
-
-    return {
-      resolvedProps: createResolvedProps(
+      slots: createSlotRenderers(
         compiled,
-        input,
-        normalizedOptions,
-        selection
-      ) as SlotResolveResult<AnySlotRecipe, TInput, TOptions>['resolvedProps'],
-      slots: createLeanSlotRenderers(compiled, selection, slotClassNames),
+        selection,
+        resolveTopLevelSlotClassNames(compiled, input)
+      ),
       variants: materializeSelection(compiled, selection) as SlotResolveResult<
         AnySlotRecipe,
         TInput,

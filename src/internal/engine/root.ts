@@ -14,31 +14,26 @@ import {
   validateClassNameValue,
 } from '../class-name';
 import {
-  attachCompiled,
   buildRootResultCacheKey,
-  buildSelection,
-  compileCompounds,
-  compileLeanCompounds,
-  compileVariants,
-  createResolvedProps,
-  forEachMatchingCompound,
-  forEachMatchingLeanCompound,
-  freezeConfig,
-  materializeSelection,
-  normalizeResolveOptions,
-  normalizeSelectionValue,
-  readVariantClassName,
   resolveResultCacheMaxSize,
   storeResult,
-  type LeanRootCompiledRecipe,
+} from './cache';
+import { compileCompounds, forEachMatchingCompound } from './compounds';
+import {
+  createResolvedProps,
+  normalizeResolveOptions,
   type NormalizedResolveOptions,
+} from './props';
+import {
+  attachCompiled,
+  compileVariants,
+  materializeSelection,
+  readVariantClassName,
   type RootCompiledRecipe,
   type RuntimeSystemOptions,
-  type StrictRootCompiledRecipe,
-  type CompiledSelectionValue,
 } from './shared';
 
-function compileRootClassNameStrict(
+function compileRootClassName(
   context: string,
   value: unknown,
   validate: boolean
@@ -52,156 +47,52 @@ function compileRootClassNameStrict(
   return flattenClassName(value as ClassNameValue | undefined);
 }
 
-function compileRootClassNameLean(value: unknown) {
-  if (value === undefined) {
-    return '';
-  }
-  return flattenClassName(value as ClassNameValue | undefined);
-}
-
-export function compileStrictRootRecipe(
+export function compileRootRecipe(
   config: AnyRootRecipeConfig,
   options: RuntimeSystemOptions
-): StrictRootCompiledRecipe {
+): RootCompiledRecipe {
+  const { validate } = options;
+  const compileClassName = (context: string, value: unknown) =>
+    compileRootClassName(context, value, validate);
   const variantTable = compileVariants({
-    compileClassName: (context, value) =>
-      compileRootClassNameStrict(context, value, options.validate),
+    compileClassName,
     defaultVariants: config.defaultVariants,
     mode: 'root',
-    validate: options.validate,
-    variants: config.variants,
-  });
-
-  const compiled: StrictRootCompiledRecipe = {
-    base: compileRootClassNameStrict('base', config.base, options.validate),
-    compounds: compileCompounds({
-      compileClassName: (context, value) =>
-        compileRootClassNameStrict(context, value, options.validate),
-      compounds: config.compoundVariants,
-      validate: options.validate,
-      variantTable,
-    }),
-    merge: options.merge,
-    mode: 'root',
-    runtime: 'strict',
-    validate: options.validate,
-    variantTable,
-  };
-
-  freezeConfig(config, options.freeze);
-  return compiled;
-}
-
-export function compileLeanRootRecipe(
-  config: AnyRootRecipeConfig,
-  options: RuntimeSystemOptions
-): LeanRootCompiledRecipe {
-  const variantTable = compileVariants({
-    compileClassName: (_context, value) => compileRootClassNameLean(value),
-    defaultVariants: config.defaultVariants,
-    mode: 'root',
-    validate: false,
+    validate,
     variants: config.variants,
   });
 
   return {
-    base: compileRootClassNameLean(config.base),
-    compounds: compileLeanCompounds({
-      compileClassName: (_context, value) => compileRootClassNameLean(value),
+    base: compileClassName('base', config.base),
+    compounds: compileCompounds({
+      compileClassName,
       compounds: config.compoundVariants,
-      validate: false,
+      validate,
       variantTable,
     }),
     merge: options.merge,
     mode: 'root',
-    resultCacheMaxSize: resolveResultCacheMaxSize(options.merge, options.cache),
-    runtime: 'lean',
-    validate: false,
+    resultCacheMaxSize: resolveResultCacheMaxSize(
+      validate,
+      options.merge,
+      options.cache
+    ),
+    runtime: options.runtime,
+    validate,
     variantTable,
   };
 }
 
-function buildRootSelectionLean(
-  compiled: LeanRootCompiledRecipe,
-  input: Record<string, unknown> | undefined
-) {
-  const selection = new Array<CompiledSelectionValue>(
-    compiled.variantTable.length
-  );
-  const source = input ?? {};
-
-  for (let index = 0; index < compiled.variantTable.length; index += 1) {
-    const variant = compiled.variantTable[index];
-    let value = source[variant.key];
-
-    if (value === undefined) {
-      value = variant.defaultValue;
-    }
-
-    if (value === undefined && variant.isBoolean) {
-      selection[index] = false;
-      continue;
-    }
-
-    if (value === undefined) {
-      continue;
-    }
-
-    selection[index] = normalizeSelectionValue(variant.isBoolean, value);
-  }
-
-  return selection;
-}
-
-function resolveStrictRootClassName(
-  compiled: StrictRootCompiledRecipe,
+function resolveRootClassName(
+  compiled: RootCompiledRecipe,
   input: Record<string, unknown> | undefined,
   allowUnknownProps: boolean
 ) {
-  const selection = buildSelection(
-    compiled,
-    input,
-    'recipe',
-    allowUnknownProps,
-    ['className']
-  );
-  let className = compiled.base;
-
-  for (let index = 0; index < compiled.variantTable.length; index += 1) {
-    className = appendClassName(
-      className,
-      readVariantClassName(compiled.variantTable[index], selection[index])
-    );
-  }
-
-  forEachMatchingCompound(compiled.compounds, selection, compoundClassName => {
-    className = appendClassName(className, compoundClassName);
-  });
-
-  className = appendClassName(
-    className,
-    flattenUserClassName(
-      'input.className',
-      input?.className as ClassNameValue | undefined,
-      true
-    )
-  );
-
-  return {
-    className: compiled.merge ? compiled.merge(className) : className,
-    selection,
-  };
-}
-
-function resolveLeanRootClassName(
-  compiled: LeanRootCompiledRecipe,
-  input: Record<string, unknown> | undefined
-) {
-  const selection = buildRootSelectionLean(compiled, input);
+  const selection = compiled.runtime.select(compiled, input, allowUnknownProps);
   const userClassName = flattenUserClassName(
     'input.className',
     input?.className as ClassNameValue | undefined,
-    false
+    compiled.validate
   );
 
   let key: string | undefined;
@@ -222,13 +113,9 @@ function resolveLeanRootClassName(
     );
   }
 
-  forEachMatchingLeanCompound(
-    compiled.compounds,
-    selection,
-    compoundClassName => {
-      className = appendClassName(className, compoundClassName);
-    }
-  );
+  forEachMatchingCompound(compiled.compounds, selection, compoundClassName => {
+    className = appendClassName(className, compoundClassName);
+  });
 
   className = appendClassName(className, userClassName);
   const merged = compiled.merge ? compiled.merge(className) : className;
@@ -237,18 +124,6 @@ function resolveLeanRootClassName(
     className: key !== undefined ? storeResult(compiled, key, merged) : merged,
     selection,
   };
-}
-
-function resolveRootClassName(
-  compiled: RootCompiledRecipe,
-  input: Record<string, unknown> | undefined,
-  allowUnknownProps: boolean
-) {
-  if (compiled.runtime === 'lean') {
-    return resolveLeanRootClassName(compiled, input);
-  }
-
-  return resolveStrictRootClassName(compiled, input, allowUnknownProps);
 }
 
 export function resolveRootComponentProps(
@@ -293,12 +168,9 @@ export function resolveRootViewState(
   };
 }
 
-export function createStrictRootRecipe(
-  compiled: StrictRootCompiledRecipe
-): AnyRecipe {
+export function createRootRecipe(compiled: RootCompiledRecipe): AnyRecipe {
   const rootRecipe = ((input?: Record<string, unknown>) =>
-    resolveStrictRootClassName(compiled, input, false)
-      .className) as RootRecipe & {
+    resolveRootClassName(compiled, input, false).className) as RootRecipe & {
     resolve: RootRecipe['resolve'];
   };
 
@@ -310,48 +182,7 @@ export function createStrictRootRecipe(
     options?: TOptions
   ): RootResolveResult<AnyRootRecipe, TInput, TOptions> => {
     const normalizedOptions = normalizeResolveOptions(compiled, options);
-    const resolved = resolveStrictRootClassName(compiled, input, true);
-    const resolvedProps = createResolvedProps(
-      compiled,
-      input,
-      normalizedOptions,
-      resolved.selection
-    );
-    resolvedProps.className = resolved.className;
-
-    return {
-      resolvedProps: resolvedProps as RootResolveResult<
-        AnyRootRecipe,
-        TInput,
-        TOptions
-      >['resolvedProps'],
-      variants: materializeSelection(
-        compiled,
-        resolved.selection
-      ) as RootResolveResult<AnyRootRecipe, TInput, TOptions>['variants'],
-    };
-  };
-
-  return attachCompiled(rootRecipe as AnyRecipe, compiled);
-}
-
-export function createLeanRootRecipe(
-  compiled: LeanRootCompiledRecipe
-): AnyRecipe {
-  const rootRecipe = ((input?: Record<string, unknown>) =>
-    resolveLeanRootClassName(compiled, input).className) as RootRecipe & {
-    resolve: RootRecipe['resolve'];
-  };
-
-  rootRecipe.resolve = <
-    TInput extends Record<string, unknown> | undefined = undefined,
-    const TOptions extends ResolveOptions | undefined = undefined
-  >(
-    input?: TInput,
-    options?: TOptions
-  ): RootResolveResult<AnyRootRecipe, TInput, TOptions> => {
-    const normalizedOptions = normalizeResolveOptions(compiled, options);
-    const resolved = resolveLeanRootClassName(compiled, input);
+    const resolved = resolveRootClassName(compiled, input, true);
     const resolvedProps = createResolvedProps(
       compiled,
       input,
