@@ -520,14 +520,15 @@ composes normally with `propAliases`, `forwardProps`, and `withRender`.
 You can pass custom React components as the base:
 
 ```tsx
-import { forwardRef, type ComponentPropsWithoutRef } from 'react';
+import type { ComponentPropsWithRef } from 'react';
 
-const RouterLink = forwardRef<
-  HTMLAnchorElement,
-  { to: string } & ComponentPropsWithoutRef<'a'>
->(function RouterLink({ to, ...props }, ref) {
-  return <a {...props} ref={ref} href={to} />;
-});
+// React 19: `ref` is a regular prop, so no forwardRef is needed.
+function RouterLink({
+  to,
+  ...props
+}: { to: string } & ComponentPropsWithRef<'a'>) {
+  return <a {...props} href={to} />;
+}
 
 const LinkBadge = styled(RouterLink, badgeRecipe);
 ```
@@ -545,24 +546,17 @@ Usage:
 Use `forwardProps` when the base component needs a resolved variant value in its own props.
 
 ```tsx
-import { forwardRef, type ComponentPropsWithoutRef } from 'react';
+import type { ComponentPropsWithRef } from 'react';
 import { defineConfig, recipe } from 'react-class-variants';
 
 const { styled } = defineConfig();
 
-const NavLinkBase = forwardRef<
-  HTMLAnchorElement,
-  { active?: boolean } & ComponentPropsWithoutRef<'a'>
->(function NavLinkBase({ active, className, ...props }, ref) {
-  return (
-    <a
-      {...props}
-      ref={ref}
-      className={className}
-      data-active={active || undefined}
-    />
-  );
-});
+function NavLinkBase({
+  active,
+  ...props
+}: { active?: boolean } & ComponentPropsWithRef<'a'>) {
+  return <a {...props} data-active={active || undefined} />;
+}
 
 const navLinkRecipe = recipe({
   base: 'inline-flex items-center rounded-md px-3 py-2 text-sm font-medium',
@@ -596,7 +590,12 @@ Rules:
 
 - custom bases do not support `withRender`
 - custom bases should accept and forward `className`, `children`, and `ref` when those behaviors matter
+- `ref` reaches the base as a regular React 19 prop; bases written with `forwardRef` keep working
 - use custom bases when you already own the host component contract
+
+`styled()` returns a plain React 19 function component, not a `forwardRef`
+object: pass `ref` like any other prop, and `ComponentRef<typeof Component>`
+resolves to the base element or component instance.
 
 ## 8. Local Slot Overrides
 

@@ -5,6 +5,7 @@ import {
   lazy,
   memo,
   type ComponentPropsWithoutRef,
+  type ComponentPropsWithRef,
 } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { defineConfig, recipe } from '../src';
@@ -157,6 +158,77 @@ describe('styled() root components', () => {
 
     expect(ref.current).toBeInstanceOf(HTMLButtonElement);
     expect(ref.current?.className).toBe('inline-flex bg-blue');
+  });
+
+  it('passes ref as a plain React 19 prop on every path', () => {
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+    const badgeRecipe = recipe({
+      base: 'inline-flex',
+      variants: { tone: { info: 'text-sky-700' } },
+    });
+    const cardRecipe = recipe({
+      slots: { root: 'rounded', label: 'text-sm' },
+      variants: { tone: { info: { root: 'bg-sky-50' } } },
+    });
+    // A React 19 base component that takes `ref` as a regular prop.
+    function PlainBase(props: ComponentPropsWithRef<'span'>) {
+      return <span data-testid="plain" {...props} />;
+    }
+
+    const Direct = styled('button', badgeRecipe);
+    const Nested = styled(Direct, badgeRecipe);
+    const Custom = styled(PlainBase, badgeRecipe);
+    const RootView = styled('section', badgeRecipe, {
+      view: ({ host }) => host.render(),
+    });
+    const SlotView = styled('article', cardRecipe, {
+      view: ({ host }) => host.render(),
+    });
+
+    const refs = {
+      direct: createRef<HTMLButtonElement>(),
+      nested: createRef<HTMLButtonElement>(),
+      custom: createRef<HTMLSpanElement>(),
+      rootView: createRef<HTMLElement>(),
+      slotView: createRef<HTMLElement>(),
+    };
+
+    render(
+      <>
+        <Direct ref={refs.direct} tone="info">
+          Direct
+        </Direct>
+        <Nested ref={refs.nested} tone="info">
+          Nested
+        </Nested>
+        <Custom ref={refs.custom} tone="info" />
+        <RootView ref={refs.rootView} tone="info" />
+        <SlotView ref={refs.slotView} tone="info" />
+      </>
+    );
+
+    expect(refs.direct.current).toBe(
+      screen.getByRole('button', { name: 'Direct' })
+    );
+    expect(refs.nested.current).toBe(
+      screen.getByRole('button', { name: 'Nested' })
+    );
+    expect(refs.custom.current).toBe(screen.getByTestId('plain'));
+    expect(refs.rootView.current?.tagName).toBe('SECTION');
+    expect(refs.slotView.current?.tagName).toBe('ARTICLE');
+    expect(consoleError).not.toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  it('builds plain function components rather than forwardRef objects', () => {
+    const Button = styled('button', recipe({ base: 'inline-flex' }));
+
+    expect(typeof Button).toBe('function');
+    expect((Button as unknown as { $$typeof?: symbol }).$$typeof).toBe(
+      undefined
+    );
   });
 
   it('drops the render prop in lean mode when withRender is disabled', () => {

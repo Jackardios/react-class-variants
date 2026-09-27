@@ -30,6 +30,9 @@ import {
   type VariantProps,
 } from '../../../dist/core';
 
+// A styled component is a React 19 function component.
+type StyledRender = ReactNode | Promise<ReactNode>;
+
 const coreConfig = defineCoreConfig({
   merge: className => className,
 });
@@ -139,14 +142,14 @@ const { styled } = defineRootConfig();
 const Button = styled('button', buttonRecipe);
 const ConfiguredButton = reactConfig.styled('button', buttonRecipe);
 
-expectType<ReactNode>(
+expectType<StyledRender>(
   Button({
     tone: 'info',
     type: 'button',
     children: 'Info',
   })
 );
-expectType<ReactNode>(
+expectType<StyledRender>(
   ConfiguredButton({
     tone: 'info',
     type: 'button',

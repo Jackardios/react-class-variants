@@ -2,12 +2,12 @@
 import {
   cloneElement,
   createElement,
-  forwardRef,
   isValidElement,
   type ComponentType,
-  type ForwardedRef,
+  type FunctionComponent,
   type ReactElement,
   type ReactNode,
+  type Ref,
 } from 'react';
 import type { ClassNameValue, ResolveOptions } from './core-types';
 import type {
@@ -51,7 +51,7 @@ type AnyStyledOptions =
 type RenderFunction = (props: Record<string, unknown>) => ReactNode;
 
 // The direct path reads `render` from the raw props, so it never reaches the
-// element props.
+// element props; `ref` is an ordinary React 19 prop and flows through.
 const directSkipKeys = ['render'];
 // View paths expose these through the host view, outside host.props.
 const viewSkipKeys = ['children', 'className', 'ref', 'render'];
@@ -72,7 +72,7 @@ type HostSetup = {
 type HostState = {
   children: ReactNode;
   className: string;
-  forwardedRef: ForwardedRef<unknown> | undefined;
+  ref: Ref<unknown> | undefined;
   props: Record<string, unknown>;
   render: RenderProp | undefined;
   setup: HostSetup;
@@ -87,19 +87,20 @@ type HostViewObject = {
 };
 
 // Renders `base` from a props object this module owns (never React's frozen
-// props), so it may be mutated in place.
+// props), so it may be mutated in place. `props.ref` is the outer ref.
 function renderElement(
   base: AnyElementType,
   props: Record<string, unknown>,
-  ref: ForwardedRef<unknown> | undefined,
   render: RenderProp | undefined
 ): ReactNode {
   if (!render) {
-    props.ref = ref;
     return createElement(base as any, props);
   }
 
-  const mergedRef = mergeTwoRefs(ref, getRefProperty(render));
+  const mergedRef = mergeTwoRefs(
+    props.ref as Ref<unknown> | undefined,
+    getRefProperty(render)
+  );
 
   if (isValidElement(render)) {
     const element = render as ReactElement<Record<string, unknown>>;
@@ -136,7 +137,7 @@ function renderHostView(
   props.children = state.children;
   props.className = state.className;
 
-  let ref = state.forwardedRef;
+  let ref = state.ref;
   let render = state.render;
 
   if (overrides) {
@@ -145,15 +146,14 @@ function renderHostView(
       state.className,
       flattenClassName(overrides.className as ClassNameValue | undefined)
     );
-    ref = mergeTwoRefs(ref, overrides.ref as ForwardedRef<unknown>) as
-      | ForwardedRef<unknown>
-      | undefined;
+    ref = mergeTwoRefs(ref, overrides.ref as Ref<unknown> | undefined);
     if (setup.withRender) {
       render = (overrides.render as RenderProp | undefined) ?? render;
     }
   }
 
-  return renderElement(setup.base, props, ref, render);
+  if (ref) props.ref = ref;
+  return renderElement(setup.base, props, render);
 }
 
 const hostViewPrototype: Pick<HostViewObject, 'render'> = {
@@ -256,19 +256,15 @@ function createDirectComponent(
   skip: SkipKeys,
   withRender: boolean
 ) {
-  return forwardRef<unknown, Record<string, unknown>>(function StyledComponent(
-    rawProps,
-    ref
-  ) {
+  return function StyledComponent(rawProps: Record<string, unknown>) {
     ensureRenderSupported(compiled.validate, withRender, rawProps);
 
     return renderElement(
       base,
       resolveRootComponentProps(compiled, rawProps, resolveOptions, skip),
-      ref,
       withRender ? (rawProps.render as RenderProp | undefined) : undefined
     );
-  });
+  };
 }
 
 function createRootViewComponent(
@@ -278,32 +274,30 @@ function createRootViewComponent(
   setup: HostSetup,
   View: ComponentType<any>
 ) {
-  return forwardRef<unknown, Record<string, unknown>>(
-    function StyledViewComponent(rawProps, ref) {
-      ensureRenderSupported(compiled.validate, setup.withRender, rawProps);
+  return function StyledViewComponent(rawProps: Record<string, unknown>) {
+    ensureRenderSupported(compiled.validate, setup.withRender, rawProps);
 
-      const resolved = resolveRootViewState(
-        compiled,
-        rawProps,
-        resolveOptions,
-        skip
-      );
+    const resolved = resolveRootViewState(
+      compiled,
+      rawProps,
+      resolveOptions,
+      skip
+    );
 
-      return createElement(View, {
-        host: createHostView({
-          children: rawProps.children as ReactNode,
-          className: resolved.className,
-          forwardedRef: ref,
-          props: resolved.props,
-          render: setup.withRender
-            ? (rawProps.render as RenderProp | undefined)
-            : undefined,
-          setup,
-        }),
-        variants: resolved.variants,
-      });
-    }
-  );
+    return createElement(View, {
+      host: createHostView({
+        children: rawProps.children as ReactNode,
+        className: resolved.className,
+        ref: rawProps.ref as Ref<unknown> | undefined,
+        props: resolved.props,
+        render: setup.withRender
+          ? (rawProps.render as RenderProp | undefined)
+          : undefined,
+        setup,
+      }),
+      variants: resolved.variants,
+    });
+  };
 }
 
 function createSlotViewComponent(
@@ -314,43 +308,41 @@ function createSlotViewComponent(
   View: ComponentType<any>,
   hostSlotIndex: number
 ) {
-  return forwardRef<unknown, Record<string, unknown>>(
-    function StyledSlotViewComponent(rawProps, ref) {
-      ensureRenderSupported(compiled.validate, setup.withRender, rawProps);
+  return function StyledSlotViewComponent(rawProps: Record<string, unknown>) {
+    ensureRenderSupported(compiled.validate, setup.withRender, rawProps);
 
-      const resolved = resolveSlotViewState(
+    const resolved = resolveSlotViewState(
+      compiled,
+      rawProps,
+      resolveOptions,
+      skip
+    );
+
+    return createElement(View, {
+      classes: createSlotRenderers(
         compiled,
-        rawProps,
-        resolveOptions,
-        skip
-      );
-
-      return createElement(View, {
-        classes: createSlotRenderers(
+        resolved.selection,
+        resolved.slotClassNames
+      ),
+      host: createHostView({
+        children: rawProps.children as ReactNode,
+        className: resolveSlotClassName(
           compiled,
+          hostSlotIndex,
           resolved.selection,
-          resolved.slotClassNames
+          resolved.slotClassNames,
+          rawProps.className as ClassNameValue | undefined
         ),
-        host: createHostView({
-          children: rawProps.children as ReactNode,
-          className: resolveSlotClassName(
-            compiled,
-            hostSlotIndex,
-            resolved.selection,
-            resolved.slotClassNames,
-            rawProps.className as ClassNameValue | undefined
-          ),
-          forwardedRef: ref,
-          props: resolved.props,
-          render: setup.withRender
-            ? (rawProps.render as RenderProp | undefined)
-            : undefined,
-          setup,
-        }),
-        variants: resolved.variants,
-      });
-    }
-  );
+        ref: rawProps.ref as Ref<unknown> | undefined,
+        props: resolved.props,
+        render: setup.withRender
+          ? (rawProps.render as RenderProp | undefined)
+          : undefined,
+        setup,
+      }),
+      variants: resolved.variants,
+    });
+  };
 }
 
 // react.ts has already validated the base/options combination.
@@ -369,7 +361,7 @@ export function createStyled(
     options?.view ? viewSkipKeys : directSkipKeys,
     resolveOptions?.aliasKeys
   );
-  let Component;
+  let Component: FunctionComponent<Record<string, unknown>>;
 
   if (compiled.mode === 'slot') {
     const slotOptions = options as SlotStyledOptions<
