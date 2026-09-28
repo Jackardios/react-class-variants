@@ -4,7 +4,6 @@ import {
   gitMaybe,
   isMainModule,
   npmView,
-  pollUntil,
   readPackageJson,
   runInherited,
 } from './release-shared.mjs';
@@ -55,13 +54,10 @@ export function doesFirstParentIntroduceVersion(parentVersion, version) {
   return parentVersion !== version;
 }
 
-async function finalizePublishedRelease({
-  headSha,
-  mode,
-  packageName,
-  tag,
-  version,
-}) {
+// No registry read follows: `changeset publish` exits non-zero when npm
+// rejects the upload, while an accepted trusted publish has taken over two
+// and a half minutes to show up in the registry.
+async function finalizePublishedRelease({ headSha, mode, tag }) {
   if (mode === 'publish' || mode === 'restore-missing-tag') {
     const tagStatus = await ensureLocalTagAtHead(tag, headSha);
 
@@ -72,20 +68,6 @@ async function finalizePublishedRelease({
     }
   } else if (mode === 'reconcile-current-head') {
     console.log(`Release tag ${tag} already points at ${headSha}.`);
-  }
-
-  // The registry can lag behind a fresh publish, so poll before failing.
-  const publishedVersion = await pollUntil(
-    () => npmView(`${packageName}@${version}`, 'version'),
-    value => value === version
-  );
-
-  if (publishedVersion !== version) {
-    throw new Error(
-      `Expected ${packageName}@${version} to be published, but npm returned ${
-        publishedVersion ?? 'nothing'
-      }.`
-    );
   }
 }
 
@@ -163,13 +145,7 @@ export async function publishRelease() {
     );
   }
 
-  await finalizePublishedRelease({
-    headSha,
-    mode: plan.mode,
-    packageName,
-    tag,
-    version,
-  });
+  await finalizePublishedRelease({ headSha, mode: plan.mode, tag });
 }
 
 if (isMainModule(import.meta.url)) {

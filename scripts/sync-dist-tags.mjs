@@ -121,18 +121,17 @@ async function readReleaseConfig() {
 export async function syncDistTags() {
   const { packageName, prereleaseTag, publishedVersion } =
     await readReleaseConfig();
-  const publishedVersions = normalizeArray(
+  const listedVersions = normalizeArray(
     await pollUntil(
       () => npmView(packageName, 'versions'),
       value => normalizeArray(value).includes(publishedVersion)
     )
   );
-
-  if (!publishedVersions.includes(publishedVersion)) {
-    throw new Error(
-      `npm registry did not report ${packageName}@${publishedVersion} after publish.`
-    );
-  }
+  // This step only runs after a successful publish, so a version the registry
+  // does not list yet is lagging, not missing.
+  const publishedVersions = listedVersions.includes(publishedVersion)
+    ? listedVersions
+    : [...listedVersions, publishedVersion];
 
   const currentDistTags =
     (await pollUntil(
