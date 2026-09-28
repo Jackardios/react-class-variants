@@ -33,7 +33,7 @@ Defined in `.github/workflows/release.yml`.
 
 - runs on pushes to `next`
 - runs the same reusable `pnpm run verify` matrix as CI on Node `22.x`, `24.x`, and `26.x`
-- uses `changesets/action`
+- uses `changesets/action` v2 with Changesets CLI v3; the action pushes the Version Packages commit through the GitHub API, so it is signed
 - makes every GitHub write (release branch, Version Packages PR, tags, GitHub Releases) with a token from the release GitHub App, so the Version Packages PR runs CI like any other PR; the job's own `GITHUB_TOKEN` only reads the repository
 - uses npm trusted publishing via GitHub Actions OIDC
 - validates GitHub release/changelog readiness with `scripts/verify-github-release.mjs`
@@ -87,7 +87,7 @@ Important notes:
 - do not assume npm dist-tags are in the state you want after a publish unless the sync step has completed successfully
 - npm currently limits trusted publishing auth to `npm publish`, so OIDC-only runs cannot mutate dist-tags and must leave any repair commands for a maintainer to run manually
 - GitHub Releases are reconciled in the same post-publish phase, so a manual dist-tag follow-up does not prevent the workflow from still attempting release-page repair
-- if a prerelease redesign invalidates pending changesets, rewrite or delete the stale `.changeset/*.md` files before the next alpha so `changeset pre exit` does not pull obsolete notes into the stable release plan
+- each alpha's `changeset version` moves the changesets it released into `.changeset/pre/`; the stable `changeset version` after `changeset pre exit` builds the `2.0.0` changelog from all of them, so rewrite or delete any there that a later redesign made obsolete
 
 ## Post-Publish Verification
 
@@ -137,7 +137,7 @@ If a publish partially succeeds and the workflow is rerun on the same commit, th
 When preparing the first stable `2.0.0`:
 
 1. Ensure `next` contains the intended stable release state.
-2. Audit pending `.changeset/*.md` files and delete or rewrite any prerelease notes that describe superseded API shapes rather than the final stable surface.
+2. Audit `.changeset/pre/*.md` and delete or rewrite any prerelease notes that describe superseded API shapes rather than the final stable surface.
 3. Run `changeset pre exit`.
 4. Publish stable `2.0.0`.
 5. Fast-forward `main` to the stable release commit.
