@@ -24,7 +24,7 @@ Canonical repository guidance for LLMs and coding agents working in this repo.
 - Keep legacy v1 work isolated to `v1-maintenance`.
 - Add a changeset for any source, public type, package metadata, build, or release-affecting change.
 - Documentation-only changes usually do not need a changeset.
-- If a prerelease redesign invalidates pending `.changeset/*.md` files, rewrite or delete the stale ones before the next alpha so `changeset pre exit` does not resurrect obsolete notes.
+- Changesets v3 moves each changeset an alpha has released into `.changeset/pre/`, and the stable `2.0.0` changelog is built from all of them. When a later redesign makes one obsolete, rewrite or delete it there; new changesets still go in `.changeset/`.
 - Alpha publishing happens from GitHub Actions via npm trusted publishing; avoid manual `npm publish` unless explicitly required.
 - The release workflow checks whether automated dist-tag repair is available before publish. With npm trusted publishing only, dist-tag drift must be repaired manually because npm currently limits trusted publishing auth to `npm publish`.
 - Package tarballs must remain valid from a clean checkout where `dist/` is gitignored; `pack`/`publish` therefore rely on a `prepack` build step.

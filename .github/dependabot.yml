@@ -10,10 +10,6 @@ updates:
     groups:
       github-actions:
         patterns: ['*']
-    ignore:
-      # v2 requires Changesets CLI v3; upgrade both in one reviewed PR.
-      - dependency-name: changesets/action
-        update-types: ['version-update:semver-major']
 
   # The package has no runtime dependencies, so these are all devDependencies.
   # Minor and patch updates share one PR; majors get their own.
@@ -27,7 +23,3 @@ updates:
     groups:
       dev-dependencies:
         update-types: [minor, patch]
-    ignore:
-      # Moves together with changesets/action v2; see above.
-      - dependency-name: '@changesets/cli'
-        update-types: ['version-update:semver-major']

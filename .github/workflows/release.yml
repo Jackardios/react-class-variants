@@ -52,28 +52,27 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Create Release Pull Request or Publish
         id: changesets
-        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
-          version: pnpm exec changeset version
-          commit: Version Packages
-          title: Version Packages
-        env:
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          github-token: ${{ steps.app-token.outputs.token }}
+          version-script: pnpm exec changeset version
+          commit-message: Version Packages
+          pr-title: Version Packages
       - name: Validate GitHub release auth and notes
-        if: steps.changesets.outputs.hasChangesets == 'false'
+        if: steps.changesets.outputs.has-changesets == 'false'
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         run: pnpm run release:github:preflight
       - name: Check npm dist-tag repair availability
-        if: steps.changesets.outputs.hasChangesets == 'false'
+        if: steps.changesets.outputs.has-changesets == 'false'
         env:
           RELEASE_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: pnpm run release:dist-tags:preflight
       - name: Publish package to npm
-        if: steps.changesets.outputs.hasChangesets == 'false'
+        if: steps.changesets.outputs.has-changesets == 'false'
         run: pnpm run release:publish
       - name: Push release tags
-        if: steps.changesets.outputs.hasChangesets == 'false'
+        if: steps.changesets.outputs.has-changesets == 'false'
         run: |
           mapfile -t tags < <(git tag --points-at HEAD 'v*')
           if [ "${#tags[@]}" -eq 0 ]; then
@@ -84,14 +83,14 @@ jobs:
             git push origin "$tag"
           done
       - name: Sync npm dist-tags
-        if: steps.changesets.outputs.hasChangesets == 'false'
+        if: steps.changesets.outputs.has-changesets == 'false'
         id: sync_dist_tags
         continue-on-error: true
         env:
           RELEASE_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: pnpm run release:dist-tags
       - name: Create or update GitHub releases
-        if: steps.changesets.outputs.hasChangesets == 'false'
+        if: steps.changesets.outputs.has-changesets == 'false'
         id: sync_github_releases
         continue-on-error: true
         env:
@@ -99,7 +98,7 @@ jobs:
         run: pnpm run release:github-releases
       - name: Verify release reconciliation
         if: |
-          steps.changesets.outputs.hasChangesets == 'false' &&
+          steps.changesets.outputs.has-changesets == 'false' &&
           (steps.sync_dist_tags.outcome == 'failure' || steps.sync_github_releases.outcome == 'failure')
         run: |
           echo "sync_dist_tags outcome: ${{ steps.sync_dist_tags.outcome }}"

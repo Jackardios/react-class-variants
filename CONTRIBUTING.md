@@ -145,7 +145,7 @@ Notes:
 
 - documentation-only changes usually do not need a changeset
 - if a PR intentionally touches release-affecting files but should not ship a version, add an empty changeset with `pnpm changeset add --empty`
-- if a prerelease redesign replaces an unreleased API, rewrite or delete stale pending `.changeset/*.md` files before the next alpha so `changeset pre exit` does not carry obsolete notes into the stable release plan
+- changesets that an alpha has already released move to `.changeset/pre/`, and the stable `2.0.0` changelog is built from all of them; if a later redesign replaces an API one of them describes, rewrite or delete that file there
 
 Use:
 
