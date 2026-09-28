@@ -12,7 +12,9 @@ All benchmark tooling lives under [`bench/`](../bench).
 
 ### `pnpm bench`
 
-Runs the local Vitest microbench suites under [`bench/vitest/`](../bench/vitest).
+Builds the package, then runs the local Vitest microbench suites under [`bench/vitest/`](../bench/vitest) against `dist/` (`vitest.bench.config.ts`).
+
+The suites import `src`, but the config redirects those imports to `dist/` and loads it, like the fixtures, as native ESM, the way competitor packages load from `node_modules`. Vite's module runner would route every cross-module call in `src/` through an export getter, which dominated the measured time (about 5x on prepared slot calls). The run fails if any `src/` module loads. Each `test()` compares its alternatives with `bench.compare()`, which interleaves them.
 
 Use this for:
 
@@ -24,7 +26,7 @@ This command intentionally excludes the optional competitor diagnostics.
 
 ### `pnpm bench:diagnostics:competitors`
 
-Runs the local, non-authoritative cross-library diagnostics under [`bench/vitest/diagnostics/`](../bench/vitest/diagnostics).
+Builds the package, then runs the local, non-authoritative cross-library diagnostics under [`bench/vitest/diagnostics/`](../bench/vitest/diagnostics) against `dist/`, with the same setup as `pnpm bench`.
 
 Use this for:
 

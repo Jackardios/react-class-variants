@@ -1,16 +1,3 @@
-import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vitest/config';
+import { createBenchConfig } from './vitest.bench.config.ts';
 
-export default defineConfig({
-  plugins: [react()],
-  test: {
-    environment: 'jsdom',
-    setupFiles: './test/setup.ts',
-    benchmark: {
-      include: [
-        'bench/vitest/diagnostics/*.bench.ts',
-        'bench/vitest/diagnostics/*.bench.tsx',
-      ],
-    },
-  },
-});
+export default createBenchConfig('bench/vitest/diagnostics');

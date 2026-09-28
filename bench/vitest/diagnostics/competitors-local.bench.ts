@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { bench, describe } from 'vitest';
+import { describe, test } from 'vitest';
 import { cva } from 'class-variance-authority';
 import { variants as cnVariants } from 'classname-variants';
 import { twMerge } from 'tailwind-merge';
@@ -37,18 +37,18 @@ for (const [track, collection] of Object.entries(factories)) {
 
   describe(`competitors local: ${trackTitle}`, () => {
     for (const [scenarioName, props] of Object.entries(scenarioGroups)) {
-      describe(scenarioName, () => {
-        for (const [library, implementation] of Object.entries(collection)) {
-          const resolver =
-            scenarioName.startsWith('simple') ||
-            scenarioName === 'simple defaults'
+      test(scenarioName, async ({ bench }) => {
+        await bench.compare(
+          ...Object.entries(collection).map(([library, implementation]) => {
+            const resolver = scenarioName.startsWith('simple')
               ? implementation.simple
               : implementation.complex;
 
-          bench(library, () => {
-            resolver(props);
-          });
-        }
+            return bench(library, () => {
+              resolver(props);
+            });
+          })
+        );
       });
     }
   });

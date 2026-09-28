@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig, mergeConfig } from 'vitest/config';
-import baseConfig from './vite.config';
+import baseConfig from './vite.config.ts';
 
 const srcDir = fileURLToPath(new URL('./src/', import.meta.url));
 const distEntry = (file: string) =>

@@ -12,17 +12,15 @@ export default defineConfig({
       exclude: ['src/**/*-types.ts'],
       // Enforced by `pnpm test:coverage` (part of `pnpm run verify`). Raise
       // these when coverage improves; never lower them to land a change.
-      // Statements are measured through Vitest 4's AST remapping, which counts
-      // about 2.5 points lower than Vitest 3 did on the same tests.
+      // Statements are measured through the AST remapping Vitest adopted in
+      // v4, which counts about 2.5 points lower than Vitest 3 did on the same
+      // tests.
       thresholds: {
         statements: 96,
         branches: 93,
         functions: 100,
         lines: 98,
       },
-    },
-    benchmark: {
-      include: ['bench/vitest/*.bench.ts', 'bench/vitest/*.bench.tsx'],
     },
   },
 });
