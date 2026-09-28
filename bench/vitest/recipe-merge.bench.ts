@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { bench, describe } from 'vitest';
+import { test } from 'vitest';
 import { twMerge } from 'tailwind-merge';
 import { defineConfig } from '../../src';
 import {
@@ -35,43 +35,46 @@ function nextRotatingInput() {
   };
 }
 
-describe('root resolve with twMerge', () => {
-  bench('cached (repeated input → hit)', () => {
-    cachedRoot(rootScenarioInputs.complexWithClassName);
-  });
-
-  bench('uncached (merge every call)', () => {
-    uncachedRoot(rootScenarioInputs.complexWithClassName);
-  });
+test('root resolve with twMerge', async ({ bench }) => {
+  await bench.compare(
+    bench('cached (repeated input → hit)', () => {
+      cachedRoot(rootScenarioInputs.complexWithClassName);
+    }),
+    bench('uncached (merge every call)', () => {
+      uncachedRoot(rootScenarioInputs.complexWithClassName);
+    })
+  );
 });
 
-describe('root resolve with bounded rotating className', () => {
-  bench('cached (bounded rotation)', () => {
-    cachedRoot(nextRotatingInput());
-  });
-
-  bench('uncached', () => {
-    uncachedRoot(nextRotatingInput());
-  });
+test('root resolve with bounded rotating className', async ({ bench }) => {
+  await bench.compare(
+    bench('cached (bounded rotation)', () => {
+      cachedRoot(nextRotatingInput());
+    }),
+    bench('uncached', () => {
+      uncachedRoot(nextRotatingInput());
+    })
+  );
 });
 
 // Slotted recipes are not cached (root-only cache): both configs run merge per
 // slot, so this measures raw slot resolution and confirms the cache flag adds no
 // overhead to the slot path.
-describe('slot resolve with twMerge (4 slots, not cached)', () => {
-  bench('default config (merge per slot)', () => {
-    const slots = cachedSlots(slotScenarioInputs.complex);
-    slots.root();
-    slots.label();
-    slots.icon();
-    slots.badge();
-  });
-
-  bench('cache:false (merge per slot)', () => {
-    const slots = uncachedSlots(slotScenarioInputs.complex);
-    slots.root();
-    slots.label();
-    slots.icon();
-    slots.badge();
-  });
+test('slot resolve with twMerge (4 slots, not cached)', async ({ bench }) => {
+  await bench.compare(
+    bench('default config (merge per slot)', () => {
+      const slots = cachedSlots(slotScenarioInputs.complex);
+      slots.root();
+      slots.label();
+      slots.icon();
+      slots.badge();
+    }),
+    bench('cache:false (merge per slot)', () => {
+      const slots = uncachedSlots(slotScenarioInputs.complex);
+      slots.root();
+      slots.label();
+      slots.icon();
+      slots.badge();
+    })
+  );
 });

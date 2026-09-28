@@ -2,7 +2,7 @@ import { createElement } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot, type Root } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { bench, describe } from 'vitest';
+import { describe, test } from 'vitest';
 import { defineConfig, recipe } from '../../src';
 import {
   complexRootConfig,
@@ -133,130 +133,128 @@ function createClientRerenderBench(
   };
 }
 
+function hooks(rerender: ReturnType<typeof createClientRerenderBench>) {
+  return { beforeAll: rerender.setup, afterAll: rerender.teardown };
+}
+
 describe('styled()', () => {
-  describe('element creation', () => {
-    bench('simple component with defaults', () => {
-      createElement(SimpleButton, { children: 'Click' });
-    });
-
-    bench('simple component with props', () => {
-      createElement(SimpleButton, simpleComponentProps);
-    });
-
-    bench('complex component with defaults', () => {
-      createElement(ComplexButton, { children: 'Click' });
-    });
-
-    bench('complex component with props', () => {
-      createElement(ComplexButton, complexComponentProps);
-    });
+  test('element creation', async ({ bench }) => {
+    await bench.compare(
+      bench('simple component with defaults', () => {
+        createElement(SimpleButton, { children: 'Click' });
+      }),
+      bench('simple component with props', () => {
+        createElement(SimpleButton, simpleComponentProps);
+      }),
+      bench('complex component with defaults', () => {
+        createElement(ComplexButton, { children: 'Click' });
+      }),
+      bench('complex component with props', () => {
+        createElement(ComplexButton, complexComponentProps);
+      })
+    );
   });
 
-  describe('render prop', () => {
-    bench('render prop with element', () => {
-      createElement(SimpleButtonWithRender, {
-        children: 'Link',
-        render: renderElement,
-      });
-    });
-
-    bench('render prop with function', () => {
-      createElement(SimpleButtonWithRender, {
-        children: 'Link',
-        render: renderFunction,
-      });
-    });
-
-    bench('render prop element with variant props', () => {
-      createElement(ComplexButtonWithRender, {
-        ...complexComponentProps,
-        render: renderElement,
-      });
-    });
-
-    bench('render prop function with variant props', () => {
-      createElement(ComplexButtonWithRender, {
-        ...complexComponentProps,
-        render: renderFunction,
-      });
-    });
-  });
-
-  describe('server render', () => {
-    bench('simple component with defaults', () => {
-      renderToStaticMarkup(
-        createElement(SimpleButton, {
-          children: 'Click',
-        })
-      );
-    });
-
-    bench('simple component with props', () => {
-      renderToStaticMarkup(createElement(SimpleButton, simpleComponentProps));
-    });
-
-    bench('complex component with props', () => {
-      renderToStaticMarkup(createElement(ComplexButton, complexComponentProps));
-    });
-
-    bench('render prop element with simple props', () => {
-      renderToStaticMarkup(
+  test('render prop', async ({ bench }) => {
+    await bench.compare(
+      bench('render prop with element', () => {
         createElement(SimpleButtonWithRender, {
-          ...simpleComponentProps,
+          children: 'Link',
           render: renderElement,
-        })
-      );
-    });
-
-    bench('render prop function with simple props', () => {
-      renderToStaticMarkup(
+        });
+      }),
+      bench('render prop with function', () => {
         createElement(SimpleButtonWithRender, {
-          ...simpleComponentProps,
+          children: 'Link',
           render: renderFunction,
-        })
-      );
-    });
-
-    bench('render prop element with complex props', () => {
-      renderToStaticMarkup(
+        });
+      }),
+      bench('render prop element with variant props', () => {
         createElement(ComplexButtonWithRender, {
           ...complexComponentProps,
           render: renderElement,
-        })
-      );
-    });
-
-    bench('render prop function with complex props', () => {
-      renderToStaticMarkup(
+        });
+      }),
+      bench('render prop function with variant props', () => {
         createElement(ComplexButtonWithRender, {
           ...complexComponentProps,
           render: renderFunction,
-        })
-      );
-    });
-
-    bench('slotted view with direct slot access', () => {
-      renderToStaticMarkup(
-        createElement(SlottedButton, {
-          children: 'Save',
-          loading: true,
-          tone: 'primary',
-        })
-      );
-    });
-
-    bench('slotted view with Object.keys and spread', () => {
-      renderToStaticMarkup(
-        createElement(EnumeratedSlottedButton, {
-          children: 'Save',
-          loading: true,
-          tone: 'ghost',
-        })
-      );
-    });
+        });
+      })
+    );
   });
 
-  describe('client rerender', () => {
+  test('server render', async ({ bench }) => {
+    await bench.compare(
+      bench('simple component with defaults', () => {
+        renderToStaticMarkup(
+          createElement(SimpleButton, {
+            children: 'Click',
+          })
+        );
+      }),
+      bench('simple component with props', () => {
+        renderToStaticMarkup(createElement(SimpleButton, simpleComponentProps));
+      }),
+      bench('complex component with props', () => {
+        renderToStaticMarkup(
+          createElement(ComplexButton, complexComponentProps)
+        );
+      }),
+      bench('render prop element with simple props', () => {
+        renderToStaticMarkup(
+          createElement(SimpleButtonWithRender, {
+            ...simpleComponentProps,
+            render: renderElement,
+          })
+        );
+      }),
+      bench('render prop function with simple props', () => {
+        renderToStaticMarkup(
+          createElement(SimpleButtonWithRender, {
+            ...simpleComponentProps,
+            render: renderFunction,
+          })
+        );
+      }),
+      bench('render prop element with complex props', () => {
+        renderToStaticMarkup(
+          createElement(ComplexButtonWithRender, {
+            ...complexComponentProps,
+            render: renderElement,
+          })
+        );
+      }),
+      bench('render prop function with complex props', () => {
+        renderToStaticMarkup(
+          createElement(ComplexButtonWithRender, {
+            ...complexComponentProps,
+            render: renderFunction,
+          })
+        );
+      }),
+      bench('slotted view with direct slot access', () => {
+        renderToStaticMarkup(
+          createElement(SlottedButton, {
+            children: 'Save',
+            loading: true,
+            tone: 'primary',
+          })
+        );
+      }),
+      bench('slotted view with Object.keys and spread', () => {
+        renderToStaticMarkup(
+          createElement(EnumeratedSlottedButton, {
+            children: 'Save',
+            loading: true,
+            tone: 'ghost',
+          })
+        );
+      })
+    );
+  });
+
+  test('client rerender', async ({ bench }) => {
     const simple = createClientRerenderBench(toggle =>
       createElement(SimpleButton, createSimpleRerenderProps(toggle))
     );
@@ -283,84 +281,70 @@ describe('styled()', () => {
       })
     );
 
-    bench('simple component rerender', simple.run, {
-      setup: simple.setup,
-      teardown: simple.teardown,
-      throws: true,
-    });
-
-    bench('complex component rerender', complex.run, {
-      setup: complex.setup,
-      teardown: complex.teardown,
-      throws: true,
-    });
-
-    bench('render prop element rerender', renderElementRerender.run, {
-      setup: renderElementRerender.setup,
-      teardown: renderElementRerender.teardown,
-      throws: true,
-    });
-
-    bench('render prop function rerender', renderFunctionRerender.run, {
-      setup: renderFunctionRerender.setup,
-      teardown: renderFunctionRerender.teardown,
-      throws: true,
-    });
-
-    bench(
-      'slotted view rerender with Object.keys and spread',
-      slottedEnumeratedRerender.run,
-      {
-        setup: slottedEnumeratedRerender.setup,
-        teardown: slottedEnumeratedRerender.teardown,
-        throws: true,
-      }
+    await bench.compare(
+      bench('simple component rerender', hooks(simple), simple.run),
+      bench('complex component rerender', hooks(complex), complex.run),
+      bench(
+        'render prop element rerender',
+        hooks(renderElementRerender),
+        renderElementRerender.run
+      ),
+      bench(
+        'render prop function rerender',
+        hooks(renderFunctionRerender),
+        renderFunctionRerender.run
+      ),
+      bench(
+        'slotted view rerender with Object.keys and spread',
+        hooks(slottedEnumeratedRerender),
+        slottedEnumeratedRerender.run
+      ),
+      { throws: true }
     );
   });
 });
 
-describe('recipe.resolve()', () => {
-  bench('resolve simple with defaults', () => {
-    simpleButtonRecipe.resolve({});
-  });
-
-  bench('resolve simple with props', () => {
-    simpleButtonRecipe.resolve(rootScenarioInputs.simpleExplicit);
-  });
-
-  bench('resolve simple with className', () => {
-    simpleButtonRecipe.resolve(rootScenarioInputs.simpleWithClassName);
-  });
-
-  bench('resolve complex with extra props', () => {
-    complexButtonRecipe.resolve(rootScenarioInputs.complexWithClassName);
-  });
+test('recipe.resolve()', async ({ bench }) => {
+  await bench.compare(
+    bench('resolve simple with defaults', () => {
+      simpleButtonRecipe.resolve({});
+    }),
+    bench('resolve simple with props', () => {
+      simpleButtonRecipe.resolve(rootScenarioInputs.simpleExplicit);
+    }),
+    bench('resolve simple with className', () => {
+      simpleButtonRecipe.resolve(rootScenarioInputs.simpleWithClassName);
+    }),
+    bench('resolve complex with extra props', () => {
+      complexButtonRecipe.resolve(rootScenarioInputs.complexWithClassName);
+    })
+  );
 });
 
-describe('styled() creation', () => {
-  bench('create simple component from prepared recipe', () => {
-    styled('button', simpleButtonRecipe);
-  });
-
-  bench('create complex component from prepared recipe', () => {
-    styled('button', complexButtonRecipe);
-  });
-
-  bench('create component with render from prepared recipe', () => {
-    styled('button', simpleButtonRecipe, { withRender: true });
-  });
+test('styled() creation', async ({ bench }) => {
+  await bench.compare(
+    bench('create simple component from prepared recipe', () => {
+      styled('button', simpleButtonRecipe);
+    }),
+    bench('create complex component from prepared recipe', () => {
+      styled('button', complexButtonRecipe);
+    }),
+    bench('create component with render from prepared recipe', () => {
+      styled('button', simpleButtonRecipe, { withRender: true });
+    })
+  );
 });
 
-describe('recipe() + styled() creation', () => {
-  bench('create simple component including recipe creation', () => {
-    styled('button', recipe(simpleRootConfig));
-  });
-
-  bench('create complex component including recipe creation', () => {
-    styled('button', recipe(complexRootConfig));
-  });
-
-  bench('create component with render including recipe creation', () => {
-    styled('button', recipe(simpleRootConfig), { withRender: true });
-  });
+test('recipe() + styled() creation', async ({ bench }) => {
+  await bench.compare(
+    bench('create simple component including recipe creation', () => {
+      styled('button', recipe(simpleRootConfig));
+    }),
+    bench('create complex component including recipe creation', () => {
+      styled('button', recipe(complexRootConfig));
+    }),
+    bench('create component with render including recipe creation', () => {
+      styled('button', recipe(simpleRootConfig), { withRender: true });
+    })
+  );
 });

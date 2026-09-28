@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { bench, describe } from 'vitest';
+import { describe, test } from 'vitest';
 import { recipe } from '../../src';
 import {
   complexSlotConfig,
@@ -13,26 +13,31 @@ const simplePreparedSlots = simpleSlotRecipe(slotScenarioInputs.simple);
 const complexPreparedSlots = complexSlotRecipe(slotScenarioInputs.complex);
 
 describe('slotted recipe()', () => {
-  bench('create slot renderers with default props', () => {
-    simpleSlotRecipe();
+  test('create slot renderers', async ({ bench }) => {
+    await bench.compare(
+      bench('with default props', () => {
+        simpleSlotRecipe();
+      }),
+      bench('with complex props', () => {
+        complexSlotRecipe(slotScenarioInputs.complex);
+      })
+    );
   });
 
-  bench('create slot renderers with complex props', () => {
-    complexSlotRecipe(slotScenarioInputs.complex);
-  });
-
-  bench('call prepared root slot with className override (simple)', () => {
-    simplePreparedSlots.root(slotScenarioInputs.rootClassNameSimple);
-  });
-
-  bench('call prepared root slot with className override (complex)', () => {
-    complexPreparedSlots.root(slotScenarioInputs.rootClassNameComplex);
-  });
-
-  bench('call prepared complex slot renderers', () => {
-    complexPreparedSlots.root(slotScenarioInputs.rootClassNameComplex);
-    complexPreparedSlots.label();
-    complexPreparedSlots.icon();
-    complexPreparedSlots.badge();
+  test('call prepared slots', async ({ bench }) => {
+    await bench.compare(
+      bench('root slot with className override (simple)', () => {
+        simplePreparedSlots.root(slotScenarioInputs.rootClassNameSimple);
+      }),
+      bench('root slot with className override (complex)', () => {
+        complexPreparedSlots.root(slotScenarioInputs.rootClassNameComplex);
+      }),
+      bench('all complex slot renderers', () => {
+        complexPreparedSlots.root(slotScenarioInputs.rootClassNameComplex);
+        complexPreparedSlots.label();
+        complexPreparedSlots.icon();
+        complexPreparedSlots.badge();
+      })
+    );
   });
 });
