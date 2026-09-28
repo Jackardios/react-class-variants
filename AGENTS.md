@@ -263,7 +263,7 @@ For changes that touch recipe resolution, class merging, `styled()` behavior, pr
 - Workflow actions are pinned to commit SHAs with the version in a trailing comment; Dependabot keeps them and the devDependencies current.
 - `CI` runs on pull requests and on pushes to `main` and `v1-maintenance`; pushes to `next` are verified by `Release`.
 - Use `pnpm changeset add --empty` when a PR touches release-affecting files but should not ship a version.
-- The `Release` workflow manually dispatches `CI` on `changeset-release/next` after `changesets/action` updates the release branch, because pushes made with the default GitHub Actions token do not trigger `push` or `pull_request` workflows.
+- The `Release` workflow makes all GitHub writes with a release GitHub App token (`RELEASE_APP_CLIENT_ID` variable, `RELEASE_APP_PRIVATE_KEY` secret). A Version Packages PR opened with the default `GITHUB_TOKEN` gets CI runs that wait for manual approval and block the merge; the app's PRs run CI normally.
 - GitHub release bodies are generated from the matching `CHANGELOG.md` section for each `v*` tag.
 - Before publish, the workflow validates changeset file structure and GitHub release/changelog readiness, and it checks whether automated dist-tag repair is available in the current environment.
 - The publish path is rerunnable after a partial success: if the version is already on npm, the workflow skips republishing, treats an already-tagged earlier release commit as a clean no-op on newer commits, and restores the local release tag only when `HEAD` is the commit that introduced the version.

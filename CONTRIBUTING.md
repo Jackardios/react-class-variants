@@ -187,7 +187,7 @@ Do not treat any one of those layers as authoritative on its own. The shipped co
 - Avoid manual `npm publish` unless it is explicitly required.
 - `changeset publish` produces the canonical `v*` git tag.
 - `pack` and `publish` build `dist/` via `prepack`, because `dist/` is gitignored and the tarball must remain valid from a clean checkout.
-- The release workflow dispatches `CI` for the `changeset-release/next` branch after it updates the version-package PR, so release PRs receive the same checks as normal PRs.
+- The release workflow opens the version-package PR with a GitHub App token, so release PRs run the same CI as normal PRs without manual approval.
 - GitHub release bodies are generated from the matching `CHANGELOG.md` section.
 - Before publishing, the release workflow validates GitHub release/changelog readiness and checks whether automated npm dist-tag repair is available in the current environment.
 - On GitHub Actions, npm trusted publishing covers `npm publish`, but npm currently requires interactive auth or a token for `dist-tag` mutations, so runs without a usable `NPM_TOKEN` secret log manual repair commands instead of attempting or failing the mutation.

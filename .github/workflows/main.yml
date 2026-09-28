@@ -7,7 +7,7 @@ on:
     # such as `v1-maintenance` keep their own triggers.
     branches:
       - 'main'
-  # Used by scripts/trigger-release-branch-ci.mjs for changeset-release/* branches.
+  # Manual runs for any branch.
   workflow_dispatch:
 
 concurrency:

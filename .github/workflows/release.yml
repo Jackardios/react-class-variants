@@ -19,16 +19,27 @@ jobs:
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Every GitHub write goes through the release app token below; the job
+    # token only reads the repository and mints the npm OIDC token.
     permissions:
-      actions: write
-      contents: write
-      pull-requests: write
+      contents: read
       id-token: write
     steps:
+      # CI on a Version Packages PR opened with the job's GITHUB_TOKEN waits for
+      # manual approval, which blocks the merge; the app's PRs run CI normally.
+      - name: Create release app token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
       - name: Setup PNPM
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - name: Setup Node.js
@@ -47,17 +58,11 @@ jobs:
           commit: Version Packages
           title: Version Packages
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Trigger CI for release branch
-        if: steps.changesets.outputs.pullRequestNumber != ''
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_BRANCH: changeset-release/${{ github.ref_name }}
-        run: pnpm run release:branch-ci
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
       - name: Validate GitHub release auth and notes
         if: steps.changesets.outputs.hasChangesets == 'false'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         run: pnpm run release:github:preflight
       - name: Check npm dist-tag repair availability
         if: steps.changesets.outputs.hasChangesets == 'false'
@@ -90,7 +95,7 @@ jobs:
         id: sync_github_releases
         continue-on-error: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         run: pnpm run release:github-releases
       - name: Verify release reconciliation
         if: |

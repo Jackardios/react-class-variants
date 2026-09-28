@@ -34,6 +34,7 @@ Defined in `.github/workflows/release.yml`.
 - runs on pushes to `next`
 - runs the same reusable `pnpm run verify` matrix as CI on Node `22.x`, `24.x`, and `26.x`
 - uses `changesets/action`
+- makes every GitHub write (release branch, Version Packages PR, tags, GitHub Releases) with a token from the release GitHub App, so the Version Packages PR runs CI like any other PR; the job's own `GITHUB_TOKEN` only reads the repository
 - uses npm trusted publishing via GitHub Actions OIDC
 - validates GitHub release/changelog readiness with `scripts/verify-github-release.mjs`
 - checks whether automated npm dist-tag repair is available with `scripts/verify-dist-tag-auth.mjs`
@@ -44,7 +45,7 @@ Defined in `.github/workflows/release.yml`.
 
 The release workflow has two paths:
 
-1. If pending changesets exist on `next`, `changesets/action` opens or updates the `Version Packages` release PR, then `scripts/trigger-release-branch-ci.mjs` waits for `changeset-release/next` to appear and dispatches the normal `CI` workflow on that branch.
+1. If pending changesets exist on `next`, `changesets/action` opens or updates the `Version Packages` release PR as the release GitHub App, which triggers the normal `CI` workflow on that PR.
 2. If no pending changesets remain on `next`, the workflow validates GitHub release/changelog readiness, checks npm dist-tag repair availability, runs the rerunnable publish wrapper, pushes any `v*` tags created on that commit, then runs npm dist-tag sync and GitHub Release sync as separate post-publish steps. In OIDC-only runs, the npm step reports any required manual `dist-tag add` commands instead of attempting the mutation.
 
 In practice, this means the version-package PR is the staging step and the publish happens after that PR is merged back into `next`.
@@ -152,7 +153,8 @@ These settings live outside the repository and should be reviewed periodically.
 - protect `next` as the active release branch for v2
 - restrict direct day-to-day development on `main`
 - require the `build` status check on `next` and `main`; it is the aggregate job in `.github/workflows/main.yml`, so matrix and job renames do not need protection updates
-- keep the release workflow allowed to write Actions, contents, pull requests, and OIDC tokens
+- keep the default workflow token read-only; the release job requests only `contents: read` and `id-token: write`
+- keep the release GitHub App installed on this repository only, with repository permissions `Contents: Read and write` and `Pull requests: Read and write`; its Client ID is the `RELEASE_APP_CLIENT_ID` variable and its private key the `RELEASE_APP_PRIVATE_KEY` secret. Rotate the key by generating a new one in the app settings, updating the secret, and deleting the old key
 
 ### npm
 
