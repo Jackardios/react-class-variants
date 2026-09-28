@@ -194,7 +194,7 @@ Do not treat any one of those layers as authoritative on its own. The shipped co
 - The publish step is intentionally rerunnable: if npm publication already succeeded on a prior attempt, the workflow skips republishing, treats an already-tagged earlier release commit as a clean no-op on newer commits, and only recreates the local `v*` tag when `HEAD` is the commit that introduced the version.
 - After a successful alpha publish, verify npm dist-tags explicitly. Token-authenticated repair can sync them to repo policy automatically; runs without a token leave any required `dist-tag add` commands in the logs for manual follow-up.
 - Post-publish reconciliation still attempts GitHub Release sync independently of npm tag state, so a manual npm follow-up does not block release-page repair.
-- The npm post-publish path waits up to about three minutes for registry propagation before deciding that a freshly published version or dist-tag update is still missing.
+- The publish step trusts a successful `changeset publish` exit instead of reading the registry back, because a trusted publish can take minutes to appear there; dist-tag sync waits up to about three minutes and treats a still-unlisted version as lagging.
 - The current workflow is also valid for the stable `2.0.0` release from `next`; if the active release branch changes after alpha, update the workflow branch filters together with that policy change.
 - If that sync step fails, verify npm dist-tags explicitly because prerelease tagging affects install behavior.
 - Keep already-published alpha history in `CHANGELOG.md`; do not rely on superseded pending changesets to document a redesign that has since been replaced.
