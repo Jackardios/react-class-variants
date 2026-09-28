@@ -1,6 +1,6 @@
 # Contributing
 
-This repository currently centers on the `react-class-variants` v2 alpha line.
+This repository currently centers on the `react-class-variants` v2 line.
 
 ## Branch Model
 
@@ -147,7 +147,7 @@ Notes:
 
 - documentation-only changes usually do not need a changeset
 - if a PR intentionally touches release-affecting files but should not ship a version, add an empty changeset with `pnpm changeset add --empty`
-- changesets that an alpha has already released move to `.changeset/pre/`, and the stable `2.0.0` changelog is built from all of them; if a later redesign replaces an API one of them describes, rewrite or delete that file there
+- in prerelease mode, changesets that a prerelease has already released move to `.changeset/pre/`, and the stable changelog after `changeset pre exit` is built from all of them; if a later redesign replaces an API one of them describes, rewrite or delete that file there
 
 Use:
 
@@ -184,7 +184,7 @@ Do not treat any one of those layers as authoritative on its own. The shipped co
 
 ## Release Notes for Contributors
 
-- Alpha releases publish from `next`.
+- Releases publish from `next`.
 - Publishing is handled by GitHub Actions via npm trusted publishing.
 - Avoid manual `npm publish` unless it is explicitly required.
 - `changeset publish` produces the canonical `v*` git tag.
@@ -196,7 +196,7 @@ Do not treat any one of those layers as authoritative on its own. The shipped co
 - The publish step is intentionally rerunnable: if npm publication already succeeded on a prior attempt, the workflow skips republishing, treats an already-tagged earlier release commit as a clean no-op on newer commits, and only recreates the local `v*` tag when `HEAD` is the commit that introduced the version.
 - After a successful publish, verify npm dist-tags explicitly.
 - The publish step trusts a successful `changeset publish` exit instead of reading the registry back, because a trusted publish can take minutes to appear there.
-- The current workflow is also valid for the stable `2.0.0` release from `next`; if the active release branch changes after alpha, update the workflow branch filters together with that policy change.
-- Keep already-published alpha history in `CHANGELOG.md`; do not rely on superseded pending changesets to document a redesign that has since been replaced.
+- The release workflow publishes from `next`; if the active release branch changes, update the workflow branch filters together with that policy change.
+- Keep already-published prerelease history in `CHANGELOG.md`; do not rely on superseded pending changesets to document a redesign that has since been replaced.
 
 The release workflow, version-package PR behavior, and post-publish checks are documented in [docs/release-process.md](./docs/release-process.md).

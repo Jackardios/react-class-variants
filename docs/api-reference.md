@@ -1,6 +1,6 @@
 # API Reference
 
-This document covers the primary user-facing v2 alpha APIs and public helpers:
+This document covers the primary user-facing v2 APIs and public helpers:
 `recipe()`, `recipe.resolve()`, `defineConfig().styled`, `defineConfig()`,
 `defineRecipeConfig()`, `defineViewProps()`, `view`, `render`, and the
 exported utilities.
