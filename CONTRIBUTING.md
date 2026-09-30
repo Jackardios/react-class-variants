@@ -189,14 +189,12 @@ Do not treat any one of those layers as authoritative on its own. The shipped co
 - `pack` and `publish` build `dist/` via `prepack`, because `dist/` is gitignored and the tarball must remain valid from a clean checkout.
 - The release workflow opens the version-package PR with a GitHub App token, so release PRs run the same CI as normal PRs without manual approval.
 - GitHub release bodies are generated from the matching `CHANGELOG.md` section.
-- Before publishing, the release workflow validates GitHub release/changelog readiness and checks whether automated npm dist-tag repair is available in the current environment.
-- On GitHub Actions, npm trusted publishing covers `npm publish`, but npm currently requires interactive auth or a token for `dist-tag` mutations, so runs without a usable `NPM_TOKEN` secret log manual repair commands instead of attempting or failing the mutation.
+- Before publishing, the release workflow validates GitHub release/changelog readiness.
+- `changeset publish` chooses the npm dist-tag, and CI never changes dist-tags afterwards: npm trusted publishing only authorizes `npm publish`. See [docs/release-process.md](./docs/release-process.md#post-publish-verification) for the tag rules and the manual repair commands.
 - The publish step is intentionally rerunnable: if npm publication already succeeded on a prior attempt, the workflow skips republishing, treats an already-tagged earlier release commit as a clean no-op on newer commits, and only recreates the local `v*` tag when `HEAD` is the commit that introduced the version.
-- After a successful alpha publish, verify npm dist-tags explicitly. Token-authenticated repair can sync them to repo policy automatically; runs without a token leave any required `dist-tag add` commands in the logs for manual follow-up.
-- Post-publish reconciliation still attempts GitHub Release sync independently of npm tag state, so a manual npm follow-up does not block release-page repair.
-- The publish step trusts a successful `changeset publish` exit instead of reading the registry back, because a trusted publish can take minutes to appear there; dist-tag sync waits up to about three minutes and treats a still-unlisted version as lagging.
+- After a successful publish, verify npm dist-tags explicitly.
+- The publish step trusts a successful `changeset publish` exit instead of reading the registry back, because a trusted publish can take minutes to appear there.
 - The current workflow is also valid for the stable `2.0.0` release from `next`; if the active release branch changes after alpha, update the workflow branch filters together with that policy change.
-- If that sync step fails, verify npm dist-tags explicitly because prerelease tagging affects install behavior.
 - Keep already-published alpha history in `CHANGELOG.md`; do not rely on superseded pending changesets to document a redesign that has since been replaced.
 
 The release workflow, version-package PR behavior, and post-publish checks are documented in [docs/release-process.md](./docs/release-process.md).

@@ -13,7 +13,7 @@ Canonical repository guidance for LLMs and coding agents working in this repo.
 - Stable-ready branch during alpha: `main`
 - Legacy maintenance branch: `v1-maintenance`
 - Changeset base branch: `next`
-- Published v2 surface: ESM-only
+- Published v2 surface: ESM-only, plus `react-class-variants/package.json` for tools that read the manifest
 - Local runtime expectations: Node.js `22.12+` and React `19`
 
 ## Non-Negotiables
@@ -26,7 +26,7 @@ Canonical repository guidance for LLMs and coding agents working in this repo.
 - Documentation-only changes usually do not need a changeset.
 - Changesets v3 moves each changeset an alpha has released into `.changeset/pre/`, and the stable `2.0.0` changelog is built from all of them. When a later redesign makes one obsolete, rewrite or delete it there; new changesets still go in `.changeset/`.
 - Alpha publishing happens from GitHub Actions via npm trusted publishing; avoid manual `npm publish` unless explicitly required.
-- The release workflow checks whether automated dist-tag repair is available before publish. With npm trusted publishing only, dist-tag drift must be repaired manually because npm currently limits trusted publishing auth to `npm publish`.
+- `changeset publish` chooses the npm dist-tag and CI never changes dist-tags afterwards: npm trusted publishing only authorizes `npm publish`, so a dist-tag repair needs a maintainer's npm login.
 - Package tarballs must remain valid from a clean checkout where `dist/` is gitignored; `pack`/`publish` therefore rely on a `prepack` build step.
 - After a successful alpha publish, verify npm dist-tags explicitly because prerelease tagging affects install behavior.
 - When the release process changes, keep `AGENTS.md`, `CONTRIBUTING.md`, and `docs/release-process.md` aligned.
@@ -261,15 +261,16 @@ For changes that touch recipe resolution, class merging, `styled()` behavior, pr
 - `changeset publish` creates the canonical `v*` git tag.
 - `CI` and `Release` share the reusable `.github/workflows/verify.yml` matrix (Node `22.x` / `24.x` / `26.x`). `CI` also runs `check:overhead` and, on pull requests, the changeset coverage check, and reports everything as the single `build` check that branch protection requires on `next` and `main`.
 - Workflow actions are pinned to commit SHAs with the version in a trailing comment; Dependabot keeps them and the devDependencies current.
+- pnpm's `minimumReleaseAge` and the Dependabot npm `cooldown` are both 7 days and must stay equal: Dependabot passes its cooldown to pnpm when it re-resolves the lockfile, and a longer cooldown rejects versions the lockfile already pins.
 - `CI` runs on pull requests and on pushes to `main` and `v1-maintenance`; pushes to `next` are verified by `Release`.
 - Use `pnpm changeset add --empty` when a PR touches release-affecting files but should not ship a version.
 - The `Release` workflow makes all GitHub writes with a release GitHub App token (`RELEASE_APP_CLIENT_ID` variable, `RELEASE_APP_PRIVATE_KEY` secret). A Version Packages PR opened with the default `GITHUB_TOKEN` gets CI runs that wait for manual approval and block the merge; the app's PRs run CI normally.
 - GitHub release bodies are generated from the matching `CHANGELOG.md` section for each `v*` tag.
-- Before publish, the workflow validates changeset file structure and GitHub release/changelog readiness, and it checks whether automated dist-tag repair is available in the current environment.
+- Before publish, the workflow validates changeset file structure and GitHub release/changelog readiness.
 - The publish path is rerunnable after a partial success: if the version is already on npm, the workflow skips republishing, treats an already-tagged earlier release commit as a clean no-op on newer commits, and restores the local release tag only when `HEAD` is the commit that introduced the version.
-- Dist-tags follow an explicit policy in CI: prereleases move `alpha` to the published version and keep `latest` on the newest stable release when one exists, otherwise `latest` remains on the published prerelease. Stable publishes move `latest`.
-- Post-publish reconciliation always attempts GitHub Release sync. npm dist-tag sync is attempted only when the `NPM_TOKEN` secret is set; OIDC-only runs, and runs whose token npm rejects, log the required manual repair commands instead of failing the publish.
-- A trusted publish can take minutes to appear in the registry (alpha.13: about 160 seconds). The publish step therefore trusts a successful `changeset publish` exit instead of reading the registry back, and dist-tag sync waits up to about three minutes, then treats a still-unlisted version as lagging rather than missing.
+- `changeset publish` sets the dist-tag: a stable publish moves `latest`; in prerelease mode a version goes to the pre tag (`alpha`), except that while every published version is a prerelease, Changesets publishes to `latest` and leaves the pre tag alone (alpha.13 went to `latest` while `alpha` stayed on alpha.12).
+- After publish, the workflow pushes the `v*` tag and creates or updates the GitHub Release.
+- A trusted publish can take minutes to appear in the registry (alpha.13: about 160 seconds). The publish step therefore trusts a successful `changeset publish` exit instead of reading the registry back.
 - The current automation covers alpha releases and the stable `2.0.0` publish from `next`; if the release branch changes after alpha, update the workflow branch filters in the same change.
 
 Post-publish verification:
@@ -278,11 +279,11 @@ Post-publish verification:
 npm view react-class-variants version dist-tags --json
 ```
 
-If CI could not sync dist-tags automatically, repair them explicitly:
+If a dist-tag is off, repair it with a maintainer's npm login:
 
 ```bash
-npm dist-tag add react-class-variants@<published-version> alpha
-npm dist-tag add react-class-variants@<latest-stable-version> latest # only if a stable line exists
+npm dist-tag add react-class-variants@<version> <tag>
+npm dist-tag rm react-class-variants alpha # once a stable release supersedes the alpha line
 ```
 
 See `docs/release-process.md` for the full release workflow.

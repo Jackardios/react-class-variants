@@ -1,4 +1,9 @@
 onlyBuiltDependencies:
   - esbuild
-# Refuse versions published less than a day ago when resolving new ones.
-minimumReleaseAge: 1440
+# Refuse versions published less than a week ago when resolving new ones.
+# Dependabot passes its cooldown to pnpm as minimumReleaseAge when it
+# re-resolves the lockfile, so the two must match (.github/dependabot.yml):
+# a longer cooldown rejects versions the lockfile already pins
+# (ERR_PNPM_NO_MATURE_MATCHING_VERSION). Add a package to
+# minimumReleaseAgeExclude to take an urgent fix sooner.
+minimumReleaseAge: 10080

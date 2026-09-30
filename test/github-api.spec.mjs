@@ -34,7 +34,7 @@ describe('github api helpers', () => {
     ).toBe('gh-token');
   });
 
-  it('returns status metadata when requested', async () => {
+  it('parses JSON response bodies', async () => {
     globalThis.fetch = vi.fn(async () => ({
       headers: new globalThis.Headers({ 'content-type': 'application/json' }),
       ok: true,
@@ -48,12 +48,8 @@ describe('github api helpers', () => {
           GITHUB_REPOSITORY: 'owner/repo',
           GITHUB_TOKEN: 'token',
         },
-        includeStatus: true,
       })
-    ).resolves.toEqual({
-      body: { ok: true },
-      status: 200,
-    });
+    ).resolves.toEqual({ ok: true });
   });
 
   it('surfaces GitHub API error messages', async () => {

@@ -1,11 +1,12 @@
 // Checks of the built package that the Vitest suite cannot cover: importing
 // the entries in an environment without `process`, the React-free core entry,
-// tree-shaking of the engine and the validating runtime, and server rendering
+// the package.json export, tree-shaking of the engine and the validating runtime, and server rendering
 // in plain Node. Behavioral coverage of dist/ comes from
 // `vitest run --config vitest.built.config.ts`.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -94,6 +95,13 @@ module.defineConfig().recipe({ base: 'inline-flex' });`,
 
 assertImportsWithoutProcess(packageRootPath, true);
 assertImportsWithoutProcess(corePath, false);
+
+// The export map exposes package.json to tools that read it (a package
+// self-reference resolves through the same exports field consumers see).
+assert.equal(
+  createRequire(import.meta.url).resolve('react-class-variants/package.json'),
+  resolve(repoRoot, 'package.json')
+);
 
 // Helper-only imports must not include the recipe engine, and bundles that
 // only use the default recipe() must not include the validating runtime.

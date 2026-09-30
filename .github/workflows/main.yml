@@ -47,10 +47,15 @@ jobs:
     name: Changeset
     # Version Packages PRs consume changesets instead of adding them, and
     # Dependabot only bumps devDependencies and actions, which do not ship.
+    # Only this repository's changeset-release/ branches are Version Packages
+    # PRs; a fork can name its branch the same.
     if: |
       github.event_name == 'pull_request' &&
       (github.base_ref == 'next' || github.base_ref == 'main') &&
-      !startsWith(github.head_ref, 'changeset-release/') &&
+      !(
+        startsWith(github.head_ref, 'changeset-release/') &&
+        github.event.pull_request.head.repo.full_name == github.repository
+      ) &&
       github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 5

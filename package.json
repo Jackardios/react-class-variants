@@ -13,7 +13,8 @@
     "./core": {
       "types": "./dist/core.d.ts",
       "default": "./dist/core.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
@@ -55,8 +56,6 @@
     "verify": "pnpm run lint && pnpm run lint:all && pnpm run lint:bench && pnpm run lint:eslint && pnpm run lint:format && pnpm run test:coverage && pnpm run test:types && pnpm run lint:pkg",
     "ci": "pnpm run check:changeset && pnpm run verify",
     "release:publish": "node scripts/release-publish.mjs",
-    "release:dist-tags": "node scripts/sync-dist-tags.mjs",
-    "release:dist-tags:preflight": "node scripts/verify-dist-tag-auth.mjs",
     "release:github:preflight": "node scripts/verify-github-release.mjs",
     "release:github-releases": "node scripts/sync-github-releases.mjs"
   },

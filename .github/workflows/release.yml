@@ -63,11 +63,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         run: pnpm run release:github:preflight
-      - name: Check npm dist-tag repair availability
-        if: steps.changesets.outputs.has-changesets == 'false'
-        env:
-          RELEASE_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: pnpm run release:dist-tags:preflight
       - name: Publish package to npm
         if: steps.changesets.outputs.has-changesets == 'false'
         run: pnpm run release:publish
@@ -82,25 +77,10 @@ jobs:
           for tag in "${tags[@]}"; do
             git push origin "$tag"
           done
-      - name: Sync npm dist-tags
-        if: steps.changesets.outputs.has-changesets == 'false'
-        id: sync_dist_tags
-        continue-on-error: true
-        env:
-          RELEASE_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: pnpm run release:dist-tags
+      # changeset publish picks the npm dist-tag itself (see
+      # docs/release-process.md), so only the GitHub Releases need syncing.
       - name: Create or update GitHub releases
         if: steps.changesets.outputs.has-changesets == 'false'
-        id: sync_github_releases
-        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         run: pnpm run release:github-releases
-      - name: Verify release reconciliation
-        if: |
-          steps.changesets.outputs.has-changesets == 'false' &&
-          (steps.sync_dist_tags.outcome == 'failure' || steps.sync_github_releases.outcome == 'failure')
-        run: |
-          echo "sync_dist_tags outcome: ${{ steps.sync_dist_tags.outcome }}"
-          echo "sync_github_releases outcome: ${{ steps.sync_github_releases.outcome }}"
-          exit 1

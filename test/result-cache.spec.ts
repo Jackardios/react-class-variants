@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest';
-import { defineConfig, recipe } from '../src';
+import { defineConfig } from '../src';
 
 describe('result cache', () => {
   const dedup = (className: string) =>

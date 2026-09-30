@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { defineConfig, hasOwnProperty, recipe } from '../src';
+import { defineConfig, recipe } from '../src';
 
 describe('recipe() slotted recipes', () => {
   it('returns slot render functions with top-level and local slot overrides', () => {
