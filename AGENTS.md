@@ -54,9 +54,10 @@ pnpm build         # tsup build -> dist/ (ESM + d.ts)
 
 ```bash
 pnpm test:built            # runtime specs against dist/ + process-less import and SSR smoke checks
-pnpm test:types            # build + built runtime + contracts + editor + packed
+pnpm test:types            # build + built runtime + contracts + editor + cost + packed
 pnpm test:types:contracts  # tsd contract tests
 pnpm test:types:editor     # editor/types tooling validation
+pnpm test:types:cost       # instantiation budget per construct (test/types/type-cost-budget.json)
 pnpm test:types:packed     # one clean-checkout pack, then exports + consumers on that tarball
 pnpm test:types:exports    # attw export validation of the clean-checkout tarball only
 pnpm test:types:consumers  # Bundler and NodeNext consumer smoke fixtures on TypeScript 5.4 / 5.x / 6 / 7

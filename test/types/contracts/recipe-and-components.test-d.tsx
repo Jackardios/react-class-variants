@@ -983,6 +983,33 @@ function BadgeView({
 }
 styled('span', badge, { view: BadgeView });
 
+// The options, not a view's annotation, decide the component's props. A view
+// typed for withRender or propAliases that the options leave out adds neither
+// `render` nor the alias, which the runtime would ignore.
+function RenderBadgeView({
+  host,
+}: RootStyledViewProps<'button', typeof badge, true>) {
+  return host.render();
+}
+const UnrenderedBadge = styled('button', badge, { view: RenderBadgeView });
+expectError(UnrenderedBadge({ tone: 'info', render: <a href="/" /> }));
+
+function AliasedInputView({
+  host,
+}: RootStyledViewProps<
+  'input',
+  typeof viewedInputRecipe,
+  false,
+  { size: 'htmlSize' }
+>) {
+  return host.render();
+}
+const UnaliasedInput = styled('input', viewedInputRecipe, {
+  view: AliasedInputView,
+});
+expectType<StyledRender>(UnaliasedInput({ tone: 'info', size: 'sm' }));
+expectError(UnaliasedInput({ tone: 'info', size: 'sm', htmlSize: 3 }));
+
 // A component base that owns a render prop (Base UI, Ark) receives it like any
 // other prop, on the component and in host.props / host.render().
 declare function RenderableTrigger(
