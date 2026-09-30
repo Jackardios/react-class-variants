@@ -1,5 +1,47 @@
 # react-class-variants
 
+## 2.0.0-alpha.14
+
+### Major Changes
+
+- eac4cd6: `defineViewProps()` takes an object of keys instead of a key list: `defineViewProps<{ icon?: Icon; shortcut?: string }>({ icon: true, shortcut: true })`.
+
+  **Breaking change:** replace `defineViewProps<T>('icon', 'shortcut')` with `defineViewProps<T>({ icon: true, shortcut: true })`.
+
+  The key list could not be checked against `T`: with `T` given explicitly, TypeScript typed the descriptor for every key of `T` even when only some were listed. The unlisted keys were then typed as view props but reached the DOM at runtime. The object form must list exactly the keys of `T`, so a missing or unknown key is a type error.
+
+- eac4cd6: Remove the type aliases deprecated during the alpha: `ClassValue` (use `ClassNameValue`), `Recipe` (use `AnyRecipe`), and `AnyElementType` (use React's `ElementType`).
+- eac4cd6: Tighten and name the `styled()` types.
+
+  - Export `StyledComponent`, the type `styled()` returns. It is now an interface, so editors and emitted declarations refer to a component by name instead of expanding its props. A component library that emits `.d.ts` files for three styled components and a recipe went from 69 KB of declarations to 3 KB.
+  - `RootStyledViewProps`, `SlotStyledViewProps`, `HostView`, `HostRenderOverrides`, and `StyledComponentProps` default `WithRender` to `false`, so a named view can be annotated as `SlotStyledViewProps<'button', typeof buttonRecipe>`.
+  - **Breaking:** `host.render()` overrides accept the base props and `data-*` attributes only, so a typo such as `classname` is a type error. They previously accepted any key.
+  - **Breaking:** `host.props` no longer declares `key`, which React never passes as a prop.
+  - **Breaking:** variant keys named after `Object.prototype` members (`constructor`, `toString`, `valueOf`, ...) are type errors. A prop bag without that prop resolves the key to the inherited member instead of the default.
+
+### Patch Changes
+
+- 2b8bd4c: Export `react-class-variants/package.json`, so tools that read a package's manifest (`require.resolve('react-class-variants/package.json')`) no longer fail with `ERR_PACKAGE_PATH_NOT_EXPORTED`.
+- 0151697: Pass `render` to custom component bases as an ordinary prop, so bases that own a `render` prop (Base UI, Ark UI) keep it.
+
+  - The types already accepted the prop, but lean mode dropped it and strict mode threw.
+  - In a `view`, `host.props.render` holds it and `host.render({ render })` overrides it.
+  - Strict mode also accepts `render={undefined}` on an intrinsic base without `withRender`, so a wrapper can forward its own optional `render` prop.
+
+- fa32f55: Type data attributes on `host.props` (`host.props['data-state']` is `unknown`), as `host.render()` overrides already accept them. A named `view` annotated with `RootStyledViewProps` or `SlotStyledViewProps` can now read a data attribute that the caller passed.
+- 0151697: Reject variant keys named after `Object.prototype` members (`constructor`, `toString`, `valueOf`, ...) in lean recipes too, when the recipe is created. Strict recipes already rejected them. In lean mode, a prop bag without that prop resolved the key to the inherited member, so the default was ignored and the wrong class came out: `{ toString: { true: 'on', false: 'off' } }` with `defaultVariants: { toString: true }` rendered `off`.
+- 0151697: Run `merge` over the classes that `host.render({ className })` and a `render` element's `className` add to the resolved class string. These classes were appended after `merge` had already run. With tailwind-merge, `host.render({ className: 'px-4' })` on a recipe with `px-2` therefore kept both classes, and which one applied depended on CSS order. It now resolves the same way as a `className` prop.
+- eac4cd6: Accept an explicit `undefined` for every optional input property, so code compiled with `exactOptionalPropertyTypes` can pass optional values through, for example `<Button tone={props.tone} />` or `recipe({ size: maybeSize })`. The runtime already treated `undefined` as absent. This covers variant props, `className`, `slotClassNames`, recipe configs, `resolve()` options, `defineConfig()` options, and `styled()` options. In slot className maps, an `undefined` slot value now means "no class" in strict mode too, instead of throwing.
+- 0151697: Fix three runtime edge cases:
+
+  - `cache: { maxSize: Infinity }` keeps every entry. It used to disable the cache.
+  - Strict mode deep-freezes the nested maps of a config that is already frozen. `Object.freeze()` is shallow, and the deep freeze stopped at the frozen root.
+  - `hostSlot: ''` reports `hostSlot "" is not declared in recipe.slots`. The error used to say that a root slot was missing.
+
+- eac4cd6: Fix `compoundVariants` type inference on TypeScript 7. TypeScript 7 also inferred the recipe's variants and slots from compound selectors, so boolean selectors (`{ disabled: true }`) and any compound on a slotted recipe failed to compile, and invalid compound options were no longer rejected. Compound selectors no longer take part in inference.
+
+  The published types need TypeScript 5.4 or newer (they use `NoInfer`), and CI now type-checks a consumer project with TypeScript 5.4, 5.9, 6, and 7.
+
 ## 2.0.0-alpha.13
 
 ### Major Changes
