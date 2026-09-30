@@ -43,6 +43,30 @@ jobs:
       - name: Check bundle overhead
         run: pnpm run check:overhead
 
+  # Runs the Release workflow's `changeset version` on a scratch worktree of
+  # the merge result, so a broken versioning step fails the pull request
+  # instead of the release after merge.
+  release-dry-run:
+    name: Release dry run
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup PNPM
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.x
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Dry-run Version Packages
+        run: pnpm run release:dry-run
+
   changeset:
     name: Changeset
     # Version Packages PRs consume changesets instead of adding them, and
@@ -75,7 +99,7 @@ jobs:
   build:
     name: build
     if: always()
-    needs: [verify, overhead, changeset]
+    needs: [verify, overhead, release-dry-run, changeset]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
