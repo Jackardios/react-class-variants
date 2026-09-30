@@ -9,6 +9,14 @@
     "skipLibCheck": true,
     "esModuleInterop": true,
     "strict": true,
+    // tsup and Vitest transpile each file on its own.
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "noEmit": true

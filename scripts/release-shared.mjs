@@ -3,10 +3,20 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
-import { sanitizeNpmCliEnv } from './npm-release-auth.mjs';
 
 const execFileAsync = promisify(execFile);
 const maxBuffer = 1024 * 1024 * 10;
+// pnpm exports these to scripts it runs; npm does not know them and warns.
+const pnpmOnlyNpmConfigEnvKeys = [
+  'npm_config__jsr_registry',
+  'npm_config_auto_install_peers',
+  'npm_config_npm_globalconfig',
+  'npm_config_verify_deps_before_run',
+  'NPM_CONFIG__JSR_REGISTRY',
+  'NPM_CONFIG_AUTO_INSTALL_PEERS',
+  'NPM_CONFIG_NPM_GLOBALCONFIG',
+  'NPM_CONFIG_VERIFY_DEPS_BEFORE_RUN',
+];
 
 export function isMainModule(metaUrl) {
   return Boolean(
@@ -14,36 +24,14 @@ export function isMainModule(metaUrl) {
   );
 }
 
-export function delay(ms) {
-  return new Promise(resolvePromise => {
-    setTimeout(resolvePromise, ms);
-  });
-}
+export function sanitizeNpmCliEnv(env = process.env) {
+  const nextEnv = { ...env };
 
-// Polls `read` until `predicate` accepts its value, waiting `attempt * stepMs`
-// between attempts; the defaults wait about 165 seconds in total. Returns the
-// last value read either way so callers can report what the registry
-// actually returned.
-export async function pollUntil(
-  read,
-  predicate,
-  { attempts = 12, stepMs = 2500 } = {}
-) {
-  let lastValue = null;
-
-  for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    lastValue = await read();
-
-    if (predicate(lastValue)) {
-      return lastValue;
-    }
-
-    if (attempt < attempts) {
-      await delay(attempt * stepMs);
-    }
+  for (const key of pnpmOnlyNpmConfigEnvKeys) {
+    delete nextEnv[key];
   }
 
-  return lastValue;
+  return nextEnv;
 }
 
 export async function git(args) {
@@ -103,21 +91,6 @@ export function runInherited(command, args, { env = process.env } = {}) {
       }
     });
   });
-}
-
-// Emits a GitHub Actions warning annotation (shown in the run summary) when
-// running in Actions, and a plain warning otherwise.
-export function warnAnnotation(message) {
-  if (process.env.GITHUB_ACTIONS === 'true') {
-    const escaped = message
-      .replace(/%/g, '%25')
-      .replace(/\r/g, '%0D')
-      .replace(/\n/g, '%0A');
-    console.log(`::warning::${escaped}`);
-    return;
-  }
-
-  console.warn(message);
 }
 
 export function buildReleaseTag(version) {

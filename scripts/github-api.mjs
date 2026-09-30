@@ -32,7 +32,6 @@ export async function githubApi(
     env = process.env,
     expectedStatuses = [200],
     headers = {},
-    includeStatus = false,
     method = 'GET',
     payload,
   } = {}
@@ -64,5 +63,5 @@ export async function githubApi(
     throw new Error(`GitHub API ${method} ${path} failed: ${message}`);
   }
 
-  return includeStatus ? { body, status: response.status } : body;
+  return body;
 }

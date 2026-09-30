@@ -1,16 +1,14 @@
 // @vitest-environment node
 import { createRequire } from 'node:module';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   doesFirstParentIntroduceVersion,
   planReleasePublish,
 } from '../scripts/release-publish.mjs';
 import {
   extractReleaseNotes,
-  pollUntil,
-  warnAnnotation,
+  sanitizeNpmCliEnv,
 } from '../scripts/release-shared.mjs';
-import { computeDesiredDistTags } from '../scripts/sync-dist-tags.mjs';
 import { buildGitHubReleasePayload } from '../scripts/sync-github-releases.mjs';
 
 const require = createRequire(import.meta.url);
@@ -165,51 +163,7 @@ describe('release publish planning', () => {
   });
 });
 
-describe('release metadata helpers', () => {
-  it('keeps prerelease and latest tags aligned during alpha releases', () => {
-    expect(
-      Object.fromEntries(
-        computeDesiredDistTags({
-          prereleaseTag: 'alpha',
-          publishedVersion: '2.0.0-alpha.8',
-          publishedVersions: ['2.0.0-alpha.7', '2.0.0-alpha.8'],
-        })
-      )
-    ).toEqual({
-      alpha: '2.0.0-alpha.8',
-      latest: '2.0.0-alpha.8',
-    });
-  });
-
-  it('moves only latest during stable releases', () => {
-    expect(
-      Object.fromEntries(
-        computeDesiredDistTags({
-          prereleaseTag: 'alpha',
-          publishedVersion: '2.0.0',
-          publishedVersions: ['2.0.0-alpha.8', '2.0.0'],
-        })
-      )
-    ).toEqual({
-      latest: '2.0.0',
-    });
-  });
-
-  it('keeps latest on the newest stable release when a prerelease follows it', () => {
-    expect(
-      Object.fromEntries(
-        computeDesiredDistTags({
-          prereleaseTag: 'alpha',
-          publishedVersion: '2.11.0-alpha.0',
-          publishedVersions: ['2.9.0', '2.10.0', '2.11.0-alpha.0', '2.2.0'],
-        })
-      )
-    ).toEqual({
-      alpha: '2.11.0-alpha.0',
-      latest: '2.10.0',
-    });
-  });
-
+describe('GitHub release payload', () => {
   it('marks only dashed versions as GitHub prereleases', () => {
     expect(
       buildGitHubReleasePayload('v2.0.0-alpha.8', 'alpha notes').prerelease
@@ -296,38 +250,16 @@ Broken changeset file.
 });
 
 describe('release shared helpers', () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-    vi.restoreAllMocks();
-  });
+  it('removes pnpm-only npm config env keys before invoking the npm CLI', () => {
+    const env = sanitizeNpmCliEnv({
+      PATH: '/usr/bin',
+      npm_config__jsr_registry: 'https://npm.jsr.io',
+      npm_config_auto_install_peers: 'true',
+      NPM_CONFIG_NPM_GLOBALCONFIG: '/tmp/npmrc',
+      npm_config_verify_deps_before_run: 'false',
+    });
 
-  it('polls until the predicate accepts a value and returns the last read', async () => {
-    const reads = [null, 'pending', 'done'];
-    const read = vi.fn(() => reads.shift());
-
-    await expect(
-      pollUntil(read, value => value === 'done', { stepMs: 0 })
-    ).resolves.toBe('done');
-    expect(read).toHaveBeenCalledTimes(3);
-
-    await expect(
-      pollUntil(
-        () => 'stale',
-        () => false,
-        { attempts: 2, stepMs: 0 }
-      )
-    ).resolves.toBe('stale');
-  });
-
-  it('escapes multi-line GitHub Actions annotations', () => {
-    vi.stubEnv('GITHUB_ACTIONS', 'true');
-    const log = vi
-      .spyOn(globalThis.console, 'log')
-      .mockImplementation(() => {});
-
-    warnAnnotation('100% done\r\nnext line');
-
-    expect(log).toHaveBeenCalledWith('::warning::100%25 done%0D%0Anext line');
+    expect(env).toEqual({ PATH: '/usr/bin' });
   });
 });
 

@@ -18,6 +18,7 @@ updates:
     target-branch: next
     schedule:
       interval: monthly
+    # Must equal minimumReleaseAge in pnpm-workspace.yaml (7 days); see there.
     cooldown:
       default-days: 7
     groups:

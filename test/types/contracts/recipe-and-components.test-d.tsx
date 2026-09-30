@@ -544,7 +544,7 @@ expectType<StyledRender>(
   })
 );
 
-const RouterLink = (props: { to: string } & ComponentPropsWithoutRef<'a'>) =>
+const RouterLink = (_props: { to: string } & ComponentPropsWithoutRef<'a'>) =>
   null;
 
 const RoutedBadge = styled(RouterLink, badge);
@@ -788,7 +788,7 @@ expectError(
 );
 
 const RouterLinkWithHref = (
-  props: { to: string; href?: string } & ComponentPropsWithoutRef<'a'>
+  _props: { to: string; href?: string } & ComponentPropsWithoutRef<'a'>
 ) => null;
 
 expectError(
