@@ -74,7 +74,9 @@ jobs:
                 --title "$tag" \
                 --notes "Published from ${GITHUB_REF_NAME} via npm trusted publishing."
             else
+              # v2 (react-class-variants) owns the repository's Latest release.
               gh release create "$tag" \
+                --latest=false \
                 --title "$tag" \
                 --notes "Published from ${GITHUB_REF_NAME} via npm trusted publishing."
             fi
