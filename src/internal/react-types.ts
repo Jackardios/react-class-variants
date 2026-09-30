@@ -265,7 +265,11 @@ type ResolvedHostProps<
     // React never passes `key` as a prop. A component base keeps its own
     // `render` prop here; an intrinsic base has none.
     'className' | 'children' | 'ref' | 'key'
-  >
+  > & {
+    // Data attributes pass through like any other prop (see
+    // HostRenderOverrides).
+    [dataAttribute: `data-${string}`]: unknown;
+  }
 >;
 
 // An interface rather than an alias, so editors and emitted declarations refer

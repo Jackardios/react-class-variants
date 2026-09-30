@@ -18,6 +18,7 @@ If you want exact option shapes, exported types, or runtime rules, use the [API 
 ## 1. Start with a Root Recipe
 
 ```ts
+// badge.recipe.ts
 import { recipe } from 'react-class-variants/core';
 
 export const badgeRecipe = recipe({
@@ -233,7 +234,11 @@ export function InputField({ label, htmlSize, ...props }: InputFieldProps) {
 Use slot recipes when different parts of the component need different classes.
 
 ```tsx
-import { defineConfig, recipe } from 'react-class-variants';
+import {
+  defineConfig,
+  recipe,
+  type SlotStyledViewProps,
+} from 'react-class-variants';
 
 const { styled } = defineConfig();
 
@@ -276,7 +281,11 @@ const buttonRecipe = recipe({
   },
 });
 
-function ButtonView({ host, classes, variants }) {
+function ButtonView({
+  host,
+  classes,
+  variants,
+}: SlotStyledViewProps<'button', typeof buttonRecipe, true>) {
   const { spinner, label } = classes;
 
   return host.render({
@@ -363,6 +372,14 @@ If the actual wrapper corresponds to a different slot, provide `hostSlot` with
 one of the declared slot names.
 
 ```tsx
+import {
+  defineConfig,
+  recipe,
+  type SlotStyledViewProps,
+} from 'react-class-variants';
+
+const { styled } = defineConfig();
+
 const fieldRecipe = recipe({
   slots: {
     label: 'block text-sm',
@@ -378,7 +395,10 @@ const fieldRecipe = recipe({
   },
 });
 
-function FieldView({ host, classes }) {
+function FieldView({
+  host,
+  classes,
+}: SlotStyledViewProps<'label', typeof fieldRecipe>) {
   return host.render({
     children: (
       <>
@@ -402,6 +422,7 @@ const Field = styled('label', fieldRecipe, {
 - hooks are allowed
 - context works the same way as in any other React component
 - prefer a named component reference such as `view: ButtonView` when you use hooks so hook linting, React DevTools, and stack traces keep a clear component name
+- annotate a named view with `RootStyledViewProps<Base, typeof recipe>` or `SlotStyledViewProps<Base, typeof recipe>`, adding `true` as a third type argument when the component uses `withRender`; an inline `view` infers them
 - `host.render()` is the canonical way to render the base element or component
 - `host.props` exposes normalized forwarded props and aliased base props
 - `host.className` is already the resolved host class string
@@ -418,7 +439,11 @@ Important note:
 Use `host.props` when your `view` needs a pass-through prop, use `host.render({ className })` when the wrapper needs extra host-level classes, and use top-level `slotClassNames` when callers need to target non-host slots from outside.
 
 ```tsx
-import { defineConfig, recipe } from 'react-class-variants';
+import {
+  defineConfig,
+  recipe,
+  type RootStyledViewProps,
+} from 'react-class-variants';
 
 const { styled } = defineConfig();
 
@@ -440,7 +465,10 @@ const actionRecipe = recipe({
   },
 });
 
-function ActionView({ host, variants }) {
+function ActionView({
+  host,
+  variants,
+}: RootStyledViewProps<'button', typeof actionRecipe>) {
   return host.render({
     className: 'justify-between gap-2',
     children: (

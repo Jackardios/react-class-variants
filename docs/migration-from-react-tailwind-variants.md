@@ -4,10 +4,9 @@ This guide is for teams moving from the frozen v1 line of
 `react-tailwind-variants` to the current v2 alpha surface of
 `react-class-variants`.
 
-It reflects the current public API and behavior in the `v1-maintenance` and
-`next` branches. It does not describe older intermediate v2 alpha designs. If
-you see examples that mention `compose`, `Root`, `nativeAliases`, or a tag-only
-`styled()` API, treat them as obsolete.
+It describes the current public API. Examples elsewhere that mention
+`compose`, `Root`, `nativeAliases`, or a tag-only `styled()` API come from early
+v2 alpha designs and are obsolete.
 
 If you are learning v2 from scratch, start with the [README](../README.md), the
 [recipes and components guide](./recipes-and-components.md), and the
@@ -49,17 +48,16 @@ import { twMerge } from 'tailwind-merge';
 
 export const { recipe, styled } = defineConfig({
   merge: twMerge,
-  validate: 'never',
 });
 ```
 
-This does two useful things during migration:
+This restores automatic Tailwind conflict resolution. Like v1, the factory does
+not validate input by default.
 
-- restores automatic Tailwind conflict resolution
-- disables dev-time strict validation while you rename APIs and reshape inputs
-
-After the migration is stable, move back to the default validation behavior or
-to `validate: 'always'` if you want stricter checking everywhere.
+While you port, a factory with `validate: 'always'` (for example in tests)
+throws on missing required variants, undeclared option values, and unknown
+props in direct recipe calls, which surfaces renamed APIs and reshaped inputs
+early. See [`validate`](./api-reference.md#validate) for the full list.
 
 ## 1. Replace the Package and Imports
 

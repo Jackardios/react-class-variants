@@ -70,6 +70,9 @@ const badgeRecipe = recipe({
       className: 'tracking-wide',
     },
   ],
+  defaultVariants: {
+    size: 'md',
+  },
 });
 ```
 
@@ -359,7 +362,12 @@ Behavior:
 ### Root recipe, `view`
 
 ```tsx
-function BadgeView({ host, variants }) {
+import type { RootStyledViewProps } from 'react-class-variants';
+
+function BadgeView({
+  host,
+  variants,
+}: RootStyledViewProps<'span', typeof badgeRecipe>) {
   return host.render({
     'data-tone': variants.tone,
     children: host.children,
@@ -371,10 +379,21 @@ const Badge = styled('span', badgeRecipe, {
 });
 ```
 
+An inline `view` infers its props. A named one is annotated with
+`RootStyledViewProps<Base, typeof recipe>` or
+`SlotStyledViewProps<Base, typeof recipe>`; pass `true` as a third type
+argument when the component uses `withRender`.
+
 ### Slot recipe, `view`
 
 ```tsx
-function ButtonView({ host, classes, variants }) {
+import type { SlotStyledViewProps } from 'react-class-variants';
+
+function ButtonView({
+  host,
+  classes,
+  variants,
+}: SlotStyledViewProps<'button', typeof buttonRecipe>) {
   const { icon, label } = classes;
 
   return host.render({
@@ -401,7 +420,10 @@ stable component name.
 If the slot recipe has no `root` slot:
 
 ```tsx
-function FieldView({ host, classes }) {
+function FieldView({
+  host,
+  classes,
+}: SlotStyledViewProps<'label', typeof fieldRecipe>) {
   return host.render({
     children: (
       <>
@@ -442,8 +464,8 @@ wrappers are unwrapped. Anonymous components fall back to `Styled(Component)`.
 Example:
 
 ```ts
-const Button = styled('button', buttonRecipe, {
-  displayName: 'Button',
+const Badge = styled('span', badgeRecipe, {
+  displayName: 'Badge',
 });
 ```
 
@@ -609,7 +631,9 @@ Important note:
 Example:
 
 ```tsx
-function ActionView({ host }) {
+function ActionView({
+  host,
+}: SlotStyledViewProps<'button', typeof buttonRecipe>) {
   return host.render({
     className: 'justify-between gap-2',
     children: (
@@ -826,6 +850,10 @@ const buttonConfig = defineRecipeConfig({
   variants: {
     tone: {
       primary: 'text-blue-600',
+      ghost: 'text-slate-900',
+    },
+    disabled: {
+      true: 'opacity-50',
     },
   },
 });
@@ -839,14 +867,14 @@ It returns the original config reference unchanged and preserves `defaultVariant
 compiled recipe:
 
 ```ts
-const names = variantNames(buttonRecipe);
+const names = variantNames(buttonConfig); // ['tone', 'disabled']
 ```
 
 `variantOptions()` returns the public values accepted for a single variant:
 
 ```ts
-const tones = variantOptions(buttonConfig, 'tone');
-const disabled = variantOptions(buttonRecipe, 'disabled');
+const tones = variantOptions(buttonConfig, 'tone'); // ['primary', 'ghost']
+const disabled = variantOptions(buttonConfig, 'disabled'); // [true, false]
 ```
 
 Named variants return string option keys. Boolean variants return boolean values
@@ -914,7 +942,7 @@ refs.
 | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------ | ------------------------------------------------- |
 | `unknown recipe prop "type"`                                             | direct recipe calls are variant-only APIs                                      | use `resolve()` when you need arbitrary props     |
 | `className cannot be passed directly to a slotted recipe call`           | slot recipes route class overrides at the slot-function level                  | use a slot renderer or `resolve()`                |
-| `slotted recipes require a view component`                               | slot recipes no longer accept the default direct host path                     | pass `view` to `styled()`                         |
+| `slotted recipes require a view component`                               | a slotted recipe renders only through `view`                                   | pass `view` to `styled()`                         |
 | `slotted recipes without a "root" slot require hostSlot`                 | the recipe has no default host slot                                            | provide `hostSlot` with a declared slot name      |
 | `hostSlot "x" is not declared in recipe.slots`                           | `hostSlot` references an unknown slot                                          | use one of the declared slot names                |
 | `invalid input.slotClassNames; slot "x" is not declared in recipe.slots` | `slotClassNames` targets an unknown slot                                       | only override declared slots                      |

@@ -48,6 +48,7 @@ pnpm lint:all
 pnpm lint:bench
 pnpm lint:eslint
 pnpm lint:format
+pnpm lint:docs
 pnpm build
 ```
 
@@ -61,6 +62,7 @@ What they do:
 - `pnpm lint:bench`: TypeScript check for `bench/` (JS files through `checkJs`)
 - `pnpm lint:eslint`: ESLint for `src/`, `test/`, `scripts/`, and `bench/`
 - `pnpm lint:format`: Prettier check
+- `pnpm lint:docs`: type-checks every `ts`/`tsx` block in `README.md` and `docs/` that imports a value from `react-class-variants`; such a block must compile on its own, while fragments that continue an earlier example are skipped. Start a block with a file-name comment (`// badge.recipe.ts`) to let later blocks import it
 - `pnpm build`: ESM + declaration build through `tsup`
 
 ### Type, packaging, and consumer validation

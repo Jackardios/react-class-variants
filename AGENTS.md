@@ -46,6 +46,7 @@ pnpm lint:all      # TypeScript check for src/ plus runtime test files
 pnpm lint:bench    # TypeScript check for bench/ (checkJs)
 pnpm lint:eslint   # ESLint for src/, test/, scripts/, and bench/
 pnpm lint:format   # Prettier check
+pnpm lint:docs     # type-check the standalone examples in README.md and docs/
 pnpm build         # tsup build -> dist/ (ESM + d.ts)
 ```
 
@@ -65,7 +66,7 @@ pnpm lint:pkg              # publint package-surface check
 ### Full gates
 
 ```bash
-pnpm run verify          # lint + lint:all + lint:bench + lint:eslint + lint:format + test:coverage + test:types + lint:pkg
+pnpm run verify          # lint + lint:all + lint:bench + lint:eslint + lint:format + lint:docs + test:coverage + test:types + lint:pkg
 pnpm run check:changeset # release-affecting branch/worktree changes must include a changeset
 pnpm run ci              # check:changeset + verify
 ```
@@ -247,7 +248,7 @@ For changes that touch recipe resolution, class merging, `styled()` behavior, pr
 - update the relevant runtime tests in `test/`
 - update type contract tests in `test/types/contracts/`
 - update the consumer smoke test in `test/types/consumers/smoke.ts` when package surface or exports change
-- update docs and examples that describe the affected public behavior
+- update docs and examples that describe the affected public behavior; `pnpm lint:docs` type-checks the standalone examples
 - keep the package-root and core-subpath surfaces aligned across code, tests, fixtures, and docs
 - keep `README.md` aligned with the primary user-facing API summary
 - keep `docs/api-reference.md` aligned with the current primary user-facing contract

@@ -51,9 +51,8 @@ This pipeline:
 
 ### `pnpm bench:overhead`
 
-Measures package-specific overhead for `react-class-variants` and writes the output to:
-
-- [`bench/overhead/reports/current.json`](../bench/overhead/reports/current.json)
+Measures package-specific overhead for `react-class-variants` and writes the
+output to `bench/overhead/reports/current.json` (gitignored).
 
 This includes:
 
