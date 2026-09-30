@@ -84,7 +84,7 @@ and slotted-recipe profiles may grow by at most 15%, the component profile by
 at most 10%. CI runs this gate on every pull request.
 
 When a change intentionally moves the bundle budget, regenerate the baseline and
-commit it in the same PR:
+commit it in the same PR, and update the sizes that `README.md` quotes from it:
 
 ```bash
 pnpm check:overhead:update
