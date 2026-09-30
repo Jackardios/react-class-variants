@@ -1,23 +1,23 @@
 // Consumer smoke test, compiled against the packed tarball once per fixture
-// (Bundler and NodeNext resolution). It proves that every public export
-// resolves through the published declarations and that the main surfaces
-// type-check. Detailed type behavior lives in test/types/contracts/.
+// (Bundler and NodeNext resolution) and TypeScript version (see
+// scripts/test-types-packed.mjs). It proves that every public export resolves
+// through the published declarations, that the main surfaces type-check, and
+// that the key mistakes stay errors on every compiler; the Bundler fixture
+// also enables exactOptionalPropertyTypes. Detailed type behavior lives in
+// test/types/contracts/, which runs on one compiler only.
 import { createRef, type ComponentRef, type ReactNode } from 'react';
 import * as root from 'react-class-variants';
 import * as core from 'react-class-variants/core';
 // Importing a name that is not exported is a compile error, so these lists
 // catch public types that disappear from either entry.
 import type {
-  AnyElementType,
   AnyRecipe,
   AnyRootRecipe,
   AnySlotRecipe,
   ClassNameValue,
-  ClassValue,
   HostRenderOverrides,
   HostView,
   PropAliases,
-  Recipe,
   RecipeConfig,
   RecipeConfigOf,
   RecipeFactory,
@@ -45,6 +45,7 @@ import type {
   SlotResolveResult,
   SlotStyledOptions,
   SlotStyledViewProps,
+  StyledComponent,
   StyledComponentProps,
   StyledFn,
   SystemOptions,
@@ -60,8 +61,6 @@ import type {
   AnyRootRecipe as CoreAnyRootRecipe,
   AnySlotRecipe as CoreAnySlotRecipe,
   ClassNameValue as CoreClassNameValue,
-  ClassValue as CoreClassValue,
-  Recipe as CoreRecipe,
   RecipeConfig as CoreRecipeConfig,
   RecipeConfigOf as CoreRecipeConfigOf,
   RecipeFactory as CoreRecipeFactory,
@@ -149,7 +148,10 @@ const tabs = strict.recipe({
 type _ButtonVariants = Expect<
   Equal<
     VariantProps<typeof button>,
-    { readonly tone: 'primary' | 'ghost'; readonly disabled?: boolean }
+    {
+      readonly tone: 'primary' | 'ghost';
+      readonly disabled?: boolean | undefined;
+    }
   >
 >;
 const buttonClassName: string = button({ tone: 'primary' });
@@ -168,8 +170,11 @@ type _ResolvedClassName = Expect<
 const names: ('tone' | 'disabled')[] = root.variantNames(button);
 
 const Button = styled('button', button, { withRender: true });
+type _ButtonComponent = Expect<
+  Equal<typeof Button, StyledComponent<'button', typeof button, true>>
+>;
 const Tabs = styled('div', tabs, {
-  viewProps: root.defineViewProps<{ label?: ReactNode }>('label'),
+  viewProps: root.defineViewProps<{ label?: ReactNode }>({ label: true }),
   view: ({ host, classes }) =>
     host.render({ children: [host.props.label, classes.tab()] }),
 });
@@ -180,7 +185,51 @@ const buttonElement: StyledRender = Button({
   render: props => props.children,
 });
 const tabsElement: StyledRender = Tabs({ size: 'lg', label: 'Tab' });
+// Recipes created inline in a styled() argument pick the matching overload.
+const InlineCard = styled('article', recipe({ slots: { root: 'p-4' } }), {
+  view: ({ host, classes }) => host.render({ children: classes.root() }),
+});
+const InlineBadge = styled('span', recipe({ base: 'px-2' }), {
+  withRender: true,
+  view: ({ host }) => host.render(),
+});
+const inlineElements: StyledRender[] = [InlineCard({}), InlineBadge({})];
 const merged = root.mergeProps({ className: 'a' }, { className: 'b' });
+
+// Optional inputs accept an explicit undefined (exactOptionalPropertyTypes).
+declare const maybeDisabled: boolean | undefined;
+const passThrough = [
+  root.defineConfig({
+    cache: undefined,
+    merge: undefined,
+    validate: undefined,
+  }),
+  button({ tone: 'primary', disabled: maybeDisabled, className: undefined }),
+  tabs({ size: undefined, slotClassNames: { tab: undefined } }).tab({
+    size: undefined,
+    className: undefined,
+  }),
+  button.resolve(
+    { tone: 'ghost' },
+    { forwardProps: undefined, propAliases: undefined }
+  ),
+  Button({ tone: 'ghost', disabled: maybeDisabled, render: undefined }),
+  styled('span', button, { displayName: undefined, withRender: undefined }),
+];
+
+// Mistakes stay errors on every compiler. Each case is one line, because
+// compilers report some of these errors on different lines of a statement.
+const toneA = { tone: { a: 'x' } } as const;
+// @ts-expect-error unknown compound option
+recipe({ variants: toneA, compoundVariants: [{ tone: 'b', className: '' }] });
+// @ts-expect-error missing required variant
+button({});
+// @ts-expect-error unknown variant option
+button({ tone: 'danger' });
+// @ts-expect-error variant key shadows an Object.prototype member
+recipe({ variants: { constructor: { a: 'x' } } });
+// @ts-expect-error every view prop key must be listed
+root.defineViewProps<{ icon?: string; shortcut?: string }>({ icon: true });
 
 // Recipes built from the core entry work with root-entry helpers and styled().
 const coreBadge = core.recipe({
@@ -203,8 +252,10 @@ export {
   coreBadgeElement,
   coreConfigured,
   crossEntryInput,
+  inlineElements,
   merged,
   names,
+  passThrough,
   tabClassName,
   tabsElement,
 };

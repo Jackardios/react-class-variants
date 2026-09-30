@@ -364,3 +364,72 @@ describe('strict validation messages', () => {
     );
   });
 });
+
+// Optional inputs accept an explicit undefined (exactOptionalPropertyTypes);
+// both runtimes treat it as absent.
+describe('explicit undefined inputs', () => {
+  const lean = defineConfig({
+    cache: undefined,
+    merge: undefined,
+    validate: undefined,
+  });
+  const strict = defineConfig({ validate: 'always' });
+
+  it.each([
+    ['lean', lean],
+    ['strict', strict],
+  ] as const)('treats undefined as absent in %s mode', (_mode, config) => {
+    const badge = config.recipe({
+      base: 'badge',
+      variants: {
+        tone: { info: 'info', danger: 'danger' },
+        outlined: { true: 'border' },
+      },
+      compoundVariants: [
+        { tone: 'danger', outlined: undefined, className: 'danger-any' },
+      ],
+      defaultVariants: { tone: 'info', outlined: undefined },
+    });
+
+    expect(badge({ tone: undefined, outlined: undefined })).toBe('badge info');
+    expect(badge({ tone: 'danger', className: undefined })).toBe(
+      'badge danger danger-any'
+    );
+    expect(
+      badge.resolve(
+        { tone: 'danger', id: 'x' },
+        { forwardProps: undefined, propAliases: undefined }
+      ).resolvedProps
+    ).toEqual({ className: 'badge danger danger-any', id: 'x' });
+
+    const empty = config.recipe({
+      base: undefined,
+      variants: undefined,
+      compoundVariants: undefined,
+      defaultVariants: undefined,
+    });
+    expect(empty()).toBe('');
+
+    const tabs = config.recipe({
+      slots: { root: 'root', tab: 'tab' },
+      variants: {
+        size: {
+          sm: { root: 'root-sm', tab: undefined },
+          lg: { root: undefined, tab: 'tab-lg' },
+        },
+      },
+      compoundVariants: [
+        { size: 'lg', className: { root: 'root-lg', tab: undefined } },
+      ],
+      defaultVariants: { size: 'sm' },
+    });
+
+    const small = tabs({ slotClassNames: { tab: undefined } });
+    expect([small.root(), small.tab()]).toEqual(['root root-sm', 'tab']);
+    const large = tabs({ size: 'lg', slotClassNames: undefined });
+    expect([large.root(), large.tab({ className: undefined })]).toEqual([
+      'root root-lg',
+      'tab tab-lg',
+    ]);
+  });
+});

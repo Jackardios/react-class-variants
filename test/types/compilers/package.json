@@ -1,0 +1,10 @@
+{
+  "name": "type-matrix-compilers",
+  "private": true,
+  "description": "TypeScript versions for the consumer type matrix (scripts/test-types-packed.mjs). A workspace package, so their tsc binaries stay out of the root node_modules/.bin.",
+  "devDependencies": {
+    "typescript-5.4": "npm:typescript@5.4.5",
+    "typescript-6": "npm:typescript@^6.0.3",
+    "typescript-7": "npm:typescript@^7.0.2"
+  }
+}

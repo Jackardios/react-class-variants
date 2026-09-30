@@ -475,6 +475,7 @@ host, declare it with `defineViewProps()`. This is especially useful for
 intrinsic hosts, where leaking extra props to the DOM would be invalid:
 
 ```tsx
+import type { ReactElement } from 'react';
 import { defineConfig, defineViewProps, recipe } from 'react-class-variants';
 
 const { styled } = defineConfig();
@@ -489,9 +490,9 @@ const buttonRecipe = recipe({
 
 const Button = styled('button', buttonRecipe, {
   viewProps: defineViewProps<{
-    icon?: (props: { className?: string }) => JSX.Element | null;
+    icon?: (props: { className?: string }) => ReactElement | null;
     shortcut?: string;
-  }>('icon', 'shortcut'),
+  }>({ icon: true, shortcut: true }),
   view({ host, classes }) {
     const { icon: Icon, shortcut } = host.props;
 

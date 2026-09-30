@@ -24,3 +24,16 @@ updates:
     groups:
       dev-dependencies:
         update-types: [minor, patch]
+    ignore:
+      # The consumer type matrix (scripts/test-types-packed.mjs) pins the
+      # supported minimum and tracks the newest release of each later major.
+      - dependency-name: typescript-5.4
+      - dependency-name: typescript-6
+        update-types: ['version-update:semver-major']
+      - dependency-name: typescript-7
+        update-types: ['version-update:semver-major']
+      # tsup's declaration build, typescript-eslint, attw, and the editor
+      # checks load the compiler's JavaScript API, which TypeScript 7 only
+      # ships as unstable entry points.
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']

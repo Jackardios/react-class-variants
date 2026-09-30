@@ -44,6 +44,8 @@ function normalizeSlotLeaf(
   validate: boolean,
   context: string
 ) {
+  // An undefined slot value means no class, as for every optional input.
+  if (value === undefined) return undefined;
   if (validate) {
     validateClassNameValue(context, value);
   }

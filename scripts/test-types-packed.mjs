@@ -1,7 +1,8 @@
 // Packs the package once from a clean-checkout state (dist/ hidden, so the
 // `prepack` build runs) and validates that single tarball:
 //   --exports    attw export-map validation
-//   --consumers  Bundler and NodeNext consumer fixtures
+//   --consumers  Bundler and NodeNext consumer fixtures, compiled with every
+//                TypeScript version in typeScriptPackages
 // Without flags both run.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -28,6 +29,20 @@ const fixturesRoot = join(consumersRoot, 'fixtures');
 const smokeSourcePath = join(consumersRoot, 'smoke.ts');
 const distPath = resolve(repoRoot, 'dist');
 const require = createRequire(import.meta.url);
+
+// The documented minimum (5.4 added NoInfer, which the declarations use), the
+// repository's own compiler, and the newest release of each later major.
+// Inference changes between majors, so the published types are checked
+// against each of them rather than against one compiler. The extra versions
+// live in a workspace package so their tsc binaries stay out of the root
+// node_modules/.bin.
+const compilersPackageDir = join(repoRoot, 'test', 'types', 'compilers');
+const typeScriptPackages = [
+  ['typescript-5.4', compilersPackageDir],
+  ['typescript', repoRoot],
+  ['typescript-6', compilersPackageDir],
+  ['typescript-7', compilersPackageDir],
+];
 
 const flags = new Set(process.argv.slice(2).filter(arg => arg !== '--'));
 for (const flag of flags) {
@@ -122,7 +137,6 @@ function writeFixturePackageJson(projectDir, tarballPath) {
     devDependencies: {
       '@types/react': `file:${reactTypesDir}`,
       csstype: csstypeDependency,
-      typescript: `file:${resolveInstalledPackageDir('typescript')}`,
     },
     pnpm: {
       overrides: {
@@ -149,6 +163,9 @@ function checkConsumerFixtures(tarballPath) {
 
   assert.notEqual(fixtureNames.length, 0, 'No consumer fixtures found.');
 
+  const compilers = typeScriptPackages.map(([packageName, fromPath]) =>
+    join(resolveInstalledPackageDir(packageName, fromPath), 'bin', 'tsc')
+  );
   const workspaceRoot = join(tempRoot, 'fixtures');
   cpSync(fixturesRoot, workspaceRoot, { recursive: true });
 
@@ -163,11 +180,14 @@ function checkConsumerFixtures(tarballPath) {
       ['install', '--ignore-scripts', '--config.lockfile=false'],
       projectDir
     );
-    run(
-      'pnpm',
-      ['exec', 'tsc', '--pretty', 'false', '-p', 'tsconfig.json', '--noEmit'],
-      projectDir
-    );
+    for (const compiler of compilers) {
+      run(process.execPath, [compiler, '--version'], projectDir);
+      run(
+        process.execPath,
+        [compiler, '--pretty', 'false', '-p', 'tsconfig.json', '--noEmit'],
+        projectDir
+      );
+    }
   }
 }
 

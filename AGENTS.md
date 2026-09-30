@@ -58,7 +58,7 @@ pnpm test:types:contracts  # tsd contract tests
 pnpm test:types:editor     # editor/types tooling validation
 pnpm test:types:packed     # one clean-checkout pack, then exports + consumers on that tarball
 pnpm test:types:exports    # attw export validation of the clean-checkout tarball only
-pnpm test:types:consumers  # Bundler and NodeNext consumer smoke fixtures only
+pnpm test:types:consumers  # Bundler and NodeNext consumer smoke fixtures on TypeScript 5.4 / 5.x / 6 / 7
 pnpm lint:pkg              # publint package-surface check
 ```
 
@@ -120,7 +120,7 @@ Exports:
 
 Does not export React runtime helpers such as `styled()`, `defineViewProps()`, `mergeProps()`, or ref utilities.
 
-Deprecated type aliases stay exported for compatibility: `ClassValue` (use `ClassNameValue`), `Recipe` (use `AnyRecipe`), and `AnyElementType` (use React's `ElementType`). Do not use them in new code, tests, or docs.
+Published types support TypeScript `5.4+` (the declarations use `NoInfer`). `pnpm test:types:consumers` compiles the consumer smoke test with TypeScript 5.4, the repository's 5.x, 6, and 7, because inference changes between majors (the extra compilers live in the `test/types/compilers` workspace package, so their `tsc` binaries stay out of the root `node_modules/.bin`); keep `test/types/consumers/smoke.ts` covering any type behavior that depends on inference. Optional input properties accept an explicit `undefined` so they work under `exactOptionalPropertyTypes`.
 
 ### API Invariants
 

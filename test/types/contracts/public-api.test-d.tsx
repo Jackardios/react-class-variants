@@ -148,7 +148,7 @@ type LinkDisabledOption = VariantOption<typeof link, 'disabled'>;
 expectAssignable<AnyRecipe>(link);
 expectAssignable<StyledFn>(configuredStyled);
 expectAssignable<LinkConfig>(linkConfig);
-defineViewProps<{ icon?: string }>('icon');
+defineViewProps<{ icon?: string }>({ icon: true });
 expectType<typeof linkConfig>(defineRecipeConfig(linkConfig));
 expectError(packageRoot.styled);
 expectAssignable<LinkConfig>({

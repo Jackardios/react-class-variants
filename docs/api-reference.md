@@ -469,7 +469,7 @@ type SlotStyledOptions = StyledOptionsCommon & {
 If the recipe does not declare a `root` slot, `hostSlot` is required.
 When you provide `hostSlot`, it must be one of the declared slot names.
 
-## `defineViewProps<T>(...keys)`
+## `defineViewProps<T>(keys)`
 
 Use `defineViewProps()` when a `styled(..., { view })` component needs extra
 public props that belong to the component surface, not to the rendered host.
@@ -478,6 +478,7 @@ would be invalid.
 
 Notes:
 
+- list every key of `T` with `true`, as in `defineViewProps<{ icon?: Icon }>({ icon: true })`; a missing or unknown key is a type error, so the declared type and the consumed keys cannot drift apart
 - `defineViewProps()` is a React-layer helper and is exported from the package root, not from `react-class-variants/core`
 - it only affects `styled(..., { view })`; `recipe.resolve()` does not consume `viewProps`
 - it also works with custom bases when `view` should consume props before the base receives its forwarded prop bag
@@ -485,6 +486,7 @@ Notes:
 Example:
 
 ```tsx
+import type { ReactElement } from 'react';
 import { defineConfig, defineViewProps, recipe } from 'react-class-variants';
 
 const { styled } = defineConfig();
@@ -499,9 +501,9 @@ const buttonRecipe = recipe({
 
 const Button = styled('button', buttonRecipe, {
   viewProps: defineViewProps<{
-    icon?: (props: { className?: string }) => JSX.Element | null;
+    icon?: (props: { className?: string }) => ReactElement | null;
     shortcut?: string;
-  }>('icon', 'shortcut'),
+  }>({ icon: true, shortcut: true }),
   view({ host, classes }) {
     const { icon: Icon, shortcut } = host.props;
 
@@ -869,11 +871,11 @@ refs.
 
 ## React Type Exports
 
-- `AnyElementType` (deprecated; use React's `ElementType`)
 - `PropAliases`
 - `ViewPropsDescriptor`
 - `RenderFunctionProps`
 - `RenderProp`
+- `StyledComponent`: the type `styled()` returns, a React function component
 - `StyledComponentProps`
 - `HostRenderOverrides`
 - `HostView`

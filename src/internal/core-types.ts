@@ -1,14 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- public recipe types intentionally carry erased runtime metadata through a hidden symbol brand. */
 export type ClassNameValue = string | null | readonly string[];
-/** @deprecated Use `ClassNameValue`. */
-export type ClassValue = ClassNameValue;
 
 export type ValidateMode = 'never' | 'always';
 
+// Optional properties of public input types also accept an explicit
+// `undefined`, which the runtime treats as absent, so they stay assignable
+// under `exactOptionalPropertyTypes`.
 export interface SystemOptions {
-  cache?: boolean | { maxSize?: number };
-  merge?: (className: string) => string;
-  validate?: ValidateMode;
+  cache?: boolean | { maxSize?: number | undefined } | undefined;
+  merge?: ((className: string) => string) | undefined;
+  validate?: ValidateMode | undefined;
 }
 
 export type Simplify<T> = {
@@ -17,9 +18,9 @@ export type Simplify<T> = {
 
 export type StringToBoolean<T> = T extends 'true' | 'false' ? boolean : T;
 
-export type SlotClassNameMap<Slots extends string> = Partial<
-  Record<Slots, ClassNameValue>
->;
+export type SlotClassNameMap<Slots extends string> = {
+  [Slot in Slots]?: ClassNameValue | undefined;
+};
 
 export type RootVariantsSchema = Record<string, Record<string, ClassNameValue>>;
 
@@ -38,15 +39,33 @@ type IsMixedBooleanVariant<Options extends Record<string, unknown>> =
       ? false
       : true;
 
-type RejectMixedBooleanVariants<Variants extends AnyVariantsSchema> = {
-  [Key in keyof Variants]: Variants[Key] extends infer Options extends Record<
-    string,
-    unknown
-  >
-    ? IsMixedBooleanVariant<Options> extends true
-      ? never
-      : Options
-    : Variants[Key];
+// The members of Object.prototype. The runtime rejects variant keys named
+// after them (`key in Object.prototype`): a prop bag without that prop would
+// resolve the key to the inherited member instead of the default.
+type ObjectPrototypeKey =
+  | '__defineGetter__'
+  | '__defineSetter__'
+  | '__lookupGetter__'
+  | '__lookupSetter__'
+  | '__proto__'
+  | 'constructor'
+  | 'hasOwnProperty'
+  | 'isPrototypeOf'
+  | 'propertyIsEnumerable'
+  | 'toLocaleString'
+  | 'toString'
+  | 'valueOf';
+
+// Rejects variants that mix boolean and named options, and variant keys named
+// after an Object.prototype member.
+type RejectInvalidVariants<Variants extends AnyVariantsSchema> = {
+  [Key in keyof Variants]: Key extends ObjectPrototypeKey
+    ? never
+    : Variants[Key] extends infer Options extends Record<string, unknown>
+      ? IsMixedBooleanVariant<Options> extends true
+        ? never
+        : Options
+      : Variants[Key];
 };
 
 export type VariantSelectionValues<Variants extends AnyVariantsSchema> = {
@@ -84,6 +103,12 @@ type BooleanVariantKeys<Variants extends AnyVariantsSchema> = {
     : never;
 }[keyof Variants];
 
+// Partial<T> that also accepts an explicit `undefined` for every key (see
+// SystemOptions).
+export type OptionalProps<T> = {
+  [Key in keyof T]?: T[Key] | undefined;
+};
+
 type OptionalVariantKeys<
   Variants extends AnyVariantsSchema,
   Defaults extends object,
@@ -101,7 +126,7 @@ export type VariantInput<
           OptionalVariantKeys<Variants, Defaults>
         >
       > &
-        Partial<
+        OptionalProps<
           Pick<
             VariantSelectionValues<Variants>,
             OptionalVariantKeys<Variants, Defaults>
@@ -114,11 +139,12 @@ export type ResolvedVariantInput<Variants extends AnyVariantsSchema> =
     ? {}
     : Simplify<VariantSelectionValues<Variants>>;
 
-type CompoundSelectorInput<Variants extends AnyVariantsSchema> = Partial<{
-  [Key in keyof VariantSelectionValues<Variants>]:
+type CompoundSelectorInput<Variants extends AnyVariantsSchema> = {
+  [Key in keyof VariantSelectionValues<Variants>]?:
     | VariantSelectionValues<Variants>[Key]
-    | readonly VariantSelectionValues<Variants>[Key][];
-}>;
+    | readonly VariantSelectionValues<Variants>[Key][]
+    | undefined;
+};
 
 export type RootCompoundVariant<Variants extends RootVariantsSchema> = Simplify<
   CompoundSelectorInput<Variants> & {
@@ -139,22 +165,25 @@ export type RootRecipeConfig<
   Variants extends RootVariantsSchema = {},
   Defaults extends Partial<VariantSelectionValues<Variants>> = {},
 > = {
-  base?: ClassNameValue;
+  base?: ClassNameValue | undefined;
   slots?: never;
-  variants?: RejectMixedBooleanVariants<Variants>;
-  compoundVariants?: readonly RootCompoundVariant<Variants>[];
-  defaultVariants?: Defaults;
+  variants?: RejectInvalidVariants<Variants> | undefined;
+  compoundVariants?: readonly RootCompoundVariant<Variants>[] | undefined;
+  defaultVariants?: Defaults | undefined;
 };
 
 export type RootRecipeConfigInput<
   Variants extends RootVariantsSchema = {},
   Defaults extends Partial<VariantSelectionValues<Variants>> = {},
 > = {
-  base?: ClassNameValue;
+  base?: ClassNameValue | undefined;
   slots?: never;
-  variants?: RejectMixedBooleanVariants<Variants>;
-  compoundVariants?: readonly RootCompoundVariant<Variants>[];
-  defaultVariants?: DefaultVariantsInput<Variants, Defaults>;
+  variants?: RejectInvalidVariants<Variants> | undefined;
+  // NoInfer: only `variants` may drive inference. TypeScript 7 otherwise also
+  // infers from compound selectors, widening boolean and slot types.
+  compoundVariants?:
+    readonly RootCompoundVariant<NoInfer<Variants>>[] | undefined;
+  defaultVariants?: DefaultVariantsInput<Variants, Defaults> | undefined;
 };
 
 export type SlotRecipeConfig<
@@ -167,12 +196,11 @@ export type SlotRecipeConfig<
 > = {
   base?: never;
   slots: SlotDefs;
-  variants?: RejectMixedBooleanVariants<Variants>;
-  compoundVariants?: readonly SlotCompoundVariant<
-    keyof SlotDefs & string,
-    Variants
-  >[];
-  defaultVariants?: Defaults;
+  variants?: RejectInvalidVariants<Variants> | undefined;
+  compoundVariants?:
+    | readonly SlotCompoundVariant<keyof SlotDefs & string, Variants>[]
+    | undefined;
+  defaultVariants?: Defaults | undefined;
 };
 
 export type SlotRecipeConfigInput<
@@ -185,12 +213,15 @@ export type SlotRecipeConfigInput<
 > = {
   base?: never;
   slots: SlotDefs;
-  variants?: RejectMixedBooleanVariants<Variants>;
-  compoundVariants?: readonly SlotCompoundVariant<
-    keyof SlotDefs & string,
-    Variants
-  >[];
-  defaultVariants?: DefaultVariantsInput<Variants, Defaults>;
+  variants?: RejectInvalidVariants<Variants> | undefined;
+  // NoInfer: see RootRecipeConfigInput.
+  compoundVariants?:
+    | readonly SlotCompoundVariant<
+        keyof NoInfer<SlotDefs> & string,
+        NoInfer<Variants>
+      >[]
+    | undefined;
+  defaultVariants?: DefaultVariantsInput<Variants, Defaults> | undefined;
 };
 
 export type AnyRootRecipeConfig = RootRecipeConfig<any, any>;
@@ -201,8 +232,8 @@ export type ResolveOptions<
   VariantKeys extends string = string,
   PropAliases extends Record<string, string> = Record<string, string>,
 > = {
-  forwardProps?: readonly VariantKeys[];
-  propAliases?: PropAliases;
+  forwardProps?: readonly VariantKeys[] | undefined;
+  propAliases?: PropAliases | undefined;
 };
 
 type ResolveInputProps<TInput> =
@@ -337,30 +368,30 @@ type SlotResolvedProps<TRecipe, TInput, TOptions> = Simplify<
 >;
 
 export type RootRecipeInput<TRecipe> = VariantProps<TRecipe> & {
-  className?: ClassNameValue;
+  className?: ClassNameValue | undefined;
 };
 
-type SlotClassNamesForShape<TShape extends object> = Partial<{
-  [Slot in keyof TShape]: ClassNameValue;
-}>;
+type SlotClassNamesForShape<TShape extends object> = {
+  [Slot in keyof TShape]?: ClassNameValue | undefined;
+};
 
 type SlotRecipeSlotClassNames<TRecipe> = SlotClassNamesForShape<
   SlotDefinitions<TRecipe>
 >;
 
 export type SlotRecipeInput<TRecipe> = VariantProps<TRecipe> & {
-  slotClassNames?: SlotRecipeSlotClassNames<TRecipe>;
+  slotClassNames?: SlotRecipeSlotClassNames<TRecipe> | undefined;
 };
 
-type SlotResolveInputContext<TRecipe> = Partial<VariantProps<TRecipe>> & {
-  slotClassNames?: SlotRecipeSlotClassNames<TRecipe>;
+type SlotResolveInputContext<TRecipe> = OptionalProps<VariantProps<TRecipe>> & {
+  slotClassNames?: SlotRecipeSlotClassNames<TRecipe> | undefined;
 };
 
 type ContextualResolveInput<TContext, TInput> =
   TInput extends Record<string, unknown> ? TContext & TInput : TInput;
 
-export type SlotRenderInput<TRecipe> = Partial<VariantProps<TRecipe>> & {
-  className?: ClassNameValue;
+export type SlotRenderInput<TRecipe> = OptionalProps<VariantProps<TRecipe>> & {
+  className?: ClassNameValue | undefined;
 };
 
 export type SlotRenderFunction<TRecipe> = (
@@ -424,6 +455,9 @@ export type SlotResolveResult<
   resolvedProps: SlotResolvedProps<TRecipe, TInput, TOptions>;
 };
 
+// Recipes stay type aliases: as interfaces, a recipe created inline in a
+// styled() argument no longer resolves (TypeScript fixes the inner recipe()
+// call while trying the first styled() overload).
 export type RootRecipe<
   Variants extends RootVariantsSchema = {},
   Defaults extends object = {},
@@ -491,8 +525,6 @@ export type AnySlotRecipe = RecipeBrand<'slot', any, any, any, any> & {
 };
 
 export type AnyRecipe = AnyRootRecipe | AnySlotRecipe;
-/** @deprecated Use `AnyRecipe`. */
-export type Recipe = AnyRecipe;
 
 export type RecipeFactory = {
   <
