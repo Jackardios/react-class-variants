@@ -1,4 +1,7 @@
 packages:
+  # The published package. Changesets only versions listed packages, and
+  # `packages` stops the root from counting as one of them.
+  - .
   # TypeScript versions for the consumer type matrix; see its package.json.
   - test/types/compilers
 onlyBuiltDependencies:
