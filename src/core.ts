@@ -23,8 +23,6 @@ export type {
   AnyRootRecipe,
   AnySlotRecipe,
   ClassNameValue,
-  ClassValue,
-  Recipe,
   RecipeConfig,
   RecipeConfigOf,
   RecipeFactory,
@@ -54,8 +52,21 @@ export type {
   VariantSource,
 } from './internal/core-types';
 
+/**
+ * Creates a recipe. A config with `base` builds a root recipe, whose call
+ * returns a class string; a config with `slots` builds a slotted recipe,
+ * whose call returns one class function per slot. `recipe.resolve()` splits
+ * variant props from a full prop bag.
+ *
+ * This default factory neither merges classes nor validates input; use
+ * `defineConfig()` for a `merge` function or `validate: 'always'`.
+ */
 export const recipe = defaultRecipeFactory;
 
+/**
+ * Returns `config` unchanged, typed as a recipe config, so it can be declared
+ * separately from `recipe()` and still keep its literal variant types.
+ */
 export function defineRecipeConfig<
   const SlotDefs extends Record<string, ClassNameValue>,
   const Variants extends SlotVariantsSchema<keyof SlotDefs & string> = {},
@@ -83,6 +94,7 @@ function isBooleanVariantOptions(options: Record<string, unknown>) {
   return hasOwnKey(options, 'true') || hasOwnKey(options, 'false');
 }
 
+/** Lists the variant names of a recipe or recipe config. */
 export function variantNames<const TSource extends VariantSource>(
   source: TSource
 ): VariantName<TSource>[] {
@@ -95,6 +107,10 @@ export function variantNames<const TSource extends VariantSource>(
   return Object.keys(source.variants ?? {}) as VariantName<TSource>[];
 }
 
+/**
+ * Lists the options of one variant of a recipe or recipe config. Boolean
+ * variants return `[true, false]`; an unknown variant returns `[]`.
+ */
 export function variantOptions<
   const TSource extends VariantSource,
   const Name extends VariantName<TSource>,
@@ -126,6 +142,10 @@ export function variantOptions<
   ) as VariantOption<TSource, Name>[];
 }
 
+/**
+ * Creates a `recipe()` factory that shares `merge`, `validate`, and `cache`
+ * settings. The package root's `defineConfig()` also returns `styled`.
+ */
 export function defineConfig(options: SystemOptions = {}) {
   return {
     recipe: createRecipeFactory(options),

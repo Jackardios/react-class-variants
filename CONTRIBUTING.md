@@ -84,7 +84,7 @@ What they do:
 - `pnpm test:types:editor`: editor/types tooling validation
 - `pnpm test:types:packed`: packs once from a clean-checkout state (`dist/` hidden, so `prepack` builds), then runs both checks below on that tarball
 - `pnpm test:types:exports`: `attw` export validation of the clean-checkout tarball only
-- `pnpm test:types:consumers`: Bundler and NodeNext consumer fixtures, both compiling `test/types/consumers/smoke.ts` with `skipLibCheck: false`
+- `pnpm test:types:consumers`: Bundler and NodeNext consumer fixtures, both compiling `test/types/consumers/smoke.ts` with `skipLibCheck: false` on TypeScript 5.4 (the supported minimum), the repository's 5.x, 6, and 7; the Bundler fixture also enables `exactOptionalPropertyTypes`
 - `pnpm lint:pkg`: `publint` package-surface validation
 
 When to use them:

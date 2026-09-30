@@ -639,7 +639,7 @@ const ViewPropButton = styled('button', badge, {
   viewProps: defineViewProps<{
     icon?: typeof IconGlyph;
     shortcut?: string;
-  }>('icon', 'shortcut'),
+  }>({ icon: true, shortcut: true }),
   view: ({ host }) => {
     expectType<typeof IconGlyph | undefined>(host.props.icon);
     expectType<string | undefined>(host.props.shortcut);
@@ -668,7 +668,7 @@ const ComposedViewPropInput = styled('input', viewedInputRecipe, {
   },
   viewProps: defineViewProps<{
     shortcut?: string;
-  }>('shortcut'),
+  }>({ shortcut: true }),
   view: ({ host }) => {
     expectType<number | undefined>(host.props.size);
     expectType<boolean>(host.props.disabled);
@@ -715,14 +715,14 @@ expectError(
 
 expectError(
   styled('button', badge, {
-    viewProps: defineViewProps<{ className?: string }>('className'),
+    viewProps: defineViewProps<{ className?: string }>({ className: true }),
     view: ({ host }) => host.render(),
   })
 );
 
 expectError(
   styled('button', badge, {
-    viewProps: defineViewProps<{ tone?: string }>('tone'),
+    viewProps: defineViewProps<{ tone?: string }>({ tone: true }),
     view: ({ host }) => host.render(),
   })
 );
@@ -732,21 +732,21 @@ expectError(
     propAliases: {
       size: 'htmlSize',
     },
-    viewProps: defineViewProps<{ htmlSize?: number }>('htmlSize'),
+    viewProps: defineViewProps<{ htmlSize?: number }>({ htmlSize: true }),
     view: ({ host }) => host.render(),
   })
 );
 
 expectError(
   styled('button', badge, {
-    viewProps: defineViewProps<{ type?: 'button' }>('type'),
+    viewProps: defineViewProps<{ type?: 'button' }>({ type: true }),
     view: ({ host }) => host.render(),
   })
 );
 
 expectError(
   styled('button', badge, {
-    viewProps: defineViewProps<{ icon?: typeof IconGlyph }>('icon'),
+    viewProps: defineViewProps<{ icon?: typeof IconGlyph }>({ icon: true }),
   })
 );
 
@@ -939,3 +939,44 @@ styled('label', fieldRecipe, {
     });
   },
 });
+
+// Variant keys named after Object.prototype members are rejected, as at
+// runtime: a prop bag would resolve them to the inherited member.
+expectError(recipe({ variants: { constructor: { a: 'x' } } }));
+expectError(recipe({ variants: { toString: { true: 'x' } } }));
+expectError(recipe({ slots: { root: '' }, variants: { valueOf: { a: {} } } }));
+
+// defineViewProps() must list exactly the keys of its type argument.
+defineViewProps<{ icon?: string; shortcut?: string }>({
+  icon: true,
+  shortcut: true,
+});
+expectError(
+  defineViewProps<{ icon?: string; shortcut?: string }>({ icon: true })
+);
+expectError(defineViewProps<{ icon?: string }>({ icon: true, extra: true }));
+
+// host.render() accepts base props and data attributes, and rejects typos;
+// host.props never carries `key`.
+styled('button', badge, {
+  view: ({ host }) => {
+    expectError(host.props.key);
+    expectError(host.render({ classname: 'typo' }));
+
+    return host.render({
+      'data-state': 'open',
+      title: 'Badge',
+      type: 'button',
+    });
+  },
+});
+
+// A named view can be annotated without spelling out every generic.
+function BadgeView({
+  host,
+  variants,
+}: RootStyledViewProps<'span', typeof badge>) {
+  expectType<boolean>(variants.disabled);
+  return host.render();
+}
+styled('span', badge, { view: BadgeView });

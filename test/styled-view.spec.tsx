@@ -71,7 +71,7 @@ describe('styled() view components', () => {
       viewProps: defineViewProps<{
         icon?: typeof StartIcon;
         shortcut?: { key: string };
-      }>('icon', 'shortcut'),
+      }>({ icon: true, shortcut: true }),
       view({ host, classes }) {
         const { icon: Icon, shortcut } = host.props;
 
@@ -138,7 +138,7 @@ describe('styled() view components', () => {
       forwardProps: ['loading'],
       viewProps: defineViewProps<{
         shortcut?: string;
-      }>('shortcut'),
+      }>({ shortcut: true }),
       view({ host, variants }) {
         expect(host.props.shortcut).toBe('K');
         expect(host.props.loading).toBe(true);
@@ -185,7 +185,7 @@ describe('styled() view components', () => {
 
     expect(() =>
       strict.styled('button', buttonRecipe, {
-        viewProps: defineViewProps<{ icon?: () => null }>('icon'),
+        viewProps: defineViewProps<{ icon?: () => null }>({ icon: true }),
         view() {
           return null;
         },
@@ -200,7 +200,7 @@ describe('styled() view components', () => {
 
     expect(() =>
       styled('button', buttonRecipe, {
-        viewProps: defineViewProps<{ icon?: () => null }>('icon'),
+        viewProps: defineViewProps<{ icon?: () => null }>({ icon: true }),
       } as never)
     ).toThrow(/viewProps require a view component/);
   });
@@ -370,7 +370,7 @@ describe('styled() view components', () => {
     for (const key of ['children', 'className', 'ref', 'render']) {
       expect(() =>
         strict.styled('button', buttonRecipe, {
-          viewProps: defineViewProps<Record<string, unknown>>(key),
+          viewProps: defineViewProps<Record<string, unknown>>({ [key]: true }),
           view,
         } as never)
       ).toThrow(
@@ -379,7 +379,9 @@ describe('styled() view components', () => {
     }
     expect(() =>
       strict.styled('div', tabsRecipe, {
-        viewProps: defineViewProps<Record<string, unknown>>('slotClassNames'),
+        viewProps: defineViewProps<Record<string, unknown>>({
+          slotClassNames: true,
+        }),
         view,
       } as never)
     ).toThrow(
@@ -388,7 +390,7 @@ describe('styled() view components', () => {
     expect(() =>
       strict.styled('input', buttonRecipe, {
         propAliases: { size: 'htmlSize' },
-        viewProps: defineViewProps<{ htmlSize?: number }>('htmlSize'),
+        viewProps: defineViewProps<{ htmlSize?: number }>({ htmlSize: true }),
         view,
       } as never)
     ).toThrow(

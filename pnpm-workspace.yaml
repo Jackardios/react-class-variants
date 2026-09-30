@@ -1,3 +1,6 @@
+packages:
+  # TypeScript versions for the consumer type matrix; see its package.json.
+  - test/types/compilers
 onlyBuiltDependencies:
   - esbuild
 # Refuse versions published less than a week ago when resolving new ones.

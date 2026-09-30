@@ -15,8 +15,6 @@ export type {
   AnyRootRecipe,
   AnySlotRecipe,
   ClassNameValue,
-  ClassValue,
-  Recipe,
   RecipeConfig,
   RecipeConfigOf,
   RecipeFactory,
@@ -47,7 +45,6 @@ export type {
 } from './internal/core-types';
 
 export type {
-  AnyElementType,
   HostRenderOverrides,
   HostView,
   PropAliases,
@@ -58,6 +55,7 @@ export type {
   SlotStyledOptions,
   SlotStyledViewProps,
   StyledFn,
+  StyledComponent,
   StyledComponentProps,
   ViewPropsDescriptor,
 } from './internal/react-types';

@@ -27,8 +27,6 @@ export type {
   AnyRootRecipe,
   AnySlotRecipe,
   ClassNameValue,
-  ClassValue,
-  Recipe,
   RecipeConfig,
   RecipeConfigOf,
   RecipeFactory,
@@ -59,7 +57,6 @@ export type {
 } from './internal/core-types';
 
 export type {
-  AnyElementType,
   HostRenderOverrides,
   HostView,
   PropAliases,
@@ -69,19 +66,31 @@ export type {
   RootStyledViewProps,
   SlotStyledOptions,
   SlotStyledViewProps,
+  StyledComponent,
   StyledComponentProps,
   StyledFn,
   ViewPropsDescriptor,
 } from './internal/react-types';
 
+/**
+ * Declares component props that only a `styled()` view consumes: they reach
+ * `host.props` but never the rendered host. List every key of `TViewProps`
+ * with `true`; a missing or unknown key is a type error.
+ *
+ * @example
+ * defineViewProps<{ icon?: Icon; shortcut?: string }>({
+ *   icon: true,
+ *   shortcut: true,
+ * });
+ */
 export function defineViewProps<
   TViewProps extends Record<string, unknown>,
-  const Keys extends readonly (keyof TViewProps & string)[] =
-    readonly (keyof TViewProps & string)[],
->(...keys: Keys): ViewPropsDescriptor<Pick<TViewProps, Keys[number]>> {
-  return {
-    keys: [...new Set(keys)],
-  } as ViewPropsDescriptor<Pick<TViewProps, Keys[number]>>;
+>(keys: {
+  readonly [Key in keyof TViewProps]-?: true;
+}): ViewPropsDescriptor<TViewProps> {
+  // An object rather than a key list: TypeScript cannot infer a key list while
+  // TViewProps is given explicitly, so it could not check that the two match.
+  return { keys: Object.keys(keys) } as ViewPropsDescriptor<TViewProps>;
 }
 
 function styledImpl(
@@ -120,6 +129,13 @@ function styledImpl(
 
 export const styled: StyledFn = styledImpl as StyledFn;
 
+/**
+ * Creates a `recipe()` factory and the `styled()` component builder that
+ * share `merge`, `validate`, and `cache` settings.
+ *
+ * @example
+ * const { recipe, styled } = defineConfig({ merge: twMerge });
+ */
 export function defineConfig(options: SystemOptions = {}) {
   return {
     recipe: createRecipeFactory(options),

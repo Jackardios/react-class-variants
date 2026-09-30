@@ -2,7 +2,7 @@
 
 [![npm version](https://img.shields.io/npm/v/react-class-variants.svg)](https://www.npmjs.com/package/react-class-variants)
 [![npm bundle size](https://img.shields.io/bundlephobia/minzip/react-class-variants)](https://bundlephobia.com/package/react-class-variants)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.4+-blue.svg)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 `react-class-variants` is a recipe-first, type-safe API for composing CSS classes in React components.
@@ -26,6 +26,7 @@ The current v2 alpha surface is built around:
 - Current line: `2.0.0-alpha.x`
 - Recommended install: `react-class-variants@alpha`
 - Runtime requirements: Node.js `22.12+` and React `19`
+- TypeScript: `5.4+`; the published types are tested with TypeScript 5.4, 5.9, 6, and 7, and support `exactOptionalPropertyTypes`
 - Module format: ESM-only
 
 ## Installation
@@ -48,7 +49,7 @@ pnpm add tailwind-merge
 | Compute slot class strings                 | `recipe(input).slotName()`          |
 | Split variant props from a full prop bag   | `recipe.resolve(input, options)`    |
 | Build a React component from a recipe      | `const { styled } = defineConfig()` |
-| Declare component props consumed by `view` | `defineViewProps<T>(...keys)`       |
+| Declare component props consumed by `view` | `defineViewProps<T>(keys)`          |
 | Share merge or validate behavior           | `defineConfig(options)`             |
 | Keep typed config objects around           | `defineRecipeConfig(config)`        |
 | Avoid React runtime imports                | `react-class-variants/core`         |
