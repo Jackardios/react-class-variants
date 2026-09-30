@@ -33,7 +33,6 @@ type HasKeys<T> = [keyof T] extends [never] ? false : true;
 type HasForwardedKeys<Forwarded extends string> = [Forwarded] extends [never]
   ? false
   : true;
-type RecipeSlotNames<TRecipe> = keyof SlotRenderMap<TRecipe> & string;
 type StyledSlotClassNames<TRecipe> = {
   [Slot in keyof SlotRenderMap<TRecipe>]?: ClassNameValue | undefined;
 };
@@ -131,10 +130,16 @@ type DisallowedAliasTargetKeys<Base extends ElementType, TRecipe> =
   | BasePropKeys<Base>
   | Extract<VariantPropKeys<TRecipe>, string>;
 
+// A taken name maps to a message type, so the error explains the conflict
+// instead of reporting "not assignable to never".
 type ValidatedAliasValue<
   AliasValue,
   Disallowed extends string,
-> = AliasValue extends string ? Exclude<AliasValue, Disallowed> : AliasValue;
+> = AliasValue extends string
+  ? AliasValue extends Disallowed
+    ? `${AliasValue} is already a variant, base, or reserved prop name`
+    : AliasValue
+  : AliasValue;
 
 type ValidatedPropAliases<
   Base extends ElementType,
@@ -193,6 +198,10 @@ type ViewPropsOption<
 > =
   HasKeys<ViewProps> extends true
     ? {
+        /**
+         * Props that only `view` reads, declared with `defineViewProps()`.
+         * They reach `host.props` but never the rendered element.
+         */
         viewProps: ValidatedViewPropsDescriptor<
           Base,
           TRecipe,
@@ -377,11 +386,25 @@ export type StyledOptionsCommon<
   Aliases extends PropAliases<Base>,
   Forwarded extends string,
 > = {
+  /** Component name in React DevTools; defaults to `Styled(<base>)`. */
   displayName?: string | undefined;
+  /**
+   * Variant names whose resolved values also reach the base as props, for
+   * example `['disabled']` for a `disabled` variant on a `<button>`.
+   */
   forwardProps?:
     | (readonly Forwarded[] & readonly (keyof VariantProps<TRecipe> & string)[])
     | undefined;
-  propAliases?: ValidatedPropAliases<Base, TRecipe, Aliases> | undefined;
+  // `& PropAliases<Base>` lets editors complete the base prop names while
+  // `Aliases` is still being inferred.
+  /**
+   * Exposes a base prop under another name when a variant already uses its
+   * name: `{ size: 'htmlSize' }` passes the `htmlSize` prop to the base as
+   * `size`.
+   */
+  propAliases?:
+    | (ValidatedPropAliases<Base, TRecipe, Aliases> & PropAliases<Base>)
+    | undefined;
 };
 
 export type RootStyledOptions<
@@ -392,6 +415,10 @@ export type RootStyledOptions<
   Forwarded extends string = never,
   ViewProps extends ViewPropsShape = {},
 > = StyledOptionsCommon<Base, TRecipe, Aliases, Forwarded> & {
+  /**
+   * Adds a `render` prop, an element or a function of the props, that
+   * replaces the rendered element. Intrinsic bases only.
+   */
   withRender?: WithRender | undefined;
 } & (
     | {
@@ -399,6 +426,10 @@ export type RootStyledOptions<
         viewProps?: undefined;
       }
     | ({
+        /**
+         * Renders the component from the resolved `host` and `variants`,
+         * usually by returning `host.render()`.
+         */
         view: ComponentType<
           RootStyledViewProps<
             Base,
@@ -412,13 +443,17 @@ export type RootStyledOptions<
       } & ViewPropsOption<Base, TRecipe, Aliases, ViewProps>)
   );
 
+// Spelled out instead of `RecipeSlotNames<TRecipe>`, so hovers and errors
+// list the slot names rather than the alias.
 type HostSlotOption<TRecipe extends AnySlotRecipeLike> =
-  'root' extends RecipeSlotNames<TRecipe>
+  'root' extends keyof SlotRenderMap<TRecipe>
     ? {
-        hostSlot?: RecipeSlotNames<TRecipe> | undefined;
+        /** Slot whose classes go on the host element; defaults to `root`. */
+        hostSlot?: (keyof SlotRenderMap<TRecipe> & string) | undefined;
       }
     : {
-        hostSlot: RecipeSlotNames<TRecipe>;
+        /** Slot whose classes go on the host element. */
+        hostSlot: keyof SlotRenderMap<TRecipe> & string;
       };
 
 export type SlotStyledOptions<
@@ -429,7 +464,15 @@ export type SlotStyledOptions<
   Forwarded extends string = never,
   ViewProps extends ViewPropsShape = {},
 > = StyledOptionsCommon<Base, TRecipe, Aliases, Forwarded> & {
+  /**
+   * Adds a `render` prop, an element or a function of the props, that
+   * replaces the rendered element. Intrinsic bases only.
+   */
   withRender?: WithRender | undefined;
+  /**
+   * Renders the component from the resolved `host`, `variants`, and one class
+   * function per slot in `classes`.
+   */
   view: ComponentType<
     SlotStyledViewProps<
       Base,
@@ -443,6 +486,41 @@ export type SlotStyledOptions<
 } & ViewPropsOption<Base, TRecipe, Aliases, ViewProps> &
   HostSlotOption<TRecipe>;
 
+/** `withRender` only applies to intrinsic bases; a component base gets `false`. */
+type StyledWithRender<
+  Base extends ElementType,
+  WithRender extends boolean,
+> = Base extends AnyIntrinsicElement ? WithRender : false;
+
+/** The options that fit a recipe: slotted recipes take a `view`. */
+type StyledOptionsFor<
+  Base extends ElementType,
+  TRecipe,
+  WithRender extends boolean,
+  Aliases extends PropAliases<Base>,
+  Forwarded extends string,
+  ViewProps extends ViewPropsShape,
+> = TRecipe extends AnySlotRecipeLike
+  ? SlotStyledOptions<
+      Base,
+      TRecipe,
+      StyledWithRender<Base, WithRender>,
+      Aliases,
+      Forwarded,
+      ViewProps
+    >
+  : TRecipe extends AnyRootRecipeLike
+    ? | RootStyledOptions<
+          Base,
+          TRecipe,
+          StyledWithRender<Base, WithRender>,
+          Aliases,
+          Forwarded,
+          ViewProps
+        >
+      | undefined
+    : never;
+
 /**
  * Builds a React component that renders `base` with the recipe's classes.
  * Variant props become component props; everything else reaches `base`.
@@ -450,17 +528,29 @@ export type SlotStyledOptions<
  * intrinsic bases.
  */
 export interface StyledFn {
+  <Base extends ElementType, TRecipe extends AnyRootRecipeLike>(
+    base: Base,
+    inputRecipe: TRecipe
+  ): StyledComponent<Base, TRecipe>;
+
+  // One signature for every call with options, rather than one overload per
+  // base and recipe kind: when every overload fails, TypeScript reports the
+  // last one's error, which pointed at the wrong argument (for example
+  // "string is not assignable to ComponentType" for a bad `forwardProps`).
   <
-    Base extends AnyIntrinsicElement,
-    TRecipe extends AnyRootRecipeLike,
+    Base extends ElementType,
+    TRecipe extends AnyRootRecipeLike | AnySlotRecipeLike,
     const WithRender extends boolean = false,
     const Aliases extends PropAliases<Base> = {},
-    const Forwarded extends string = never,
+    // Constrained so that an unknown name is reported against the variant
+    // names rather than as "not assignable to never".
+    const Forwarded extends Extract<keyof VariantProps<TRecipe>, string> =
+      never,
     const ViewProps extends ViewPropsShape = {},
   >(
     base: Base,
     inputRecipe: TRecipe,
-    options?: RootStyledOptions<
+    options: StyledOptionsFor<
       Base,
       TRecipe,
       WithRender,
@@ -468,63 +558,12 @@ export interface StyledFn {
       Forwarded,
       ViewProps
     >
-  ): StyledComponent<Base, TRecipe, WithRender, Aliases, Forwarded, ViewProps>;
-
-  <
-    Base extends Exclude<ElementType, AnyIntrinsicElement>,
-    TRecipe extends AnyRootRecipeLike,
-    const Aliases extends PropAliases<Base> = {},
-    const Forwarded extends string = never,
-    const ViewProps extends ViewPropsShape = {},
-  >(
-    base: Base,
-    inputRecipe: TRecipe,
-    options?: RootStyledOptions<
-      Base,
-      TRecipe,
-      false,
-      Aliases,
-      Forwarded,
-      ViewProps
-    >
-  ): StyledComponent<Base, TRecipe, false, Aliases, Forwarded, ViewProps>;
-
-  <
-    Base extends AnyIntrinsicElement,
-    TRecipe extends AnySlotRecipeLike,
-    const WithRender extends boolean = false,
-    const Aliases extends PropAliases<Base> = {},
-    const Forwarded extends string = never,
-    const ViewProps extends ViewPropsShape = {},
-  >(
-    base: Base,
-    inputRecipe: TRecipe,
-    options: SlotStyledOptions<
-      Base,
-      TRecipe,
-      WithRender,
-      Aliases,
-      Forwarded,
-      ViewProps
-    >
-  ): StyledComponent<Base, TRecipe, WithRender, Aliases, Forwarded, ViewProps>;
-
-  <
-    Base extends Exclude<ElementType, AnyIntrinsicElement>,
-    TRecipe extends AnySlotRecipeLike,
-    const Aliases extends PropAliases<Base> = {},
-    const Forwarded extends string = never,
-    const ViewProps extends ViewPropsShape = {},
-  >(
-    base: Base,
-    inputRecipe: TRecipe,
-    options: SlotStyledOptions<
-      Base,
-      TRecipe,
-      false,
-      Aliases,
-      Forwarded,
-      ViewProps
-    >
-  ): StyledComponent<Base, TRecipe, false, Aliases, Forwarded, ViewProps>;
+  ): StyledComponent<
+    Base,
+    TRecipe,
+    StyledWithRender<Base, WithRender>,
+    Aliases,
+    Forwarded,
+    ViewProps
+  >;
 }

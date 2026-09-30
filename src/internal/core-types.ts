@@ -7,8 +7,20 @@ export type ValidateMode = 'never' | 'always';
 // `undefined`, which the runtime treats as absent, so they stay assignable
 // under `exactOptionalPropertyTypes`.
 export interface SystemOptions {
+  /**
+   * Memoizes root recipe results when `merge` is set in lean mode. On by
+   * default; `false` turns it off, and `{ maxSize }` bounds it (default 500).
+   */
   cache?: boolean | { maxSize?: number | undefined } | undefined;
+  /**
+   * Post-processes every resolved class string, for example `twMerge` from
+   * tailwind-merge.
+   */
   merge?: ((className: string) => string) | undefined;
+  /**
+   * `'always'` checks configs and calls at runtime and throws descriptive
+   * errors; `'never'` (the default) uses the lean runtime.
+   */
   validate?: ValidateMode | undefined;
 }
 
@@ -165,10 +177,21 @@ export type RootRecipeConfig<
   Variants extends RootVariantsSchema = {},
   Defaults extends Partial<VariantSelectionValues<Variants>> = {},
 > = {
+  /** Classes applied on every call. Makes a root recipe. */
   base?: ClassNameValue | undefined;
+  /** Root recipes take `base`; `slots` makes a slotted recipe. */
   slots?: never;
+  /**
+   * Variant name → option → classes. Options named `true` and `false` make a
+   * boolean variant. A variant without a default is a required prop.
+   */
   variants?: RejectInvalidVariants<Variants> | undefined;
+  /**
+   * Classes added when every listed variant matches; an array matches any of
+   * its options.
+   */
   compoundVariants?: readonly RootCompoundVariant<Variants>[] | undefined;
+  /** Option used when a variant prop is missing; makes the variant optional. */
   defaultVariants?: Defaults | undefined;
 };
 
@@ -176,13 +199,24 @@ export type RootRecipeConfigInput<
   Variants extends RootVariantsSchema = {},
   Defaults extends Partial<VariantSelectionValues<Variants>> = {},
 > = {
+  /** Classes applied on every call. Makes a root recipe. */
   base?: ClassNameValue | undefined;
+  /** Root recipes take `base`; `slots` makes a slotted recipe. */
   slots?: never;
+  /**
+   * Variant name → option → classes. Options named `true` and `false` make a
+   * boolean variant. A variant without a default is a required prop.
+   */
   variants?: RejectInvalidVariants<Variants> | undefined;
   // NoInfer: only `variants` may drive inference. TypeScript 7 otherwise also
   // infers from compound selectors, widening boolean and slot types.
+  /**
+   * Classes added when every listed variant matches; an array matches any of
+   * its options.
+   */
   compoundVariants?:
     readonly RootCompoundVariant<NoInfer<Variants>>[] | undefined;
+  /** Option used when a variant prop is missing; makes the variant optional. */
   defaultVariants?: DefaultVariantsInput<Variants, Defaults> | undefined;
 };
 
@@ -194,12 +228,27 @@ export type SlotRecipeConfig<
   Variants extends SlotVariantsSchema<keyof SlotDefs & string> = {},
   Defaults extends Partial<VariantSelectionValues<Variants>> = {},
 > = {
+  /** Slotted recipes take `slots`; `base` makes a root recipe. */
   base?: never;
+  /**
+   * Slot name → classes. Makes a slotted recipe, whose call returns one class
+   * function per slot.
+   */
   slots: SlotDefs;
+  /**
+   * Variant name → option → classes per slot. Options named `true` and
+   * `false` make a boolean variant. A variant without a default is a required
+   * prop.
+   */
   variants?: RejectInvalidVariants<Variants> | undefined;
+  /**
+   * Classes added when every listed variant matches; an array matches any of
+   * its options.
+   */
   compoundVariants?:
     | readonly SlotCompoundVariant<keyof SlotDefs & string, Variants>[]
     | undefined;
+  /** Option used when a variant prop is missing; makes the variant optional. */
   defaultVariants?: Defaults | undefined;
 };
 
@@ -211,16 +260,31 @@ export type SlotRecipeConfigInput<
   Variants extends SlotVariantsSchema<keyof SlotDefs & string> = {},
   Defaults extends Partial<VariantSelectionValues<Variants>> = {},
 > = {
+  /** Slotted recipes take `slots`; `base` makes a root recipe. */
   base?: never;
+  /**
+   * Slot name → classes. Makes a slotted recipe, whose call returns one class
+   * function per slot.
+   */
   slots: SlotDefs;
+  /**
+   * Variant name → option → classes per slot. Options named `true` and
+   * `false` make a boolean variant. A variant without a default is a required
+   * prop.
+   */
   variants?: RejectInvalidVariants<Variants> | undefined;
   // NoInfer: see RootRecipeConfigInput.
+  /**
+   * Classes added when every listed variant matches; an array matches any of
+   * its options.
+   */
   compoundVariants?:
     | readonly SlotCompoundVariant<
         keyof NoInfer<SlotDefs> & string,
         NoInfer<Variants>
       >[]
     | undefined;
+  /** Option used when a variant prop is missing; makes the variant optional. */
   defaultVariants?: DefaultVariantsInput<Variants, Defaults> | undefined;
 };
 
@@ -232,7 +296,13 @@ export type ResolveOptions<
   VariantKeys extends string = string,
   PropAliases extends Record<string, string> = Record<string, string>,
 > = {
+  /** Variant names whose resolved values also stay in `resolvedProps`. */
   forwardProps?: readonly VariantKeys[] | undefined;
+  /**
+   * Maps a prop name to the public prop that carries it, for a prop whose
+   * name a variant already uses: `{ size: 'htmlSize' }` reads `htmlSize` and
+   * returns it as `size`.
+   */
   propAliases?: PropAliases | undefined;
 };
 
@@ -383,12 +453,29 @@ export type SlotRecipeInput<TRecipe> = VariantProps<TRecipe> & {
   slotClassNames?: SlotRecipeSlotClassNames<TRecipe> | undefined;
 };
 
+type RootResolveInputContext<TRecipe> = OptionalProps<VariantProps<TRecipe>> & {
+  className?: ClassNameValue | undefined;
+};
+
 type SlotResolveInputContext<TRecipe> = OptionalProps<VariantProps<TRecipe>> & {
   slotClassNames?: SlotRecipeSlotClassNames<TRecipe> | undefined;
 };
 
-type ContextualResolveInput<TContext, TInput> =
-  TInput extends Record<string, unknown> ? TContext & TInput : TInput;
+// `TInput &` a shape that depends on `TInput`: editors complete keys and
+// values from the shape, and TypeScript still infers `TInput` from the
+// argument (see ResolveOptionsArg).
+type ContextualResolveInput<TContext, TInput> = TInput &
+  (TInput extends Record<string, unknown> ? TContext : unknown);
+
+// Editors complete the keys of an optional parameter typed as a bare type
+// parameter only when the parameter type also names the object shape. The
+// shape depends on `TOptions` so that TypeScript still infers `TOptions` from
+// an argument of exactly that shape, such as a variable typed
+// `ResolveOptions<...>`, instead of matching it against the shape.
+type ResolveOptionsArg<Variants, TOptions> = TOptions &
+  (TOptions extends unknown
+    ? ResolveOptions<Extract<keyof Variants, string>>
+    : never);
 
 export type SlotRenderInput<TRecipe> = OptionalProps<VariantProps<TRecipe>> & {
   className?: ClassNameValue | undefined;
@@ -457,20 +544,27 @@ export type SlotResolveResult<
 
 // Recipes stay type aliases: as interfaces, a recipe created inline in a
 // styled() argument no longer resolves (TypeScript fixes the inner recipe()
-// call while trying the first styled() overload).
+// call while trying the first styled() signature).
 export type RootRecipe<
   Variants extends RootVariantsSchema = {},
   Defaults extends object = {},
   Config = RootRecipeConfig<Variants, any>,
 > = RecipeBrand<'root', never, Variants, Defaults, Config> & {
   (input?: RootRecipeInput<RootRecipe<Variants, Defaults, Config>>): string;
+  /**
+   * Splits a full prop bag into the resolved variants and the remaining
+   * props, which also carry the resolved `className`.
+   */
   resolve<
     TInput extends Record<string, unknown> | undefined = undefined,
     const TOptions extends
       ResolveOptions<Extract<keyof Variants, string>> | undefined = undefined,
   >(
-    input?: TInput,
-    options?: TOptions
+    input?: ContextualResolveInput<
+      RootResolveInputContext<RootRecipe<Variants, Defaults, Config>>,
+      TInput
+    >,
+    options?: ResolveOptionsArg<Variants, TOptions>
   ): RootResolveResult<
     RootRecipe<Variants, Defaults, Config>,
     TInput,
@@ -487,6 +581,10 @@ export type SlotRecipe<
   (
     input?: SlotRecipeInput<SlotRecipe<Slots, Variants, Defaults, Config>>
   ): SlotRenderMap<SlotRecipe<Slots, Variants, Defaults, Config>>;
+  /**
+   * Splits a full prop bag into the resolved variants, the remaining props,
+   * and one class function per slot.
+   */
   resolve<
     TInput extends Record<string, unknown> | undefined = undefined,
     const TOptions extends
@@ -496,7 +594,7 @@ export type SlotRecipe<
       SlotResolveInputContext<SlotRecipe<Slots, Variants, Defaults, Config>>,
       TInput
     >,
-    options?: TOptions
+    options?: ResolveOptionsArg<Variants, TOptions>
   ): SlotResolveResult<
     SlotRecipe<Slots, Variants, Defaults, Config>,
     TInput,

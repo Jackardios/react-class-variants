@@ -156,7 +156,7 @@ describe('recipe() validation', () => {
       /invalid input\.className/
     );
 
-    expect(() => root.resolve({ tone: 'info', className: 1 })).toThrow(
+    expect(() => root.resolve({ tone: 'info', className: 1 } as never)).toThrow(
       /invalid input\.className/
     );
 

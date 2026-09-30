@@ -6,6 +6,7 @@ import { createRecipeFactory } from './internal/recipe';
 import type {
   AnyRootRecipe,
   AnySlotRecipe,
+  RecipeFactory,
   SystemOptions,
 } from './internal/core-types';
 import type {
@@ -136,7 +137,15 @@ export const styled: StyledFn = styledImpl as StyledFn;
  * @example
  * const { recipe, styled } = defineConfig({ merge: twMerge });
  */
-export function defineConfig(options: SystemOptions = {}) {
+export function defineConfig(options: SystemOptions = {}): {
+  /** Creates recipes that share this config's `merge`, `validate`, and `cache`. */
+  readonly recipe: RecipeFactory;
+  /**
+   * Builds a React component that renders a base element or component with a
+   * recipe's classes. Slotted recipes need a `view`.
+   */
+  readonly styled: StyledFn;
+} {
   return {
     recipe: createRecipeFactory(options),
     styled,

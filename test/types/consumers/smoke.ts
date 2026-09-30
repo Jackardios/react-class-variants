@@ -185,7 +185,7 @@ const buttonElement: StyledRender = Button({
   render: props => props.children,
 });
 const tabsElement: StyledRender = Tabs({ size: 'lg', label: 'Tab' });
-// Recipes created inline in a styled() argument pick the matching overload.
+// Recipes created inline in a styled() argument resolve.
 const InlineCard = styled('article', recipe({ slots: { root: 'p-4' } }), {
   view: ({ host, classes }) => host.render({ children: classes.root() }),
 });
