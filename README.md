@@ -27,7 +27,7 @@ The current v2 alpha surface is built around:
 - Runtime requirements: Node.js `22.12+` and React `19`
 - TypeScript: `5.4+`; the published types are tested with TypeScript 5.4, 5.9, 6, and 7, and support `exactOptionalPropertyTypes`
 - Module format: ESM-only
-- Bundle size (minified and gzipped): under 4 kB for `recipe()` alone and about 6 kB with `styled()`; CI fails on size regressions (see [benchmarks](./docs/benchmarks.md))
+- Bundle size (minified and gzipped, React excluded): about 3.8 kB for `recipe()` alone and 5.9 kB with `styled()`. CI fails a pull request that grows the `recipe()` bundle by more than 15% or the `styled()` bundle by more than 10% over the committed baseline (see [benchmarks](./docs/benchmarks.md#pnpm-checkoverhead))
 
 ## Installation
 
