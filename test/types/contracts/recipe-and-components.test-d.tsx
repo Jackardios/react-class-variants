@@ -958,9 +958,10 @@ expectError(
 expectError(defineViewProps<{ icon?: string }>({ icon: true, extra: true }));
 
 // host.render() accepts base props and data attributes, and rejects typos;
-// host.props never carries `key`.
+// host.props carries data attributes but never `key`.
 styled('button', badge, {
   view: ({ host }) => {
+    expectType<unknown>(host.props['data-shortcut']);
     expectError(host.props.key);
     expectError(host.render({ classname: 'typo' }));
 

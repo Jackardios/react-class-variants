@@ -1,7 +1,6 @@
 # React Class Variants
 
 [![npm version](https://img.shields.io/npm/v/react-class-variants.svg)](https://www.npmjs.com/package/react-class-variants)
-[![npm bundle size](https://img.shields.io/bundlephobia/minzip/react-class-variants)](https://bundlephobia.com/package/react-class-variants)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4+-blue.svg)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -28,6 +27,7 @@ The current v2 alpha surface is built around:
 - Runtime requirements: Node.js `22.12+` and React `19`
 - TypeScript: `5.4+`; the published types are tested with TypeScript 5.4, 5.9, 6, and 7, and support `exactOptionalPropertyTypes`
 - Module format: ESM-only
+- Bundle size (minified and gzipped): under 4 kB for `recipe()` alone and about 6 kB with `styled()`; CI fails on size regressions (see [benchmarks](./docs/benchmarks.md))
 
 ## Installation
 
@@ -182,7 +182,11 @@ Tailwind project normally.
 Use `slots` when different parts of the component need different classes, then render them through a `view` component:
 
 ```tsx
-import { defineConfig, recipe } from 'react-class-variants';
+import {
+  defineConfig,
+  recipe,
+  type SlotStyledViewProps,
+} from 'react-class-variants';
 
 const { styled } = defineConfig();
 
@@ -209,7 +213,10 @@ const buttonRecipe = recipe({
   },
 });
 
-function ButtonView({ host, classes }) {
+function ButtonView({
+  host,
+  classes,
+}: SlotStyledViewProps<'button', typeof buttonRecipe, true>) {
   return host.render({
     children: (
       <>
