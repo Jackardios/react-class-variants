@@ -314,6 +314,8 @@ const Input = styled('input', inputRecipe, {
 Rules:
 
 - only intrinsic bases support `withRender`
+- a custom base receives `render` as an ordinary prop, so components that own
+  a `render` prop (Base UI, Ark UI) keep it
 - slotted recipes require `view`
 - root recipes may omit `view`
 - custom bases should accept and forward `className`, `children`, and `ref` when those behaviors matter
@@ -329,6 +331,18 @@ not a `forwardRef` object. `ref` is a regular prop:
 - `ComponentRef<typeof Component>` resolves to the base element or component instance
 
 Component bases may take `ref` as a regular prop or still use `forwardRef`.
+
+### Server Components
+
+`recipe()` and `styled()` use no client-only hooks or state, so modules that
+define recipes and styled components need no `'use client'` directive and
+render in React Server Components.
+
+A `view` receives `host` and, for slotted recipes, `classes`, and both hold
+functions. React cannot pass functions from the server to a Client Component,
+so a `view` must render where its styled component renders: keep a
+`'use client'` view (one that uses hooks or event state) together with the
+`styled()` call in a client module.
 
 ### Root recipe, simple path
 
@@ -578,7 +592,9 @@ Behavior:
 - consumed `viewProps` also appear here and stay available to `view`
 - `host.className` is already final for the rendered host
 - `host.render()` renders the base with optional overrides
-- `host.render({ className })` appends to the resolved host class string
+- `host.render({ className })` appends to the resolved host class string and
+  runs `merge` over the result, so an added class wins a conflict the same
+  way a `className` prop does
 - `host.render()` reuses the current `host.children` unless you override `children`
 - declared `viewProps` are stripped before props reach the rendered host or `render` target
 - for slotted recipes, external component `className` is routed automatically to the host slot
@@ -618,6 +634,8 @@ For slotted views:
 ## `render`
 
 `render` is available only when `withRender: true` and the base is intrinsic.
+A custom base receives `render` as an ordinary prop instead (see
+[Supported bases](#supported-bases)).
 
 ```tsx
 import { defineConfig, recipe } from 'react-class-variants';
@@ -661,7 +679,8 @@ It accepts:
 
 When the render target is a React element:
 
-- `className` is concatenated
+- `className` is appended after the resolved class string, and `merge` runs
+  over the result
 - `style` is shallow-merged
 - event handlers are composed
 - refs are merged
@@ -719,16 +738,18 @@ Both modes throw on structural errors:
   `className`, `ref`, `render`, and `slotClassNames` on slotted recipes), a
   variant that mixes boolean and named options, and slotted variant values
   that are not slot className maps
+- a variant key that shadows an `Object.prototype` member (`constructor`,
+  `toString`, `valueOf`, ...): a prop bag without that prop would otherwise
+  read the inherited member
 - `styled()` given a value that is not a recipe, `withRender` on a
   non-intrinsic base, a slotted recipe or `viewProps` without `view`, or an
   undeclared or missing `hostSlot`
 
 Strict mode adds these checks when a recipe is created, and then deep-freezes
-the config:
+the config, including the nested maps of a config that is already frozen:
 
 - undeclared `defaultVariants` or `compoundVariants` keys, and values those
   variants do not declare
-- variant keys that shadow `Object.prototype` members
 - invalid `className` values, and slot className maps that name undeclared
   slots
 
@@ -749,7 +770,8 @@ On every call, strict mode also rejects:
   call
 - invalid `className` values, and invalid or undeclared `slotClassNames` slots
 - unknown slot override props and undeclared override values
-- a `render` prop on a component without `withRender`
+- a `render` prop on an intrinsic-base component without `withRender`
+  (`render={undefined}` is accepted)
 - an alias whose target prop is also passed directly
 
 Lean mode skips the strict checks and ignores input it cannot use: undeclared
@@ -780,7 +802,8 @@ skip variant resolution and the `merge` call entirely.
 - enabled automatically when `merge` is set and the runtime is lean (the default,
   and `validate: 'never'`); has no effect without `merge`
 - `cache: false` disables it; `cache: { maxSize }` bounds it (default `500`,
-  FIFO eviction)
+  FIFO eviction); `maxSize: Infinity` keeps every entry, and a `maxSize` below
+  `1` disables the cache
 - **slotted recipes are not cached**: a slot resolves into several short class
   strings, and `merge` (e.g. tailwind-merge) already keeps its own cache for
   those, so memoizing each slot result would cost more than it saves
@@ -887,20 +910,20 @@ refs.
 
 ## Common Errors
 
-| Error                                                                    | Cause                                                                           | Fix                                               |
-| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------- | ------------------------------------------------- |
-| `unknown recipe prop "type"`                                             | direct recipe calls are variant-only APIs                                       | use `resolve()` when you need arbitrary props     |
-| `className cannot be passed directly to a slotted recipe call`           | slot recipes route class overrides at the slot-function level                   | use a slot renderer or `resolve()`                |
-| `slotted recipes require a view component`                               | slot recipes no longer accept the default direct host path                      | pass `view` to `styled()`                         |
-| `slotted recipes without a "root" slot require hostSlot`                 | the recipe has no default host slot                                             | provide `hostSlot` with a declared slot name      |
-| `hostSlot "x" is not declared in recipe.slots`                           | `hostSlot` references an unknown slot                                           | use one of the declared slot names                |
-| `invalid input.slotClassNames; slot "x" is not declared in recipe.slots` | `slotClassNames` targets an unknown slot                                        | only override declared slots                      |
-| `variant key "slotClassNames" is reserved`                               | `slotClassNames` cannot also be a variant name                                  | rename the variant key                            |
-| `prop alias target "className" conflicts with a reserved public prop`    | aliasing would shadow a reserved React prop                                     | choose a different alias                          |
-| `forwardProps key "x" is not declared in variants`                       | `forwardProps` references a non-existent variant                                | only forward declared variant keys                |
-| `compoundVariants key "x" is not declared in variants`                   | a compound selector references an unknown variant (`validate: 'always'`)        | fix the selector key                              |
-| `variant key "x" shadows an Object.prototype member`                     | variant names like `toString` break plain-object lookups (`validate: 'always'`) | rename the variant key                            |
-| `styled() received a value without compiled recipe metadata`             | the second argument is not a recipe, or duplicate package copies are installed  | pass a `recipe()` result; deduplicate the package |
+| Error                                                                    | Cause                                                                          | Fix                                               |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------ | ------------------------------------------------- |
+| `unknown recipe prop "type"`                                             | direct recipe calls are variant-only APIs                                      | use `resolve()` when you need arbitrary props     |
+| `className cannot be passed directly to a slotted recipe call`           | slot recipes route class overrides at the slot-function level                  | use a slot renderer or `resolve()`                |
+| `slotted recipes require a view component`                               | slot recipes no longer accept the default direct host path                     | pass `view` to `styled()`                         |
+| `slotted recipes without a "root" slot require hostSlot`                 | the recipe has no default host slot                                            | provide `hostSlot` with a declared slot name      |
+| `hostSlot "x" is not declared in recipe.slots`                           | `hostSlot` references an unknown slot                                          | use one of the declared slot names                |
+| `invalid input.slotClassNames; slot "x" is not declared in recipe.slots` | `slotClassNames` targets an unknown slot                                       | only override declared slots                      |
+| `variant key "slotClassNames" is reserved`                               | `slotClassNames` cannot also be a variant name                                 | rename the variant key                            |
+| `prop alias target "className" conflicts with a reserved public prop`    | aliasing would shadow a reserved React prop                                    | choose a different alias                          |
+| `forwardProps key "x" is not declared in variants`                       | `forwardProps` references a non-existent variant                               | only forward declared variant keys                |
+| `compoundVariants key "x" is not declared in variants`                   | a compound selector references an unknown variant (`validate: 'always'`)       | fix the selector key                              |
+| `variant key "x" shadows an Object.prototype member`                     | variant names like `toString` break plain-object lookups                       | rename the variant key                            |
+| `styled() received a value without compiled recipe metadata`             | the second argument is not a recipe, or duplicate package copies are installed | pass a `recipe()` result; deduplicate the package |
 
 ## Related Docs
 

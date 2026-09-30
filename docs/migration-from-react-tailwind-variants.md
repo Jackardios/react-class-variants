@@ -621,8 +621,9 @@ Re-test these areas carefully after migration:
   items.
 - Variant names are variant-first on component surfaces. If a base prop and a
   variant share the same name, use `propAliases`.
-- `withRender` is intrinsic-only. Custom React component bases cannot use
-  `render`.
+- `withRender` is intrinsic-only. A custom React component base receives
+  `render` as an ordinary prop, so a base that owns one (Base UI, Ark UI)
+  keeps it.
 - If a `styled(..., { view })` component needs extra component-level props that
   only `view` should consume, use `defineViewProps()` instead of introducing a
   wrapper only to widen props and strip them before the host renders.

@@ -28,20 +28,29 @@ export function setRef<T>(
   return undefined;
 }
 
-function composeTwoRefs<T>(refA: Ref<T>, refB: Ref<T>): RefCallback<T> {
+// Calls every ref with the value. React 19 cleanup: run inner cleanups where
+// provided and fall back to the legacy null call for refs that returned none.
+export function composeRefs<T>(refs: readonly Ref<T>[]): RefCallback<T> {
   return (value: T | null) => {
-    const cleanupA = setRef(refA, value);
-    const cleanupB = setRef(refB, value);
+    let cleanups: Array<RefCleanup | undefined> | undefined;
 
-    if (!cleanupA && !cleanupB) return;
+    for (let index = 0; index < refs.length; index += 1) {
+      const cleanup = setRef(refs[index], value);
+      if (cleanup) {
+        cleanups ??= [];
+        cleanups[index] = cleanup;
+      }
+    }
 
-    // React 19 cleanup: run inner cleanups where provided and fall back to the
-    // legacy null call for refs that returned none.
+    if (!cleanups) return;
+
+    const collected = cleanups;
     return () => {
-      if (cleanupA) cleanupA();
-      else setRef(refA, null);
-      if (cleanupB) cleanupB();
-      else setRef(refB, null);
+      for (let index = 0; index < refs.length; index += 1) {
+        const cleanup = collected[index];
+        if (cleanup) cleanup();
+        else setRef(refs[index], null);
+      }
     };
   };
 }
@@ -70,7 +79,7 @@ export function mergeTwoRefs<T>(
 
   let merged = cacheForA.get(refB);
   if (!merged) {
-    merged = composeTwoRefs(refA, refB) as RefCallback<unknown>;
+    merged = composeRefs([refA, refB]) as RefCallback<unknown>;
     cacheForA.set(refB, merged);
   }
 

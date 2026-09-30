@@ -1,11 +1,13 @@
 import { render, screen } from '@testing-library/react';
 import {
+  cloneElement,
   createRef,
   forwardRef,
   lazy,
   memo,
   type ComponentPropsWithoutRef,
   type ComponentPropsWithRef,
+  type ReactElement,
 } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { defineConfig, recipe } from '../src';
@@ -255,6 +257,69 @@ describe('styled() root components', () => {
     } finally {
       errorSpy.mockRestore();
     }
+  });
+
+  describe.each([
+    ['lean', defineConfig()],
+    ['strict', defineConfig({ validate: 'always' })],
+  ])('render on a component base in %s mode', (_mode, config) => {
+    // Shaped like Base UI / Ark parts: the component owns the render prop.
+    function Trigger({
+      render: renderProp,
+      ...props
+    }: ComponentPropsWithRef<'button'> & { render?: ReactElement }) {
+      return renderProp ? (
+        cloneElement(renderProp, props)
+      ) : (
+        <button {...props} />
+      );
+    }
+    const triggerRecipe = config.recipe({
+      base: 'inline-flex',
+      variants: { tone: { primary: 'bg-blue' } },
+    });
+
+    it('forwards render as an ordinary prop on the direct path', () => {
+      const Button = config.styled(Trigger, triggerRecipe);
+
+      render(
+        <Button tone="primary" render={<a href="/docs" />}>
+          Docs
+        </Button>
+      );
+
+      const link = screen.getByRole('link', { name: 'Docs' });
+      expect(link.className).toBe('inline-flex bg-blue');
+      expect(link.getAttribute('href')).toBe('/docs');
+    });
+
+    it('keeps render in host.props and lets host.render() override it', () => {
+      const seen: unknown[] = [];
+      const Button = config.styled(Trigger, triggerRecipe, {
+        view: ({ host }) => {
+          seen.push(host.props.render);
+          return host.props.render
+            ? host.render()
+            : host.render({ render: <a href="/fallback" /> });
+        },
+      });
+
+      const view = render(
+        <Button tone="primary" render={<a href="/docs" />}>
+          Docs
+        </Button>
+      );
+      expect(
+        screen.getByRole('link', { name: 'Docs' }).getAttribute('href')
+      ).toBe('/docs');
+      expect(seen).toHaveLength(1);
+
+      view.rerender(<Button tone="primary">Docs</Button>);
+      expect(
+        screen.getByRole('link', { name: 'Docs' }).getAttribute('href')
+      ).toBe('/fallback');
+      expect(seen[1]).toBeUndefined();
+    });
   });
 
   it('derives displayName from the base component', () => {

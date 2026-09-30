@@ -45,13 +45,34 @@ describe('prototype-named keys', () => {
     ).toThrow(/slot "constructor" is not declared/);
   });
 
-  it('rejects variant keys that shadow Object.prototype members in strict mode', () => {
-    expect(() =>
-      defineConfig({ validate: 'always' }).recipe({
-        base: 'inline-flex',
-        variants: { toString: { fancy: 'font-serif' } },
-      } as never)
-    ).toThrow(/shadows an Object.prototype member/);
+  describe.each([
+    ['lean', recipe],
+    ['strict', defineConfig({ validate: 'always' }).recipe],
+  ])('in %s mode', (_mode, make) => {
+    // A prop bag without the prop would read the inherited member (lean
+    // output used to ignore the default and pick the wrong class).
+    it.each(['constructor', 'toString', 'valueOf', 'hasOwnProperty'])(
+      'rejects the variant key "%s"',
+      key => {
+        expect(() =>
+          make({
+            base: 'b',
+            variants: { [key]: { true: 'on', false: 'off' } },
+          } as never)
+        ).toThrow(`variant key "${key}" shadows an Object.prototype member`);
+      }
+    );
+
+    it('rejects an own __proto__ variant key', () => {
+      const variants = JSON.parse('{"__proto__":{"on":"vp"}}') as never;
+
+      expect(() => make({ base: 'b', variants } as never)).toThrow(
+        'variant key "__proto__" shadows an Object.prototype member'
+      );
+      expect(() =>
+        make({ slots: { root: 'flex' }, variants } as never)
+      ).toThrow('variant key "__proto__" shadows an Object.prototype member');
+    });
   });
 
   it('does not resolve inherited props through propAliases', () => {
@@ -221,38 +242,5 @@ describe('prototype-named keys', () => {
 
     expect(badge({ color: '__proto__' } as never)).toBe('b px');
     expect(variantOptions(badge, 'color')).toEqual(['red', '__proto__']);
-  });
-
-  it('indexes lean variant keys named __proto__ without leaking props', () => {
-    const variants = JSON.parse(
-      '{"__proto__":{"on":"vp"},"tone":{"a":"ta"}}'
-    ) as Record<string, Record<string, string>>;
-    const badge = recipe({
-      base: 'b',
-      variants,
-      defaultVariants: JSON.parse('{"__proto__":"on","tone":"a"}') as never,
-    } as never);
-
-    expect(badge({} as never)).toBe('b ta');
-    const { resolvedProps } = badge.resolve({ tone: 'a' } as never);
-    expect(Object.keys(resolvedProps as object)).toEqual(['className']);
-
-    // Slot overrides read the variant index directly, which makes the
-    // __proto__ entry observable in lean output.
-    const tabs = recipe({
-      slots: { root: 'flex' },
-      variants: JSON.parse(
-        '{"__proto__":{"on":{"root":"vp"}},"tone":{"a":{"root":"ta"}}}'
-      ) as never,
-      defaultVariants: { tone: 'a' },
-    } as never);
-    const rendered = tabs({} as never) as Record<
-      string,
-      (input?: Record<string, unknown>) => string
-    >;
-    expect(rendered.root()).toBe('flex ta');
-    expect(rendered.root(JSON.parse('{"__proto__":"on"}') as never)).toBe(
-      'flex vp ta'
-    );
   });
 });

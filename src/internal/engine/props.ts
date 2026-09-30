@@ -9,14 +9,9 @@ import {
   type VariantIndex,
 } from './shared';
 
-const normalizedResolveOptionsSymbol = Symbol(
-  'react-class-variants.normalized-resolve-options'
-);
-
 type ForwardPropEntry = readonly [key: string, index: number];
 
 export type NormalizedResolveOptions = {
-  readonly [normalizedResolveOptionsSymbol]: true;
   // Public alias keys: read by their alias entry, never copied verbatim.
   readonly aliasKeys?: SkipKeys;
   readonly forwardPropEntries?: readonly ForwardPropEntry[];
@@ -93,12 +88,6 @@ export function createResolvedProps(
   return resolvedProps;
 }
 
-function isNormalizedResolveOptions(
-  options: ResolveOptions | NormalizedResolveOptions | undefined
-): options is NormalizedResolveOptions {
-  return Boolean(options && normalizedResolveOptionsSymbol in options);
-}
-
 function getPropAliasProblem(
   mode: CompiledRecipe['mode'],
   variantIndex: Readonly<VariantIndex>,
@@ -139,7 +128,6 @@ export function normalizeResolveOptions(
   options: ResolveOptions | undefined
 ): NormalizedResolveOptions | undefined {
   if (!options) return undefined;
-  if (isNormalizedResolveOptions(options)) return options;
 
   const forwardProps =
     options.forwardProps && options.forwardProps.length > 0
@@ -207,7 +195,6 @@ export function normalizeResolveOptions(
   }
 
   return {
-    [normalizedResolveOptionsSymbol]: true,
     aliasKeys,
     forwardPropEntries,
     propAliasEntries,

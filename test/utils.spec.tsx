@@ -100,6 +100,20 @@ describe('React utilities', () => {
     expect(callbackRef).toHaveBeenCalledWith(null);
   });
 
+  it('skips null and undefined refs', () => {
+    const firstRef = createRef<HTMLDivElement>();
+    const secondRef = createRef<HTMLDivElement>();
+    const node = document.createElement('div');
+
+    expect(mergeRefs()).toBeUndefined();
+    expect(mergeRefs(null, undefined)).toBeUndefined();
+    expect(mergeRefs(null, firstRef, undefined)).toBe(firstRef);
+
+    mergeRefs(null, firstRef, undefined, secondRef)?.(node);
+    expect(firstRef.current).toBe(node);
+    expect(secondRef.current).toBe(node);
+  });
+
   it('memoizes merged refs for React components', () => {
     const outerRef = createRef<HTMLDivElement>();
     const callbackRef = vi.fn<RefCallback<HTMLDivElement>>();

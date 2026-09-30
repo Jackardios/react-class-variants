@@ -98,10 +98,12 @@ export function isPlainObject(
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
+// Descends into already-frozen objects too: Object.freeze() is shallow, so a
+// frozen config may still hold mutable variant maps.
 export function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
   if (!value || typeof value !== 'object') return value;
   const object = value as object;
-  if (Object.isFrozen(object) || seen.has(object)) return value;
+  if (seen.has(object)) return value;
   seen.add(object);
 
   for (const key of Object.getOwnPropertyNames(object)) {
@@ -205,7 +207,9 @@ export function compileVariants<TClassName>(params: {
       );
     }
 
-    if (validate && variantKey in Object.prototype) {
+    // Checked in lean mode too: selection reads `input[key]`, so a prop bag
+    // without this prop would resolve to the inherited member.
+    if (variantKey in Object.prototype) {
       throw new Error(
         `react-class-variants: variant key "${variantKey}" shadows an Object.prototype member.`
       );

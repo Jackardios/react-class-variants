@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { defineConfig, recipe, variantNames, variantOptions } from '../src';
 
 describe('recipe() validation', () => {
@@ -198,6 +198,48 @@ describe('recipe() validation', () => {
       config.variants.tone.info = 'text-red-500';
     }).toThrow();
   });
+
+  it('freezes the nested maps of an already-frozen config', () => {
+    const { recipe: strictRecipe } = defineConfig({ validate: 'always' });
+    const variants = { tone: { info: 'bg-sky-100' } };
+
+    strictRecipe(Object.freeze({ base: 'inline-flex', variants }));
+
+    expect(Object.isFrozen(variants.tone)).toBe(true);
+    expect(() => {
+      variants.tone.info = 'text-red-500';
+    }).toThrow();
+  });
+});
+
+describe('lean mode', () => {
+  it('ignores forwardProps keys that are not declared variants', () => {
+    const badge = recipe({
+      base: 'badge',
+      variants: { tone: { info: 'info' } },
+      defaultVariants: { tone: 'info' },
+    });
+
+    expect(
+      badge.resolve({ id: 'x' }, { forwardProps: ['size' as never, 'tone'] })
+        .resolvedProps
+    ).toEqual({ className: 'badge info', id: 'x', tone: 'info' });
+  });
+
+  it('requires a slots object', () => {
+    expect(() => recipe({ slots: null } as never)).toThrow(
+      'react-class-variants: slotted recipes require a slots object.'
+    );
+  });
+
+  it('keeps the result cache on its default bound for an empty cache object', () => {
+    const merge = vi.fn((className: string) => className);
+    const card = defineConfig({ merge, cache: {} }).recipe({ base: 'p-2' });
+
+    card();
+    card();
+    expect(merge).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('non-recipe inputs', () => {
@@ -369,7 +411,7 @@ describe('strict validation messages', () => {
 // both runtimes treat it as absent.
 describe('explicit undefined inputs', () => {
   const lean = defineConfig({
-    cache: undefined,
+    cache: { maxSize: undefined },
     merge: undefined,
     validate: undefined,
   });
@@ -401,6 +443,20 @@ describe('explicit undefined inputs', () => {
         { forwardProps: undefined, propAliases: undefined }
       ).resolvedProps
     ).toEqual({ className: 'badge danger danger-any', id: 'x' });
+    expect(
+      badge.resolve(
+        { tone: 'danger', title: 't', label: 'l' },
+        // The React PropAliases type allows an undefined entry; the runtime
+        // skips it for resolve() too.
+        {
+          propAliases: { title: undefined, 'aria-label': 'label' },
+        } as never
+      ).resolvedProps
+    ).toEqual({
+      'aria-label': 'l',
+      className: 'badge danger danger-any',
+      title: 't',
+    });
 
     const empty = config.recipe({
       base: undefined,

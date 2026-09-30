@@ -39,7 +39,8 @@ export function resolveResultCacheMaxSize(
   }
   const { maxSize } = cache;
   if (maxSize === undefined) return DEFAULT_RESULT_CACHE_MAX_SIZE;
-  return Number.isFinite(maxSize) && maxSize >= 1 ? Math.floor(maxSize) : 0;
+  // Infinity stays Infinity (unbounded); NaN and sizes below 1 disable it.
+  return maxSize >= 1 ? Math.floor(maxSize) : 0;
 }
 
 function appendSelectionKey(
