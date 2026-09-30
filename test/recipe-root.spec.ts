@@ -51,6 +51,7 @@ describe('recipe() root recipes', () => {
     expect(variantOptions(config, 'disabled')).toEqual([true, false]);
     expect(variantOptions(input, 'disabled')).toEqual([true, false]);
     expect(variantOptions(input, 'missing' as never)).toEqual([]);
+    expect(variantOptions(config, 'missing' as never)).toEqual([]);
   });
 
   it('resolves root recipes with defaults, booleans, compounds, OR selectors, and className', () => {

@@ -157,6 +157,82 @@ describe('styled() render prop', () => {
     ).toThrow(/withRender: true/);
   });
 
+  it('accepts render={undefined} without withRender in strict mode', () => {
+    const strict = defineConfig({ validate: 'always' });
+    const Button = strict.styled(
+      'button',
+      strict.recipe({ base: 'inline-flex' })
+    );
+    // A wrapper that forwards its own optional render prop.
+    const forwarded = { render: undefined } as object;
+
+    render(<Button {...forwarded}>Docs</Button>);
+
+    expect(screen.getByRole('button', { name: 'Docs' }).className).toBe(
+      'inline-flex'
+    );
+  });
+
+  describe('merge', () => {
+    // A tailwind-merge stand-in: the last class of each prefix wins.
+    const lastWins = (className: string) => {
+      const byPrefix = new Map<string, string>();
+      for (const token of className.split(' ').filter(Boolean)) {
+        const prefix = token.split('-')[0];
+        byPrefix.delete(prefix);
+        byPrefix.set(prefix, token);
+      }
+      return [...byPrefix.values()].join(' ');
+    };
+    const merged = defineConfig({ merge: lastWins });
+    const rootRecipe = merged.recipe({ base: 'px-2 bg-red' });
+    const slotRecipe = merged.recipe({
+      slots: { root: 'px-2 bg-red', icon: 'size-4' },
+    });
+
+    it('runs over the className of a render element', () => {
+      const Link = merged.styled('button', rootRecipe, { withRender: true });
+
+      render(<Link render={<a className="px-4" href="/docs" />}>Docs</Link>);
+
+      expect(screen.getByRole('link', { name: 'Docs' }).className).toBe(
+        'bg-red px-4'
+      );
+    });
+
+    it('runs over a className added by host.render()', () => {
+      const RootView = merged.styled('div', rootRecipe, {
+        view: ({ host }) => host.render({ className: 'px-4' }),
+      });
+      const SlotView = merged.styled('div', slotRecipe, {
+        view: ({ host }) => host.render({ className: ['px-6', 'bg-blue'] }),
+      });
+
+      render(
+        <>
+          <RootView data-testid="root" />
+          <SlotView data-testid="slot" />
+        </>
+      );
+
+      expect(screen.getByTestId('root').className).toBe('bg-red px-4');
+      expect(screen.getByTestId('slot').className).toBe('px-6 bg-blue');
+    });
+
+    it('is not called again when nothing adds classes', () => {
+      const merge = vi.fn(lastWins);
+      const counted = defineConfig({ merge, cache: false });
+      const View = counted.styled('div', counted.recipe({ base: 'px-2' }), {
+        view: ({ host }) => host.render({ className: '' }),
+      });
+
+      render(<View data-testid="view" />);
+
+      expect(screen.getByTestId('view').className).toBe('px-2');
+      expect(merge).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('keeps merged render-prop refs identity-stable across re-renders', () => {
     const linkRecipe = recipe({
       base: 'inline-flex',

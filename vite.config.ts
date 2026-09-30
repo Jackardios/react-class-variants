@@ -16,10 +16,10 @@ export default defineConfig({
       // v4, which counts about 2.5 points lower than Vitest 3 did on the same
       // tests.
       thresholds: {
-        statements: 96,
-        branches: 93,
+        statements: 98,
+        branches: 95,
         functions: 100,
-        lines: 98,
+        lines: 99,
       },
     },
   },

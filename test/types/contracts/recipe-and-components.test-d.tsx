@@ -1,6 +1,7 @@
 import type {
   ComponentPropsWithoutRef,
   HTMLInputTypeAttribute,
+  ReactElement,
   ReactNode,
 } from 'react';
 import {
@@ -980,3 +981,28 @@ function BadgeView({
   return host.render();
 }
 styled('span', badge, { view: BadgeView });
+
+// A component base that owns a render prop (Base UI, Ark) receives it like any
+// other prop, on the component and in host.props / host.render().
+declare function RenderableTrigger(
+  props: ComponentPropsWithoutRef<'button'> & { render?: ReactElement }
+): ReactNode;
+const Trigger = styled(RenderableTrigger, badge);
+<Trigger tone="info" render={<a href="/docs" />} />;
+styled(RenderableTrigger, badge, {
+  view: ({ host }) => {
+    expectType<ReactElement | undefined>(host.props.render);
+    return host.render({ render: <a href="/docs" /> });
+  },
+});
+
+// An intrinsic base has no render prop without withRender.
+const PlainButton = styled('button', badge);
+expectError(<PlainButton tone="info" render={<a href="/docs" />} />);
+styled('button', badge, {
+  view: ({ host }) => {
+    expectError(host.props.render);
+    expectError(host.render({ render: <a href="/docs" /> }));
+    return host.render();
+  },
+});

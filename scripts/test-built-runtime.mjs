@@ -125,7 +125,8 @@ const validatingMarkers = [
   'missing required recipe variant',
   'unknown recipe prop',
   'unknown slot override prop',
-  'Object.isFrozen',
+  // deepFreeze(), which only strict recipes call.
+  'getOwnPropertyNames',
 ];
 
 for (const source of [

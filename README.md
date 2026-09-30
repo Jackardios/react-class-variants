@@ -59,7 +59,7 @@ Four rules explain most of the package:
 1. `recipe()` becomes a root recipe when you use `base`, and a slotted recipe when you use `slots`.
 2. `resolve()` is the full-prop-bag API. Direct recipe calls stay variant-oriented.
 3. Get `styled()` from `defineConfig()`; it accepts intrinsic bases and custom React component bases.
-4. Slotted recipes require `view`, and `render` is opt-in through `withRender: true` for intrinsic bases only.
+4. Slotted recipes require `view`, and `render` is opt-in through `withRender: true` for intrinsic bases only; a custom base receives `render` as an ordinary prop.
 
 ## Quick Start
 

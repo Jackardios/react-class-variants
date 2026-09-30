@@ -50,14 +50,9 @@ type AnyStyledOptions =
 
 type RenderFunction = (props: Record<string, unknown>) => ReactNode;
 
-// The direct path reads `render` from the raw props, so it never reaches the
-// element props; `ref` is an ordinary React 19 prop and flows through.
-const directSkipKeys = ['render'];
-// View paths expose these through the host view, outside host.props.
-const viewSkipKeys = ['children', 'className', 'ref', 'render'];
-// Components without prop aliases share these instead of building their own.
-const sharedDirectSkip = /* @__PURE__ */ createSkipKeys(directSkipKeys);
-const sharedViewSkip = /* @__PURE__ */ createSkipKeys(viewSkipKeys);
+// View paths expose these through the host view, outside host.props; `ref` is
+// an ordinary React 19 prop and flows through the direct path.
+const viewSkipKeys = ['children', 'className', 'ref'];
 
 const hostStateSymbol = Symbol('react-class-variants.host-state');
 
@@ -66,8 +61,10 @@ type HostSetup = {
   base: ElementType;
   // viewProps keys: visible in host.props, never rendered.
   consumed: SkipKeys | undefined;
-  // host.render() override keys assignMergedProps skips: className, ref, and
-  // render are merged separately, viewProps keys are dropped.
+  merge: ((className: string) => string) | undefined;
+  // host.render() override keys assignMergedProps skips: className and ref
+  // (and an intrinsic base's render) are merged separately, viewProps keys are
+  // dropped.
   overrideSkip: SkipKeys;
   withRender: boolean;
 };
@@ -89,12 +86,22 @@ type HostViewObject = {
   [hostStateSymbol]: HostState;
 };
 
+// Runs `merge` over a className that gained classes after the recipe merged
+// it, so conflicting utilities resolve the same way as a className prop.
+function mergeAddedClassName(
+  merge: ((className: string) => string) | undefined,
+  className: string
+) {
+  return merge && className ? merge(className) : className;
+}
+
 // Renders `base` from a props object this module owns (never React's frozen
 // props), so it may be mutated in place. `props.ref` is the outer ref.
 function renderElement(
   base: ElementType,
   props: Record<string, unknown>,
-  render: RenderProp | undefined
+  render: RenderProp | undefined,
+  merge: ((className: string) => string) | undefined
 ): ReactNode {
   if (!render) {
     return createElement(base as any, props);
@@ -108,6 +115,9 @@ function renderElement(
   if (isValidElement(render)) {
     const element = render as ReactElement<Record<string, unknown>>;
     assignMergedProps(props, element.props);
+    if (element.props.className) {
+      props.className = mergeAddedClassName(merge, props.className as string);
+    }
     props.ref = mergedRef;
     return cloneElement(element, props);
   }
@@ -145,10 +155,15 @@ function renderHostView(
 
   if (overrides) {
     assignMergedProps(props, overrides, setup.overrideSkip);
-    props.className = appendClassName(
-      state.className,
-      flattenClassName(overrides.className as ClassNameValue | undefined)
+    const addedClassName = flattenClassName(
+      overrides.className as ClassNameValue | undefined
     );
+    if (addedClassName) {
+      props.className = mergeAddedClassName(
+        setup.merge,
+        appendClassName(state.className, addedClassName)
+      );
+    }
     ref = mergeTwoRefs(ref, overrides.ref as Ref<unknown> | undefined);
     if (setup.withRender) {
       render = (overrides.render as RenderProp | undefined) ?? render;
@@ -156,7 +171,7 @@ function renderHostView(
   }
 
   if (ref) props.ref = ref;
-  return renderElement(setup.base, props, render);
+  return renderElement(setup.base, props, render, setup.merge);
 }
 
 const hostViewPrototype: Pick<HostViewObject, 'render'> = {
@@ -182,7 +197,7 @@ function getHostSlotIndex(
     return slotIndex;
   }
 
-  if (hostSlot) {
+  if (hostSlot !== undefined) {
     throw new Error(
       `react-class-variants: hostSlot "${hostSlot}" is not declared in recipe.slots.`
     );
@@ -198,7 +213,8 @@ function createHostSetup(
   compiled: CompiledRecipe,
   options: AnyStyledOptions,
   aliasKeys: SkipKeys | undefined,
-  withRender: boolean
+  withRender: boolean,
+  forwardRender: boolean
 ): HostSetup {
   const consumedKeys = options.viewProps?.keys ?? [];
 
@@ -230,22 +246,24 @@ function createHostSetup(
     base,
     consumed:
       consumedKeys.length > 0 ? createSkipKeys(consumedKeys) : undefined,
+    merge: compiled.merge,
     overrideSkip: createSkipKeys([
       'className',
       'ref',
-      'render',
+      ...(forwardRender ? [] : ['render']),
       ...consumedKeys,
     ]),
     withRender,
   };
 }
 
+// `rejectRender`: strict mode, an intrinsic base, and no withRender. Lean mode
+// drops such a render prop instead (it is in the skip keys).
 function ensureRenderSupported(
-  validate: boolean,
-  withRender: boolean,
+  rejectRender: boolean,
   rawProps: Record<string, unknown>
 ) {
-  if (validate && !withRender && 'render' in rawProps) {
+  if (rejectRender && rawProps.render !== undefined) {
     throw new Error(
       'react-class-variants: render prop requires withRender: true.'
     );
@@ -257,15 +275,17 @@ function createDirectComponent(
   compiled: RootCompiledRecipe,
   resolveOptions: NormalizedResolveOptions | undefined,
   skip: SkipKeys,
-  withRender: boolean
+  withRender: boolean,
+  rejectRender: boolean
 ) {
   return function StyledComponent(rawProps: Record<string, unknown>) {
-    ensureRenderSupported(compiled.validate, withRender, rawProps);
+    ensureRenderSupported(rejectRender, rawProps);
 
     return renderElement(
       base,
       resolveRootComponentProps(compiled, rawProps, resolveOptions, skip),
-      withRender ? (rawProps.render as RenderProp | undefined) : undefined
+      withRender ? (rawProps.render as RenderProp | undefined) : undefined,
+      compiled.merge
     );
   };
 }
@@ -275,10 +295,11 @@ function createRootViewComponent(
   resolveOptions: NormalizedResolveOptions | undefined,
   skip: SkipKeys,
   setup: HostSetup,
-  View: ComponentType<any>
+  View: ComponentType<any>,
+  rejectRender: boolean
 ) {
   return function StyledViewComponent(rawProps: Record<string, unknown>) {
-    ensureRenderSupported(compiled.validate, setup.withRender, rawProps);
+    ensureRenderSupported(rejectRender, rawProps);
 
     const resolved = resolveRootViewState(
       compiled,
@@ -309,10 +330,11 @@ function createSlotViewComponent(
   skip: SkipKeys,
   setup: HostSetup,
   View: ComponentType<any>,
-  hostSlotIndex: number
+  hostSlotIndex: number,
+  rejectRender: boolean
 ) {
   return function StyledSlotViewComponent(rawProps: Record<string, unknown>) {
-    ensureRenderSupported(compiled.validate, setup.withRender, rawProps);
+    ensureRenderSupported(rejectRender, rawProps);
 
     const resolved = resolveSlotViewState(
       compiled,
@@ -355,18 +377,20 @@ export function createStyled(
   options: AnyStyledOptions | undefined
 ) {
   const withRender = options?.withRender === true;
+  // A component base receives `render` as an ordinary prop (Base UI, Ark);
+  // only intrinsic bases give it the withRender meaning.
+  const forwardRender = typeof base !== 'string';
+  const rejectRender = compiled.validate && !withRender && !forwardRender;
   const resolveOptions = normalizeResolveOptions(
     compiled,
     options as ResolveOptions | undefined
   );
   // Slotted recipes always have a view (checked in react.ts).
   const isView = Boolean(options?.view);
-  const aliasKeys = resolveOptions?.aliasKeys;
-  const skip = aliasKeys
-    ? createSkipKeys(isView ? viewSkipKeys : directSkipKeys, aliasKeys)
-    : isView
-      ? sharedViewSkip
-      : sharedDirectSkip;
+  const skip = createSkipKeys(
+    [...(isView ? viewSkipKeys : []), ...(forwardRender ? [] : ['render'])],
+    resolveOptions?.aliasKeys
+  );
   let Component: FunctionComponent<Record<string, unknown>>;
 
   if (compiled.mode === 'slot') {
@@ -388,10 +412,12 @@ export function createStyled(
         compiled,
         slotOptions,
         resolveOptions?.aliasKeys,
-        withRender
+        withRender,
+        forwardRender
       ),
       slotOptions.view,
-      hostSlotIndex
+      hostSlotIndex,
+      rejectRender
     );
   } else if (options?.view) {
     Component = createRootViewComponent(
@@ -403,9 +429,11 @@ export function createStyled(
         compiled,
         options,
         resolveOptions?.aliasKeys,
-        withRender
+        withRender,
+        forwardRender
       ),
-      options.view
+      options.view,
+      rejectRender
     );
   } else {
     Component = createDirectComponent(
@@ -413,7 +441,8 @@ export function createStyled(
       compiled,
       resolveOptions,
       skip,
-      withRender
+      withRender,
+      rejectRender
     );
   }
 

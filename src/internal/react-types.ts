@@ -262,8 +262,9 @@ type ResolvedHostProps<
 > = Simplify<
   Omit<
     ResolvedBaseProps<Base, TRecipe, Aliases, Forwarded, ViewProps>,
-    // React never passes `key` as a prop.
-    'className' | 'children' | 'ref' | 'render' | 'key'
+    // React never passes `key` as a prop. A component base keeps its own
+    // `render` prop here; an intrinsic base has none.
+    'className' | 'children' | 'ref' | 'key'
   >
 >;
 

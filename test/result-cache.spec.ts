@@ -112,6 +112,23 @@ describe('result cache', () => {
     expect(merge).toHaveBeenCalledTimes(2);
   });
 
+  it('keeps every entry when maxSize is Infinity', () => {
+    const merge = vi.fn(dedup);
+    const { recipe: configured } = defineConfig({
+      merge,
+      cache: { maxSize: Infinity },
+    });
+    const card = configured({ base: 'p-2' });
+
+    // More distinct inputs than the default bound of 500.
+    for (let index = 0; index < 600; index += 1) {
+      card({ className: `c${index}` });
+    }
+    card({ className: 'c0' });
+
+    expect(merge).toHaveBeenCalledTimes(600);
+  });
+
   it('stays inert when no merge is configured', () => {
     const merge = vi.fn(dedup);
     const noMerge = defineConfig({ cache: true }).recipe({

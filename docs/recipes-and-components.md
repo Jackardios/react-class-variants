@@ -589,7 +589,7 @@ Without `forwardProps`, the recipe would still style the component, but `NavLink
 
 Rules:
 
-- custom bases do not support `withRender`
+- custom bases do not support `withRender`; they receive `render` as an ordinary prop, so components that own one (Base UI, Ark UI) keep it
 - custom bases should accept and forward `className`, `children`, and `ref` when those behaviors matter
 - `ref` reaches the base as a regular React 19 prop; bases written with `forwardRef` keep working
 - use custom bases when you already own the host component contract
@@ -626,7 +626,7 @@ When you are inside `view`, `host.props` follows the resolved shape:
 
 ## 9. `render`
 
-`render` remains opt-in through `withRender: true` and only exists for intrinsic bases.
+`render` remains opt-in through `withRender: true` and only exists for intrinsic bases. A custom base receives `render` as an ordinary prop instead.
 
 ```tsx
 import { defineConfig, recipe } from 'react-class-variants';

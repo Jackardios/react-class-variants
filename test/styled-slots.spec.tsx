@@ -326,6 +326,16 @@ describe('styled() slotted recipes', () => {
     );
   });
 
+  it('names an empty hostSlot in the error', () => {
+    const tabsRecipe = recipe({ slots: { label: 'block' } });
+
+    expect(() =>
+      styled('div', tabsRecipe, { hostSlot: '', view: () => null } as never)
+    ).toThrow(
+      'react-class-variants: hostSlot "" is not declared in recipe.slots.'
+    );
+  });
+
   it('renders view components identically in lean and strict runtimes', () => {
     const rootConfig = {
       base: 'inline-flex',
