@@ -72,6 +72,7 @@ pnpm test:built
 pnpm test:types
 pnpm test:types:contracts
 pnpm test:types:editor
+pnpm test:types:cost
 pnpm test:types:packed
 pnpm test:types:exports
 pnpm test:types:consumers
@@ -81,9 +82,10 @@ pnpm lint:pkg
 What they do:
 
 - `pnpm test:built`: the runtime specs run against `dist/` (`vitest.built.config.ts` fails if any `src/` module loads), plus process-less import and SSR smoke checks
-- `pnpm test:types`: full type gate: build + built runtime + contracts + editor + packed
+- `pnpm test:types`: full type gate: build + built runtime + contracts + editor + cost + packed
 - `pnpm test:types:contracts`: `tsd` contract tests against the built package
 - `pnpm test:types:editor`: editor/types tooling validation
+- `pnpm test:types:cost`: type-checks one probe per construct (recipes, `resolve()`, `styled()`, `view`, JSX) against the built package and fails when TypeScript's instantiation count grows more than 10% over `test/types/type-cost-budget.json`; run `pnpm test:types:cost:update` when a change or a TypeScript upgrade moves it on purpose
 - `pnpm test:types:packed`: packs once from a clean-checkout state (`dist/` hidden, so `prepack` builds), then runs both checks below on that tarball
 - `pnpm test:types:exports`: `attw` export validation of the clean-checkout tarball only
 - `pnpm test:types:consumers`: Bundler and NodeNext consumer fixtures, both compiling `test/types/consumers/smoke.ts` with `skipLibCheck: false` on TypeScript 5.4 (the supported minimum), the repository's 5.x, 6, and 7; the Bundler fixture also enables `exactOptionalPropertyTypes`

@@ -453,11 +453,21 @@ export type SlotRecipeInput<TRecipe> = VariantProps<TRecipe> & {
   slotClassNames?: SlotRecipeSlotClassNames<TRecipe> | undefined;
 };
 
-type RootResolveInputContext<TRecipe> = OptionalProps<VariantProps<TRecipe>> & {
-  className?: ClassNameValue | undefined;
-};
+// Built from the variants schema directly: `VariantProps<RootRecipe<...>>`
+// would infer the schema back out of the recipe's brand on every call.
+type ResolveInputVariants<Variants extends AnyVariantsSchema> = OptionalProps<
+  VariantSelectionValues<Variants>
+>;
 
-type SlotResolveInputContext<TRecipe> = OptionalProps<VariantProps<TRecipe>> & {
+type RootResolveInputContext<Variants extends AnyVariantsSchema> =
+  ResolveInputVariants<Variants> & {
+    className?: ClassNameValue | undefined;
+  };
+
+type SlotResolveInputContext<
+  Variants extends AnyVariantsSchema,
+  TRecipe,
+> = ResolveInputVariants<Variants> & {
   slotClassNames?: SlotRecipeSlotClassNames<TRecipe> | undefined;
 };
 
@@ -560,10 +570,7 @@ export type RootRecipe<
     const TOptions extends
       ResolveOptions<Extract<keyof Variants, string>> | undefined = undefined,
   >(
-    input?: ContextualResolveInput<
-      RootResolveInputContext<RootRecipe<Variants, Defaults, Config>>,
-      TInput
-    >,
+    input?: ContextualResolveInput<RootResolveInputContext<Variants>, TInput>,
     options?: ResolveOptionsArg<Variants, TOptions>
   ): RootResolveResult<
     RootRecipe<Variants, Defaults, Config>,
@@ -591,7 +598,10 @@ export type SlotRecipe<
       ResolveOptions<Extract<keyof Variants, string>> | undefined = undefined,
   >(
     input?: ContextualResolveInput<
-      SlotResolveInputContext<SlotRecipe<Slots, Variants, Defaults, Config>>,
+      SlotResolveInputContext<
+        Variants,
+        SlotRecipe<Slots, Variants, Defaults, Config>
+      >,
       TInput
     >,
     options?: ResolveOptionsArg<Variants, TOptions>
