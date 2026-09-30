@@ -1,5 +1,7 @@
 // @vitest-environment node
 import { createRequire } from 'node:module';
+import { dirname } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
   doesFirstParentIntroduceVersion,
@@ -285,5 +287,22 @@ describe('changeset coverage rules', () => {
     ]) {
       expect(isReleaseAffecting(file), file).toBe(false);
     }
+  });
+});
+
+describe('Changesets workspace', () => {
+  it('includes the published package', async () => {
+    // Resolve the copy Changesets uses to find the packages it versions.
+    const changesetsRequire = createRequire(
+      require.resolve('@changesets/cli/package.json')
+    );
+    const { getPackages } = await import(
+      pathToFileURL(changesetsRequire.resolve('@manypkg/get-packages')).href
+    );
+    const { packages } = await getPackages(dirname(import.meta.dirname));
+
+    expect(packages.map(pkg => pkg.packageJson.name)).toContain(
+      'react-class-variants'
+    );
   });
 });
