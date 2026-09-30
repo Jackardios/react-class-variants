@@ -760,6 +760,182 @@ for (const [label, snippet, expected] of [
   }
 }
 
+const hintsProbeFile = resolve(repoRoot, '__editor_probe_hints__.tsx');
+const hintsProbeSource = `
+import { defineConfig, recipe } from 'react-class-variants';
+
+const { styled } = defineConfig();
+
+const field = recipe({
+  base: 'field',
+  variants: {
+    tone: { info: 'text-sky-700', danger: 'text-rose-700' },
+    size: { sm: 'text-sm', md: 'text-base' },
+    disabled: { true: 'opacity-50' },
+  },
+  defaultVariants: { size: 'sm', disabled: false },
+});
+
+const menu = recipe({
+  slots: { root: 'menu', item: 'item', icon: 'icon' },
+  variants: { tone: { plain: { root: 'bg-white' } } },
+  defaultVariants: { tone: 'plain' },
+});
+
+styled('input', field, { forwardProps: ['/*forwardProps values*/'] });
+styled('div', menu, { /*slot option keys*/ });
+styled('div', menu, { hostSlot: '/*hostSlot values*/', view: () => null });
+styled('input', field, { propAliases: { /*propAliases keys*/ } });
+field.resolve({ tone: 'info' }, { /*resolve option keys*/ });
+field.resolve({ /*resolve input keys*/ });
+field.resolve({ tone: '/*resolve input values*/' });
+`;
+
+const hintsErrorFile = resolve(repoRoot, '__editor_probe_hint_errors__.tsx');
+const hintsErrorSource = `
+import { defineConfig, recipe } from 'react-class-variants';
+import type { ComponentProps } from 'react';
+
+const { styled } = defineConfig();
+
+const field = recipe({
+  base: 'field',
+  variants: {
+    tone: { info: 'text-sky-700', danger: 'text-rose-700' },
+    size: { sm: 'text-sm', md: 'text-base' },
+  },
+});
+
+const menu = recipe({
+  slots: { root: 'menu', item: 'item' },
+  variants: { tone: { plain: { root: 'bg-white' } } },
+});
+
+function Link(props: ComponentProps<'a'>) {
+  return <a {...props} />;
+}
+
+styled('input', field, { forwardProps: ['bogus'] });
+styled('div', menu, { hostSlot: 'bogus', view: () => null });
+styled('input', field, { propAliases: { size: 'tone' } });
+styled(Link, field, { withRender: true });
+styled('div', menu);
+`;
+
+const hintsLanguageService = createLanguageService(
+  new Map([
+    [hintsProbeFile, hintsProbeSource],
+    [hintsErrorFile, hintsErrorSource],
+  ])
+);
+
+// Calls with options resolve against one styled() signature and resolve()
+// options name their shape, so editors complete the right keys and values.
+for (const [label, snippet, expected] of [
+  ['root styled forwardProps values', `forwardProps: ['`, ['tone', 'size']],
+  ['slot styled option keys', '{ /*slot option keys*/', ['hostSlot', 'view']],
+  ['hostSlot values', `hostSlot: '`, ['root', 'item', 'icon']],
+  ['propAliases keys', '{ /*propAliases keys*/', ['size', 'type']],
+  [
+    'resolve option keys',
+    '{ /*resolve option keys*/',
+    ['forwardProps', 'propAliases'],
+  ],
+  ['root resolve input values', `resolve({ tone: '`, ['info', 'danger']],
+  [
+    'root resolve input keys',
+    '{ /*resolve input keys*/',
+    ['tone', 'size', 'className'],
+  ],
+]) {
+  const names = completionNames(
+    hintsLanguageService,
+    hintsProbeFile,
+    hintsProbeSource,
+    snippet
+  );
+
+  for (const expectedName of expected) {
+    assert.ok(
+      names.includes(expectedName),
+      `${label} should include ${expectedName} in completions.`
+    );
+  }
+}
+
+// A styled() option error is reported on that option with a message about
+// it, not on the base as "string is not assignable to ComponentType".
+const hintErrors = hintsLanguageService
+  .getSemanticDiagnostics(hintsErrorFile)
+  .map(diagnostic => ({
+    start: diagnostic.start,
+    message: ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'),
+  }));
+
+for (const [label, snippet, token, message] of [
+  [
+    'unknown forwardProps name',
+    "forwardProps: ['bogus']",
+    "'bogus'",
+    /is not assignable to type '"tone" \| "size"'/,
+  ],
+  [
+    'unknown hostSlot',
+    "hostSlot: 'bogus'",
+    'hostSlot',
+    /is not assignable to type '"root" \| "item" \| undefined'/,
+  ],
+  [
+    'alias that is a variant name',
+    "propAliases: { size: 'tone' }",
+    'size',
+    /tone is already a variant, base, or reserved prop name/,
+  ],
+  [
+    'withRender on a component base',
+    'withRender: true',
+    'withRender',
+    /Type 'true' is not assignable to type 'false'/,
+  ],
+  ['slotted recipe without options', "styled('div', menu);", 'menu', /Slot/],
+]) {
+  const start = position(hintsErrorSource, snippet, token);
+  const errors = hintErrors.filter(error => error.start === start);
+
+  assert.equal(errors.length, 1, `${label} should be reported on ${token}.`);
+  assert.match(errors[0].message, message, `${label} message`);
+}
+
+assert.equal(
+  hintErrors.length,
+  5,
+  `Unexpected diagnostics:\n${hintErrors.map(error => error.message).join('\n')}`
+);
+
+for (const error of hintErrors) {
+  assert.doesNotMatch(error.message, /ComponentType/);
+}
+
+// Options and destructured factories carry their documentation into hovers.
+for (const [label, snippet, token] of [
+  ['styled', 'const { styled } = defineConfig();', 'styled'],
+  ['forwardProps', "forwardProps: ['", 'forwardProps'],
+  ['hostSlot', "hostSlot: '", 'hostSlot'],
+  ['propAliases', 'propAliases: {', 'propAliases'],
+  ['variants', 'variants: {\n    tone', 'variants'],
+  ['defaultVariants', "defaultVariants: { size: 'sm'", 'defaultVariants'],
+]) {
+  const info = hintsLanguageService.getQuickInfoAtPosition(
+    hintsProbeFile,
+    position(hintsProbeSource, snippet, token)
+  );
+
+  assert.ok(
+    info && ts.displayPartsToString(info.documentation).length > 0,
+    `${label} should show its documentation on hover.`
+  );
+}
+
 const timings = [];
 const timedQueries = [
   () =>

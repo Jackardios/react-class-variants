@@ -4,6 +4,7 @@ import type {
   AnyRecipe,
   ClassNameValue,
   RecipeConfig,
+  RecipeFactory,
   RootRecipeConfig,
   RootRecipeConfigInput,
   RootVariantsSchema,
@@ -146,7 +147,10 @@ export function variantOptions<
  * Creates a `recipe()` factory that shares `merge`, `validate`, and `cache`
  * settings. The package root's `defineConfig()` also returns `styled`.
  */
-export function defineConfig(options: SystemOptions = {}) {
+export function defineConfig(options: SystemOptions = {}): {
+  /** Creates recipes that share this config's `merge`, `validate`, and `cache`. */
+  readonly recipe: RecipeFactory;
+} {
   return {
     recipe: createRecipeFactory(options),
   } as const;

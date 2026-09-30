@@ -184,6 +184,10 @@ Rules:
 
 Use `resolve()` when you need class resolution and a full prop bag.
 
+The input is typed like the props of a component built from the recipe:
+variant props take the recipe's options, `className` (and `slotClassNames` on
+slotted recipes) takes class values, and any other prop passes through.
+
 ### Root recipe `resolve()`
 
 ```ts
