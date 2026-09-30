@@ -69,6 +69,7 @@ pnpm lint:pkg              # publint package-surface check
 pnpm run verify          # lint + lint:all + lint:bench + lint:eslint + lint:format + lint:docs + test:coverage + test:types + lint:pkg
 pnpm run check:changeset # release-affecting branch/worktree changes must include a changeset
 pnpm run ci              # check:changeset + verify
+pnpm run release:dry-run # changeset version on a scratch worktree of HEAD (also runs in CI)
 ```
 
 Useful Vitest shortcuts:
@@ -260,7 +261,7 @@ For changes that touch recipe resolution, class merging, `styled()` behavior, pr
 - Alpha releases publish from `next`.
 - Changesets prerelease mode is active under the `alpha` tag.
 - `changeset publish` creates the canonical `v*` git tag.
-- `CI` and `Release` share the reusable `.github/workflows/verify.yml` matrix (Node `22.x` / `24.x` / `26.x`). `CI` also runs `check:overhead` and, on pull requests, the changeset coverage check, and reports everything as the single `build` check that branch protection requires on `next` and `main`.
+- `CI` and `Release` share the reusable `.github/workflows/verify.yml` matrix (Node `22.x` / `24.x` / `26.x`). `CI` also runs `check:overhead`, `release:dry-run` (`changeset version` on a scratch worktree, checked for a publishable version and its changelog section), and, on pull requests, the changeset coverage check, and reports everything as the single `build` check that branch protection requires on `next` and `main`.
 - Workflow actions are pinned to commit SHAs with the version in a trailing comment; Dependabot keeps them and the devDependencies current.
 - pnpm's `minimumReleaseAge` and the Dependabot npm `cooldown` are both 7 days and must stay equal: Dependabot passes its cooldown to pnpm when it re-resolves the lockfile, and a longer cooldown rejects versions the lockfile already pins.
 - `CI` runs on pull requests and on pushes to `main` and `v1-maintenance`; pushes to `next` are verified by `Release`.

@@ -23,6 +23,7 @@ Defined in `.github/workflows/main.yml`.
 - cancels an in-progress run when the same PR or branch is updated
 - runs `pnpm run verify` on Node `22.x`, `24.x`, and `26.x` through the reusable `.github/workflows/verify.yml`
 - runs `pnpm run check:overhead` once, against the committed `bench/overhead/baseline.json`
+- runs `pnpm run release:dry-run` once: `scripts/release-dry-run.mjs` runs `changeset version` on a scratch worktree of the checked-out commit and checks that the version changes only when changesets are pending, matches the prerelease mode, has a `CHANGELOG.md` section for the GitHub release, and is not on npm yet
 - on pull requests to `next` and `main`, runs `scripts/check-changeset.cjs` to verify that release-affecting changes are covered by a changeset; `Version Packages` PRs and Dependabot PRs skip it
 - reports the combined result as a single `build` check, which branch protection requires
 - pins every action to a commit SHA; Dependabot (`.github/dependabot.yml`) proposes action and devDependency updates monthly

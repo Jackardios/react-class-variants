@@ -22,7 +22,7 @@ Install dependencies:
 pnpm install
 ```
 
-CI and the release gate both run `pnpm run verify` on Node `22.x`, `24.x`, and `26.x`; CI also runs `pnpm run check:overhead` once. The package supports the `engines` minimum in `package.json`, but the test tooling needs a current patch release: jsdom requires Node `22.22.2+` or `24.15+`. Keep the full support matrix in mind when touching runtime or packaging behavior.
+CI and the release gate both run `pnpm run verify` on Node `22.x`, `24.x`, and `26.x`; CI also runs `pnpm run check:overhead` and `pnpm run release:dry-run` (the Version Packages step on a scratch worktree) once. The package supports the `engines` minimum in `package.json`, but the test tooling needs a current patch release: jsdom requires Node `22.22.2+` or `24.15+`. Keep the full support matrix in mind when touching runtime or packaging behavior.
 
 ## Typical Contributor Flow
 

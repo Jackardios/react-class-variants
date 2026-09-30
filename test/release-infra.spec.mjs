@@ -7,6 +7,7 @@ import {
   doesFirstParentIntroduceVersion,
   planReleasePublish,
 } from '../scripts/release-publish.mjs';
+import { checkVersionedRelease } from '../scripts/release-dry-run.mjs';
 import {
   extractReleaseNotes,
   sanitizeNpmCliEnv,
@@ -304,5 +305,81 @@ describe('Changesets workspace', () => {
     expect(packages.map(pkg => pkg.packageJson.name)).toContain(
       'react-class-variants'
     );
+  });
+});
+
+describe('release dry run', () => {
+  const changelog = `# react-class-variants
+
+## 2.0.0-alpha.15
+
+### Patch Changes
+
+- Improve editor hints.
+
+## 2.0.0-alpha.14
+
+- Old notes.
+`;
+  const pending = {
+    changelog,
+    hasChangesets: true,
+    nextVersion: '2.0.0-alpha.15',
+    preMode: true,
+    previousVersion: '2.0.0-alpha.14',
+    published: false,
+  };
+
+  it('accepts a new, unpublished version with release notes', () => {
+    expect(checkVersionedRelease(pending)).toBe(
+      'Version Packages would release 2.0.0-alpha.14 -> 2.0.0-alpha.15 (42 chars of release notes).'
+    );
+  });
+
+  it('accepts an unchanged version when no changesets are pending', () => {
+    expect(
+      checkVersionedRelease({
+        ...pending,
+        hasChangesets: false,
+        nextVersion: '2.0.0-alpha.14',
+      })
+    ).toMatch(/keeps 2\.0\.0-alpha\.14/);
+  });
+
+  it('rejects a version that is already on npm', () => {
+    expect(() =>
+      checkVersionedRelease({ ...pending, published: true })
+    ).toThrow('which is already on npm');
+  });
+
+  it('rejects a version that does not match the prerelease mode', () => {
+    expect(() => checkVersionedRelease({ ...pending, preMode: false })).toThrow(
+      'prerelease mode is off'
+    );
+    expect(() =>
+      checkVersionedRelease({
+        ...pending,
+        changelog: changelog.replace('2.0.0-alpha.15', '2.0.0'),
+        nextVersion: '2.0.0',
+      })
+    ).toThrow('prerelease mode is on');
+  });
+
+  it('rejects a version bump that pending changesets do not explain', () => {
+    expect(() =>
+      checkVersionedRelease({ ...pending, nextVersion: '2.0.0-alpha.14' })
+    ).toThrow('although changesets are pending');
+    expect(() =>
+      checkVersionedRelease({ ...pending, hasChangesets: false })
+    ).toThrow('without pending changesets');
+  });
+
+  it('rejects a version without a changelog section', () => {
+    expect(() =>
+      checkVersionedRelease({
+        ...pending,
+        changelog: '# react-class-variants\n',
+      })
+    ).toThrow('Could not find CHANGELOG.md section for version 2.0.0-alpha.15');
   });
 });

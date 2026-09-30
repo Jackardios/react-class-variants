@@ -56,6 +56,7 @@
     "bench:overhead": "node --expose-gc bench/overhead/measure.mjs --out bench/overhead/reports/current.json",
     "verify": "pnpm run lint && pnpm run lint:all && pnpm run lint:bench && pnpm run lint:eslint && pnpm run lint:format && pnpm run lint:docs && pnpm run test:coverage && pnpm run test:types && pnpm run lint:pkg",
     "ci": "pnpm run check:changeset && pnpm run verify",
+    "release:dry-run": "node scripts/release-dry-run.mjs",
     "release:publish": "node scripts/release-publish.mjs",
     "release:github:preflight": "node scripts/verify-github-release.mjs",
     "release:github-releases": "node scripts/sync-github-releases.mjs"
