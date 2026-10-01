@@ -10,7 +10,7 @@ This documentation describes the current `react-class-variants` v2.x surface.
 If you are looking for the legacy `react-tailwind-variants` v1.x docs, start
 with the [legacy v1 docs entrypoint](./docs/react-tailwind-variants-v1.md).
 
-The current v2 alpha surface is built around:
+The v2 surface is built around:
 
 - one adaptive `recipe()` primitive
 - one React builder, `styled()`, exposed through `defineConfig()`
@@ -22,8 +22,7 @@ The current v2 alpha surface is built around:
 ## Status
 
 - Package name: `react-class-variants`
-- Current line: `2.0.0-alpha.x`
-- Recommended install: `react-class-variants@alpha`
+- Current line: `2.x`
 - Runtime requirements: Node.js `22.12+` and React `19`
 - TypeScript: `5.4+`; the published types are tested with TypeScript 5.4, 5.9, 6, and 7, and support `exactOptionalPropertyTypes`
 - Module format: ESM-only
@@ -32,7 +31,7 @@ The current v2 alpha surface is built around:
 ## Installation
 
 ```bash
-pnpm add react-class-variants@alpha
+pnpm add react-class-variants
 ```
 
 Optional Tailwind conflict resolution:

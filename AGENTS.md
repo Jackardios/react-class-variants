@@ -7,7 +7,7 @@ Canonical repository guidance for LLMs and coding agents working in this repo.
 ## Repo Snapshot
 
 - Package name: `react-class-variants`
-- Current line: `2.0.0-alpha.x`
+- Current line: `2.x` (stable since `2.0.0`; the `2.0.0-alpha.*` prereleases are superseded)
 - Legacy v1 package name: `react-tailwind-variants`
 - Active v2 branch: `next`
 - Stable-ready branch during alpha: `main`
@@ -24,11 +24,11 @@ Canonical repository guidance for LLMs and coding agents working in this repo.
 - Keep legacy v1 work isolated to `v1-maintenance`.
 - Add a changeset for any source, public type, package metadata, build, or release-affecting change.
 - Documentation-only changes usually do not need a changeset.
-- Changesets v3 moves each changeset an alpha has released into `.changeset/pre/`, and the stable `2.0.0` changelog is built from all of them. When a later redesign makes one obsolete, rewrite or delete it there; new changesets still go in `.changeset/`.
-- Alpha publishing happens from GitHub Actions via npm trusted publishing; avoid manual `npm publish` unless explicitly required.
+- In Changesets prerelease mode (`changeset pre enter`), v3 moves each changeset a prerelease has released into `.changeset/pre/`, and the stable changelog after `changeset pre exit` is built from all of them. When a later redesign makes one obsolete, rewrite or delete it there; new changesets still go in `.changeset/`.
+- Publishing happens from GitHub Actions via npm trusted publishing; avoid manual `npm publish` unless explicitly required.
 - `changeset publish` chooses the npm dist-tag and CI never changes dist-tags afterwards: npm trusted publishing only authorizes `npm publish`, so a dist-tag repair needs a maintainer's npm login.
 - Package tarballs must remain valid from a clean checkout where `dist/` is gitignored; `pack`/`publish` therefore rely on a `prepack` build step.
-- After a successful alpha publish, verify npm dist-tags explicitly because prerelease tagging affects install behavior.
+- After a successful publish, verify npm dist-tags explicitly because they decide what a plain install resolves to.
 - When the release process changes, keep `AGENTS.md`, `CONTRIBUTING.md`, and `docs/release-process.md` aligned.
 
 ## Smallest Useful Commands
@@ -161,7 +161,7 @@ Published types support TypeScript `5.4+` (the declarations use `NoInfer`). `pnp
 - Variants with defaults are optional.
 - Boolean variants use string keys `"true"` and `"false"` and accept boolean props.
 - Do not mix boolean and named options inside the same variant.
-- There is no separate `state` namespace in the current v2 alpha API; model behavioral state as regular variants.
+- There is no separate `state` namespace in the current v2 API; model behavioral state as regular variants.
 - Variant keys are variant-first on component surfaces.
 - Use `propAliases` when a base prop name needs an alternate public prop such as `htmlSize`.
 - `forwardProps` re-adds selected resolved variant values into the forwarded prop bag.
@@ -259,8 +259,8 @@ For changes that touch recipe resolution, class merging, `styled()` behavior, pr
 ## Release Notes
 
 - v2 feature and fix PRs target `next`.
-- Alpha releases publish from `next`.
-- Changesets prerelease mode is active under the `alpha` tag.
+- Releases publish from `next`.
+- Changesets prerelease mode is off: the `alpha` line ended with `2.0.0-alpha.14`, and `2.0.0` is the first stable release.
 - `changeset publish` creates the canonical `v*` git tag.
 - `CI` and `Release` share the reusable `.github/workflows/verify.yml` matrix (Node `22.x` / `24.x` / `26.x`). `CI` also runs `check:overhead`, `release:dry-run` (`changeset version` on a scratch worktree, checked for a publishable version and its changelog section), and, on pull requests, the changeset coverage check, and reports everything as the single `build` check that branch protection requires on `next` and `main`.
 - Workflow actions are pinned to commit SHAs with the version in a trailing comment; Dependabot keeps them and the devDependencies current.
@@ -274,7 +274,7 @@ For changes that touch recipe resolution, class merging, `styled()` behavior, pr
 - `changeset publish` sets the dist-tag: a stable publish moves `latest`; in prerelease mode a version goes to the pre tag (`alpha`), except that while every published version is a prerelease, Changesets publishes to `latest` and leaves the pre tag alone (alpha.13 went to `latest` while `alpha` stayed on alpha.12).
 - After publish, the workflow pushes the `v*` tag and creates or updates the GitHub Release.
 - A trusted publish can take minutes to appear in the registry (alpha.13: about 160 seconds). The publish step therefore trusts a successful `changeset publish` exit instead of reading the registry back.
-- The current automation covers alpha releases and the stable `2.0.0` publish from `next`; if the release branch changes after alpha, update the workflow branch filters in the same change.
+- The release automation publishes from `next`; if the release branch changes, update the workflow branch filters in the same change.
 
 Post-publish verification:
 
