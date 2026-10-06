@@ -1,14 +1,14 @@
 # Release Process
 
-This document describes the current release process for the `react-class-variants` v2 alpha line.
+This document describes the current release process for the `react-class-variants` v2 line.
 
 ## Current Release Topology
 
-- `next`: active v2 development branch and alpha release branch
+- `next`: active v2 development branch and release branch
 - `main`: stable-ready branch during the alpha period
 - `v1-maintenance`: legacy `react-tailwind-variants` maintenance branch
 - Changesets base branch: `next`
-- Changesets prerelease mode: active under the `alpha` tag
+- Changesets prerelease mode: off; the `alpha` line ended with `2.0.0-alpha.14`, and `2.0.0` is the first stable release
 
 The published v2 package surface is ESM-only.
 
@@ -71,22 +71,21 @@ In practice, this means the version-package PR is the staging step and the publi
 
 `pnpm run ci` adds the changeset coverage check on top.
 
-## Alpha Release Policy
+## Release Policy
 
 - v2 releases are published from `next`
-- prerelease mode stays active under the `alpha` tag until the stable `2.0.0` transition
 - publishing happens from GitHub Actions through npm trusted publishing
 - the release workflow validates GitHub release/changelog readiness before publish
 - the publish wrapper checks the registry once before publishing and streams `changeset publish` output live; if registry lag hides an earlier publish, npm rejects the duplicate and a rerun reconciles the release
 - the publish wrapper is safe to rerun after a partial success: it skips duplicate publishes, treats an already-tagged earlier release commit as a no-op on newer commits, and only recreates a missing local tag when `HEAD` is the commit that introduced the version
 - a trusted publish can take minutes to appear in the registry (about 160 seconds for `2.0.0-alpha.13`), so the publish wrapper trusts a successful `changeset publish` exit and does not read the registry back
-- the same release path works for the stable `2.0.0` publish from `next`; if you later move day-to-day releases from `next` to `main`, update workflow branch filters in the same change
+- if you later move day-to-day releases from `next` to `main`, update workflow branch filters in the same change
 - avoid manual `npm publish` unless it is explicitly required
 
 Important notes:
 
 - npm limits trusted publishing auth to `npm publish`, so the workflow never changes dist-tags; any repair is a maintainer's manual step
-- each alpha's `changeset version` moves the changesets it released into `.changeset/pre/`; the stable `changeset version` after `changeset pre exit` builds the `2.0.0` changelog from all of them, so rewrite or delete any there that a later redesign made obsolete
+- in prerelease mode, each prerelease's `changeset version` moves the changesets it released into `.changeset/pre/`; the stable `changeset version` after `changeset pre exit` builds the stable changelog from all of them, so rewrite or delete any there that a later redesign made obsolete. For `2.0.0`, the 56 alpha notes were replaced by one summary, since the alpha sections of `CHANGELOG.md` already record them
 
 ## Post-Publish Verification
 

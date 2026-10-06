@@ -1,7 +1,7 @@
-# Migrating from `react-tailwind-variants` v1 to `react-class-variants` v2 alpha
+# Migrating from `react-tailwind-variants` v1 to `react-class-variants` v2
 
 This guide is for teams moving from the frozen v1 line of
-`react-tailwind-variants` to the current v2 alpha surface of
+`react-tailwind-variants` to the current v2 surface of
 `react-class-variants`.
 
 It describes the current public API. Examples elsewhere that mention
@@ -16,7 +16,8 @@ If you are learning v2 from scratch, start with the [README](../README.md), the
 
 - The package name changed from `react-tailwind-variants` to
   `react-class-variants`.
-- The recommended install target is `react-class-variants@alpha`.
+- Install `react-class-variants`; the `2.0.0-alpha.*` prereleases are superseded
+  by the stable `2.x` line.
 - v2 is ESM-only.
 - v2 expects Node.js `22.12+` and React `19`.
 - If you cannot move to those runtime requirements yet, stay on v1 for now.
@@ -25,7 +26,7 @@ If you are learning v2 from scratch, start with the [README](../README.md), the
 
 | v1 export or pattern                 | v2 replacement                                                                           | Notes                                                   |
 | ------------------------------------ | ---------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| `react-tailwind-variants`            | `react-class-variants@alpha`                                                             | package rename and new runtime requirements             |
+| `react-tailwind-variants`            | `react-class-variants`                                                                   | package rename and new runtime requirements             |
 | `variants(config)`                   | `recipe(config)`                                                                         | use `react-class-variants/core` in recipe-only modules  |
 | `styled(base, config)`               | `const { styled } = defineConfig(); const r = recipe(config); styled(base, r, options?)` | config definition and component creation are separate   |
 | `variantProps(config)`               | `recipe.resolve(input, options?)`                                                        | returns structured output, not one merged prop object   |
@@ -630,7 +631,7 @@ Re-test these areas carefully after migration:
 
 ## Migration Checklist
 
-- [ ] Replace the package with `react-class-variants@alpha`
+- [ ] Replace the package with `react-class-variants`
 - [ ] Confirm the app can run with React `19`, Node.js `22.12+`, and ESM-only
       package consumption
 - [ ] Replace `variants()` with `recipe()`

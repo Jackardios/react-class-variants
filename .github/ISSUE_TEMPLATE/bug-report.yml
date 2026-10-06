@@ -18,18 +18,18 @@ body:
     id: package_version
     attributes:
       label: Package version
-      description: Include the exact npm version, for example `2.0.0-alpha.12` or `1.0.4`.
-      placeholder: 2.0.0-alpha.12
+      description: Include the exact npm version, for example `2.0.0` or `1.0.4`.
+      placeholder: 2.0.0
     validations:
       required: true
   - type: dropdown
     id: release_channel
     attributes:
-      label: Release channel
-      description: Helps distinguish the legacy v1 line from the alpha v2 line.
+      label: Package line
+      description: Helps distinguish the legacy v1 package from v2.
       options:
-        - alpha / prerelease
-        - stable / legacy
+        - react-class-variants 2.x
+        - react-tailwind-variants 1.x (legacy)
     validations:
       required: true
   - type: textarea
