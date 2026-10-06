@@ -7,7 +7,6 @@ import type {
   FunctionComponent,
   HTMLAttributes,
   JSX,
-  PropsWithoutRef,
   ReactElement,
   ReactNode,
   Ref,
@@ -48,20 +47,21 @@ type StyledRecipePublicProps<TRecipe> = {
       slotClassNames?: StyledSlotClassNames<TRecipe> | undefined;
     }
   : {});
+// Root and slotted recipes, told apart by the mode in their type-only brand
+// (RecipeBrand in core-types). Matching the brand is one property comparison;
+// matching a recipe's call and `resolve()` signatures cost more than the rest
+// of a styled() call. The call signature rejects objects, and a function
+// without the brand shares no property with the brand, so TypeScript still
+// rejects it.
 export type AnyRootRecipeLike = {
-  (input?: any): string;
-  readonly resolve: (...args: any[]) => {
-    variants: Record<string, unknown>;
-    resolvedProps: Record<string, unknown>;
-  };
+  (...args: any[]): unknown;
+  readonly resolve: (...args: any[]) => unknown;
+  readonly '~rcv'?: { readonly mode: 'root' };
 };
 export type AnySlotRecipeLike = {
-  (input?: any): Record<string, (input?: Record<string, unknown>) => string>;
-  readonly resolve: (...args: any[]) => {
-    variants: Record<string, unknown>;
-    slots: Record<string, (input?: Record<string, unknown>) => string>;
-    resolvedProps: Record<string, unknown>;
-  };
+  (...args: any[]): unknown;
+  readonly resolve: (...args: any[]) => unknown;
+  readonly '~rcv'?: { readonly mode: 'slot' };
 };
 
 export type PropAliases<Base extends ElementType> = {
@@ -291,18 +291,42 @@ export interface StyledComponent<
   Forwarded extends string = never,
   ViewProps extends ViewPropsShape = {},
 > extends FunctionComponent<
-  PropsWithoutRef<
-    StyledComponentProps<
-      Base,
-      TRecipe,
-      WithRender,
-      Aliases,
-      Forwarded,
-      ViewProps
-    >
+  StyledComponentOwnProps<
+    Base,
+    TRecipe,
+    WithRender,
+    Aliases,
+    Forwarded,
+    ViewProps
   > &
     RefAttributes<ComponentRef<Base>>
 > {}
+
+// StyledComponentProps without `ref`, dropped in the same Omit as the variant
+// keys: `PropsWithoutRef<StyledComponentProps<...>>` walks every base prop a
+// second time for each component.
+type StyledComponentOwnProps<
+  Base extends ElementType,
+  TRecipe,
+  WithRender extends boolean,
+  Aliases extends PropAliases<Base>,
+  Forwarded extends string,
+  ViewProps extends ViewPropsShape,
+> = Simplify<
+  Omit<
+    BaseProps<Base>,
+    | VariantPropKeys<TRecipe>
+    | keyof Aliases
+    | ConsumedStyledPropKeys<TRecipe>
+    | keyof ViewProps
+    | 'ref'
+  > &
+    AliasProps<Base, Aliases> &
+    VariantProps<TRecipe> &
+    StyledRecipePublicProps<TRecipe> &
+    ViewProps &
+    RenderPropOption<TRecipe, WithRender, Forwarded>
+>;
 
 export type StyledComponentProps<
   Base extends ElementType,
@@ -317,10 +341,16 @@ export type StyledComponentProps<
     VariantProps<TRecipe> &
     StyledRecipePublicProps<TRecipe> &
     ViewProps &
-    (WithRender extends true
-      ? { render?: RenderProp<TRecipe, Forwarded> | undefined }
-      : {})
+    RenderPropOption<TRecipe, WithRender, Forwarded>
 >;
+
+type RenderPropOption<
+  TRecipe,
+  WithRender extends boolean,
+  Forwarded extends string,
+> = WithRender extends true
+  ? { render?: RenderProp<TRecipe, Forwarded> | undefined }
+  : {};
 
 export type HostRenderOverrides<
   Base extends ElementType,
@@ -407,6 +437,11 @@ export type StyledOptionsCommon<
     | undefined;
 };
 
+// `view` takes no part in inference (NoInfer): the type parameters come from
+// the other options. Inferring from a view's parameter made TypeScript measure
+// the variance of the view props types, and through them of React's
+// ComponentPropsWithRef over every intrinsic element: about 120k type
+// instantiations, once per program with a view.
 export type RootStyledOptions<
   Base extends ElementType,
   TRecipe extends AnyRootRecipeLike,
@@ -431,13 +466,15 @@ export type RootStyledOptions<
          * usually by returning `host.render()`.
          */
         view: ComponentType<
-          RootStyledViewProps<
-            Base,
-            TRecipe,
-            WithRender,
-            Aliases,
-            Forwarded,
-            NoInfer<ViewProps>
+          NoInfer<
+            RootStyledViewProps<
+              Base,
+              TRecipe,
+              WithRender,
+              Aliases,
+              Forwarded,
+              ViewProps
+            >
           >
         >;
       } & ViewPropsOption<Base, TRecipe, Aliases, ViewProps>)
@@ -474,13 +511,15 @@ export type SlotStyledOptions<
    * function per slot in `classes`.
    */
   view: ComponentType<
-    SlotStyledViewProps<
-      Base,
-      TRecipe,
-      WithRender,
-      Aliases,
-      Forwarded,
-      NoInfer<ViewProps>
+    NoInfer<
+      SlotStyledViewProps<
+        Base,
+        TRecipe,
+        WithRender,
+        Aliases,
+        Forwarded,
+        ViewProps
+      >
     >
   >;
 } & ViewPropsOption<Base, TRecipe, Aliases, ViewProps> &

@@ -1,0 +1,10 @@
+{
+  "typescript": "5.9.2",
+  "instantiations": {
+    "recipe": 20196,
+    "resolve": 18759,
+    "styled": 38477,
+    "view": 45728,
+    "jsx": 47262
+  }
+}
