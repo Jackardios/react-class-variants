@@ -107,7 +107,7 @@
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^6.1.1",
     "@vitest/coverage-v8": "5.0.2",
-    "@vitest/ui": "5.0.2",
+    "@vitest/ui": "5.0.5",
     "class-variance-authority": "^0.7.1",
     "classname-variants": "^1.7.0",
     "esbuild": "0.25.9",
