@@ -121,7 +121,7 @@
     "tailwind-merge": "^3.5.0",
     "tailwind-variants": "^3.2.2",
     "tsd": "^0.33.0",
-    "tsup": "^8.5.0",
+    "tsup": "^9.0.0",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.53.1",
     "vite": "^8.3.1",
